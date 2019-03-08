@@ -1,0 +1,50 @@
+body{
+    margin: 0;
+    padding: 0;
+}
+
+.sidebar_container{
+    width: 100%;
+    background-color: rgb(0,65,119);
+    position: fixed;
+    margin: 0;
+    padding: 0;
+}
+
+
+.sidebar_list{
+    list-style-type: none;
+    margin: 0;
+    text-align: left;
+    padding: 0; 
+    width: 100%; 
+    height: 100%;
+}
+
+.sidebar_list li{
+    float: left;
+}
+
+.sidebar_list li.active{
+    background-color: rgb(231,89,0);
+    color: White;
+}
+
+.sidebar_list a{
+    display: block;
+    text-decoration: none;
+    padding: 1pc;;
+    color:white;
+}
+
+
+
+.sidebar_list a:hover{
+    background-color: rgb(231,89,0);
+    color: white;
+}
+
+.body{
+    padding-top: 3pc;
+    padding-left: 1pc;
+}
