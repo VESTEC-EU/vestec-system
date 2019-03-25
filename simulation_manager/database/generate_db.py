@@ -1,5 +1,5 @@
-import database.machine as machine
-import database.job as job
+from . import machine
+from . import job
 import pony.orm as pny
 from database import db, initialiseDatabase
 
