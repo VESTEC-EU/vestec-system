@@ -1,4 +1,4 @@
-from database import db, initialiseDatabase
-import generate_db
-import job
-import machine
+from .database import db, initialiseDatabase
+from . import generate_db
+from . import job
+from . import machine
