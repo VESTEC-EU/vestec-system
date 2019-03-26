@@ -6,7 +6,7 @@ from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)  # create an instance if the imported Flask class
 
-targetURI = 'http://0.0.0.0:5001/jobs'
+targetURI = 'http://127.0.0.1:5500/jobs'
 current_job = {'uuid': '', 'name': ''}
 
 def generate_id():
@@ -57,10 +57,12 @@ def check_job_status():
            
        Data Structures:
        - SMI URI: /jobs/uuid
-       - SMI response data: {'uuid': <uuid>, 'name': <name>, 'status': <status>, 'machine': <machine>}
+       - SMI response data: {"uuid": <jobuuid>, "name": <jobname>, "jobs": [{"machine": <machinename>, 
+                             "status": <jobstatus>, "executable": <exec>, "QueueID": <queueid>}, {}], 
+                             "date": <jobsubmitdate>, "status": <jobstatus>}
     '''
     current_stat_req = requests.get(targetURI + '/' + str(current_job.get('uuid')))
-    response_data = current_stat_req.json()
+    response_data = [current_stat_req.json()]
 
     return render_template('jobstatustable.html', jobs=response_data)
 
@@ -78,7 +80,9 @@ def check_all_jobs_status():
            
        Data Structures:
        - SMI URI: /jobs
-       - SMI response data: {'uuid': {'uuid': <uuid>, 'name': <name>, 'status': <status>, 'machine': <machine>}}
+       - SMI response data: [{"uuid": <jobuuid>, "name": <jobname>, "jobs": [{"machine": <machinename>, 
+                              "status": <jobstatus>, "executable": <exec>, "QueueID": <queueid>}, {}
+                             ], "date": <jobsubmitdate>, "status": <jobstatus>}, {}]
     '''
     all_stat_req = requests.get(targetURI)
     response_data = all_stat_req.json()

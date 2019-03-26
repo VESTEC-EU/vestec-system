@@ -1,5 +1,5 @@
 input[type=text] {
-    width: 80%;
+    width: 50%;
     padding: 12px 20px;
     margin: 8px 0;
     box-sizing: border-box;
@@ -24,6 +24,30 @@ input[type=text]:focus {
   outline: none;
 }
 
-.container {
-  margin-top: 20px;
+#confirmation {
+  padding: 10px;
+  color: rgb(15, 153, 96);
+}
+
+.jobs {
+  font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.jobs td, .jobs th {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+.jobs tr:nth-child(even){background-color: #f2f2f2;}
+
+.jobs tr:hover {background-color: #ddd;}
+
+.jobs th {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  text-align: left;
+  background-color: #008CBA;
+  color: white;
 }

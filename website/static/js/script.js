@@ -1,5 +1,11 @@
 $("#checkJobStatus").hide();
 
+$("#userInput").keyup(function(e) {
+    if (e.keyCode == 13) {
+        submitJob();
+    }
+});
+
 function submitJob() {
     text = $("#userInput").val();
 
@@ -8,7 +14,8 @@ function submitJob() {
         type: "PUT",
         data: {jsdata: text},
         success: function(response) {
-            $("#confirmation").html(response);
+            $("#userInput").val('');
+            $("#confirmation").html("Job successfully submitted");
             $("#checkJobStatus").show();
         },
         error: function(xhr) {
