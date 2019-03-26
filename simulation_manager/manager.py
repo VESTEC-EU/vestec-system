@@ -8,6 +8,7 @@ import pony.orm as pny
 from pony.orm.serialization import to_dict
 from database.job import SubmittedJobStatus, SubmittedActivityStatus
 import datetime
+from uuid import uuid4
 
 
 app=flask.Flask("Simulation Manager")
@@ -28,6 +29,7 @@ def JobSummary():
     activities = pny.select(a for a in database.job.Activity)[:]
     for a in activities:
         name = a.getName()
+        uuid=a.getUUID()
         sjbs = a.getSubmittedJobs()
 
         #get all jobs for activity and construct dictionary for each job
@@ -38,17 +40,20 @@ def JobSummary():
             status=jb.getStatus().name
             exe=jb.getExecutable()
             qid=jb.getQueueId()
+            juuid=jb.getUUID()
 
             job={}
             job["machine"] = machine
             job["status"] = status
             job["executable"] = exe
             job["QueueID"] = qid
+            job["UUID"] = juuid
 
             jobs.append(job)
 
         act={}
         act["Name"] = name
+        act["UUID"] = uuid
         act["jobs"] = jobs
         act["date"] = str(a.getDate())
         act["status"] = a.getStatus().name
@@ -68,7 +73,7 @@ def JobSummary():
 def RunJob(jobID):
 
     if flask.request.method == "GET":
-        a = database.job.Activity.get(name=jobID)
+        a = database.job.Activity.get(uuid=jobID)
         if a== None:
             return json.dumps({})
         else:
@@ -104,7 +109,9 @@ def RunJob(jobID):
         print("jobID = %s"%jobID)
         data = dict=flask.request.get_json()
 
-        newActivity = database.job.Activity(name=jobID,date=datetime.datetime.now())
+        name=data["name"]
+
+        newActivity = database.job.Activity(name=name,uuid=jobID,date=datetime.datetime.now())
 
         pny.commit()
 
@@ -133,13 +140,14 @@ def ThreadInfo():
 
 # task to be run in a thread for each job. Currently just changes the job status then exits
 @pny.db_session
-def task(name):
-    act = database.job.Activity.get(name=name)
+def task(JobID):
+    act = database.job.Activity.get(uuid=JobID)
     archer = database.machine.Machine.get(name="ARCHER")
     time.sleep(3)
 
     act.setStatus(SubmittedActivityStatus.ACTIVE)
-    job=act.addSubmittedJob(archer,"test.exe","Q341592","/work/files")
+    ID = str(uuid4())
+    job=act.addSubmittedJob(uuid=ID,machine=archer,executable="test.exe",queue_id="Q341592",wkdir="/work/files")
     pny.commit()
     time.sleep(10)
 

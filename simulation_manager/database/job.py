@@ -17,6 +17,7 @@ class SubmittedActivityStatus(Enum):
 
 class Activity(db.Entity):
   name = pny.Required(str)
+  uuid = pny.Required(str)
   submittedjobs = pny.Set('SubmittedJob')
   date = pny.Required(datetime.datetime)
   status = pny.Required(SubmittedActivityStatus,default=SubmittedActivityStatus.PENDING)
@@ -24,6 +25,9 @@ class Activity(db.Entity):
 
   def getName(self):
     return self.name
+
+  def getUUID(self):
+    return self.uuid
 
   def getDate(self):
      return self.date
@@ -34,8 +38,8 @@ class Activity(db.Entity):
   def setStatus(self,status):
     self.status = status
 
-  def addSubmittedJob(self, machine, executable_name, queue_id,wkdir):
-    newJob = SubmittedJob(name=self.name, executable=executable_name, machine=machine, queue_id=queue_id, wkdir=wkdir)
+  def addSubmittedJob(self ,uuid, machine, executable, queue_id,wkdir):
+    newJob = SubmittedJob(uuid=uuid, executable=executable, machine=machine, queue_id=queue_id, wkdir=wkdir)
     self.submittedjobs.add(newJob)
     return newJob
 
@@ -53,15 +57,15 @@ class Activity(db.Entity):
 
 class SubmittedJob(db.Entity):
   activity=pny.Optional(Activity)
-  name = pny.Required(str)
+  uuid = pny.Required(str)
   executable = pny.Required(str)
   status = pny.Required(SubmittedJobStatus, default=SubmittedJobStatus.QUEUED)
   machine = pny.Required('Machine')
   queue_id = pny.Required(str)
   wkdir = pny.Required(str)
 
-  def getName(self):
-    return self.name
+  def getUUID(self):
+    return self.uuid
 
   def updateStatus(self, status):
     self.status=status
