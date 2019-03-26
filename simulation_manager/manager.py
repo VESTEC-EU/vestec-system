@@ -79,6 +79,7 @@ def RunJob(jobID):
         else:
             name = a.getName()
             sjbs = a.getSubmittedJobs()
+            juuid = a.getUUID()
             jobs=[]
             #print("JOB=",sjbs)
             jbs = pny.select(j for j in sjbs)[:]
@@ -101,6 +102,7 @@ def RunJob(jobID):
             act["jobs"] = jobs
             act["date"] = str(a.getDate())
             act["status"] = a.getStatus().name
+            act["UUID"] = juuid
 
             return(json.dumps(act))
 
