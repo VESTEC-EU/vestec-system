@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+    <head>
+        <title>{% block PageTitle %} {% endblock %}</title>
+        <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    </head>
+    <body>
+        <input type="text" id="userInput" placeholder="Enter the job name...">
+        <button class="button" id="submitJob" onClick="submitJob()">Submit Job</button>
+        <div class="container" id="confirmation"></div>
+        <button class="button" id="checkJobStatus" onClick="getJobStatus()">Check Job Status</button>
+        <button class="button" id="checkaAllJobs" onClick="getAllJobsStatus()">Check All Jobs</button>
+    </body>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</html>
