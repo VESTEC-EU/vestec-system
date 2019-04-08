@@ -1,1 +1,1 @@
-from templating import Templates
+from .templating import Templates

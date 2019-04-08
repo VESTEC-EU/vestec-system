@@ -1,1 +1,1 @@
-from ConnectionManager import RemoteConnection
+from .ConnectionManager import RemoteConnection

@@ -1,7 +1,7 @@
 from . import machine
 from . import job
 import pony.orm as pny
-from database import db, initialiseDatabase
+from Database import db, initialiseDatabase
 
 @pny.db_session
 def initialiseStaticInformation():

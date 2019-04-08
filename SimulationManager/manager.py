@@ -5,10 +5,10 @@ import flask
 import threading
 import time
 import json
-import database
+import Database
 import pony.orm as pny
 from pony.orm.serialization import to_dict
-from database.job import SubmittedJobStatus, SubmittedActivityStatus
+from Database.job import SubmittedJobStatus, SubmittedActivityStatus
 import datetime
 from uuid import uuid4
 import ConnectionManager
@@ -29,7 +29,7 @@ def WelcomePage():
 def JobSummary():
     Tasks=[]
     #get all activities, loop through them and create dictionaries to store the information
-    activities = pny.select(a for a in database.job.Activity)[:]
+    activities = pny.select(a for a in Database.job.Activity)[:]
     for a in activities:
         name = a.getName()
         uuid=a.getUUID()
@@ -76,7 +76,7 @@ def JobSummary():
 def RunJob(jobID):
 
     if flask.request.method == "GET":
-        a = database.job.Activity.get(uuid=jobID)
+        a = Database.job.Activity.get(uuid=jobID)
         if a== None:
             return json.dumps({})
         else:
@@ -116,7 +116,7 @@ def RunJob(jobID):
 
         name=data["name"]
 
-        newActivity = database.job.Activity(name=name,uuid=jobID,date=datetime.datetime.now())
+        newActivity = Database.job.Activity(name=name,uuid=jobID,date=datetime.datetime.now())
 
         pny.commit()
 
@@ -146,8 +146,8 @@ def ThreadInfo():
 # task to be run in a thread for each job. Currently just changes the job status then exits
 @pny.db_session
 def task(JobID):
-    act = database.job.Activity.get(uuid=JobID)
-    archer = database.machine.Machine.get(name="ARCHER")
+    act = Database.job.Activity.get(uuid=JobID)
+    archer = Database.machine.Machine.get(name="ARCHER")
     time.sleep(3)
 
     act.setStatus(SubmittedActivityStatus.ACTIVE)
@@ -171,5 +171,5 @@ def task(JobID):
 
 
 if __name__ == "__main__":
-    database.initialiseDatabase()
+    Database.initialiseDatabase()
     app.run(host="0.0.0.0",port=5500)

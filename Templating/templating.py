@@ -24,4 +24,4 @@ if __name__ == "__main__":
     omp="4"
     command = "aprun -n 96 -d 4 -S 3 ./exe"
 
-    print t.render_template("pbs.j2",pbs=pbs,modules=modules,omp=omp,command=command)
+    print(t.render_template("pbs.j2",pbs=pbs,modules=modules,omp=omp,command=command))

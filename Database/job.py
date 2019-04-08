@@ -1,4 +1,4 @@
-from database import db
+from Database import db
 import pony.orm as pny
 from enum import Enum
 import datetime
