@@ -2,6 +2,7 @@
 # render_template loads html pages of the application
 import uuid
 import requests
+import os
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)  # create an instance if the imported Flask class
@@ -21,7 +22,7 @@ def welcome_page():
 def submit_job():
     '''This function sends a PUT request to the SMI for a current_job
        to be created
-           
+
        Process:
        - generate current_job object
        - send current_job object as JSON to the SMI server
@@ -29,7 +30,7 @@ def submit_job():
 
        Input Params: none
        Output Params: response_data - SMI response string
-           
+
        Data Structures:
        - SMI URI: /jobs/uuid
        - current_job object: {'uuid': <id>, 'name': <title>}
@@ -46,7 +47,7 @@ def submit_job():
 @app.route('/jobs/current', methods = ['GET'])
 def check_job_status():
     '''This function sends a GET request to the SMI for the details of the current job
-           
+
        Process:
        - send get request to the SMI passing the current job as parameter
        - get SMI response job dictionary
@@ -54,11 +55,11 @@ def check_job_status():
 
        Input Params: none
        Output Params: response_data - SMI response dictionary
-           
+
        Data Structures:
        - SMI URI: /jobs/uuid
-       - SMI response data: {"uuid": <jobuuid>, "name": <jobname>, "jobs": [{"machine": <machinename>, 
-                             "status": <jobstatus>, "executable": <exec>, "QueueID": <queueid>}, {}], 
+       - SMI response data: {"uuid": <jobuuid>, "name": <jobname>, "jobs": [{"machine": <machinename>,
+                             "status": <jobstatus>, "executable": <exec>, "QueueID": <queueid>}, {}],
                              "date": <jobsubmitdate>, "status": <jobstatus>}
     '''
     current_stat_req = requests.get(targetURI + '/' + str(current_job.get('uuid')))
@@ -69,7 +70,7 @@ def check_job_status():
 @app.route('/jobs', methods = ['GET'])
 def check_all_jobs_status():
     '''This function sends a GET request to the SMI for the details of all jobs
-           
+
        Process:
        - send get request to the SMI for all jobs
        - get SMI response jobs dictionary of dictionaries
@@ -77,10 +78,10 @@ def check_all_jobs_status():
 
        Input Params: none
        Output Params: response_data - SMI response dictionary
-           
+
        Data Structures:
        - SMI URI: /jobs
-       - SMI response data: [{"uuid": <jobuuid>, "name": <jobname>, "jobs": [{"machine": <machinename>, 
+       - SMI response data: [{"uuid": <jobuuid>, "name": <jobname>, "jobs": [{"machine": <machinename>,
                               "status": <jobstatus>, "executable": <exec>, "QueueID": <queueid>}, {}
                              ], "date": <jobsubmitdate>, "status": <jobstatus>}, {}]
     '''
@@ -93,6 +94,9 @@ def check_all_jobs_status():
 def page_not_found(e):
     # note that we set the 404 status explicitly
     return render_template('404.html'), 404
-    
+
 if __name__ == '__main__':
+    if "VESTEC_MANAGER_URI" in os.environ:
+        targetURI = os.environ["VESTEC_MANAGER_URI"]
+    print("Website using SimulationManager URI: %s"%targetURI)
     app.run(host='0.0.0.0', port=5000)

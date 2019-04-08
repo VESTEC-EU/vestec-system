@@ -1,0 +1,18 @@
+version: '3'
+services:
+  website:
+    container_name: website
+    build:
+      context: ../
+      dockerfile: DockerFiles/Dockerfile_website
+    ports:
+     - "5000:5000"
+    environment:
+      VESTEC_MANAGER_URI: "http://manager:5500/jobs"
+  manager:
+    container_name: manager
+    build:
+      context: ../
+      dockerfile: DockerFiles/Dockerfile_SimulationManager
+    # ports:
+    #  - "5500:5500"
