@@ -14,5 +14,7 @@ services:
     build:
       context: ../
       dockerfile: DockerFiles/Dockerfile_SimulationManager
-    # ports:
-    #  - "5500:5500"
+    environment:
+      VESTEC_DATABASE_PATH: "/database/vestec.sqlite"
+    volumes:
+      - "../Database:/database"

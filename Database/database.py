@@ -1,6 +1,7 @@
 import pony.orm as pny
 from pony.orm.dbapiprovider import StrConverter
 from enum import Enum
+import os
 
 db = pny.Database()
 
@@ -18,7 +19,14 @@ class EnumConverter(StrConverter):
     return self.py_type[value]
 
 def initialiseDatabase():
-  db.bind("sqlite","vestec.sqlite",create_db=True)
+  dbpath = "vestec.sqlite"
+  if "VESTEC_DATABASE_PATH" in os.environ:
+      dbpath = os.environ["VESTEC_DATABASE_PATH"]
+  else:
+      dbpath="vestec.sqlite"
+
+  print("Database file being used is '%s'"%dbpath)
+  db.bind("sqlite",dbpath,create_db=True)
   # Register the type converter with the database
   db.provider.converter_classes.append((Enum, EnumConverter))
   # Generate object mapping
