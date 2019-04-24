@@ -24,7 +24,7 @@ $ python generate_db.py
 
 In order to run the services, two running processes are required: the simulation manager and the web interface. In one terminal run
 ```
-$ cd Website
+$ cd website
 $ python app.py
 ```
 and in another run
