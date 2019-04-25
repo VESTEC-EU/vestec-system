@@ -9,6 +9,12 @@ You will need python 3 to run the existing framework with the following python p
 - Pony
 - Requests
 
+Make sure that the root directory of this repository is included in the PYTHONPATH variable, e.g., by executing
+```
+$ export PYTHONPATH=$PYTHONPATH:/absolute/path/to/repository
+```
+before the execution of any of the commands below.
+
 Firstly you will need to initialise the database. To do this, change into the `Database` directory and run
 ```
 $ python generate_db.py
@@ -18,7 +24,7 @@ $ python generate_db.py
 
 In order to run the services, two running processes are required: the simulation manager and the web interface. In one terminal run
 ```
-$ cd Website
+$ cd website
 $ python app.py
 ```
 and in another run
