@@ -1,31 +1,35 @@
 #!/usr/local/bin/flask
-# render_template loads html pages of the application
+'''render_template loads html pages of the application
+'''
+import os
 import uuid
 import requests
-import os
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request
 
-app = Flask(__name__)  # create an instance if the imported Flask class
+APP = Flask(__name__)  # create an instance if the imported Flask class
 
-targetURI = 'http://127.0.0.1:5500/jobs'
-current_job = {'uuid': '', 'name': ''}
+TARGET_URI = 'http://127.0.0.1:5500/jobs'
+CURRENT_JOB = {'uuid': '', 'name': ''}
 
 def generate_id():
+    '''auto-generates a uuid'''
     return str(uuid.uuid1())
 
-@app.route('/')  # used to bind the following function to the specified URL
+
+@APP.route('/')  # used to bind the following function to the specified URL
 def welcome_page():
     '''Render a static welcome template'''
     return render_template('index.html')
 
-@app.route('/submit', methods = ['PUT'])
+
+@APP.route('/submit', methods=['PUT'])
 def submit_job():
-    '''This function sends a PUT request to the SMI for a current_job
+    '''This function sends a PUT request to the SMI for a CURRENT_JOB
        to be created
 
        Process:
-       - generate current_job object
-       - send current_job object as JSON to the SMI server
+       - generate CURRENT_JOB object
+       - send CURRENT_JOB object as JSON to the SMI server
        - if the SMI server has received the JSON package, return string message
 
        Input Params: none
@@ -33,18 +37,19 @@ def submit_job():
 
        Data Structures:
        - SMI URI: /jobs/uuid
-       - current_job object: {'uuid': <id>, 'name': <title>}
+       - CURRENT_JOB object: {'uuid': <id>, 'name': <title>}
        - SMI response data: 'SUCCESS' or 'FAILURE'
     '''
-    current_job['uuid'] = generate_id()
-    current_job['name'] = request.form.get('jsdata')
+    CURRENT_JOB['uuid'] = generate_id()
+    CURRENT_JOB['name'] = request.form.get('jsdata')
 
-    job_request = requests.put(targetURI + '/' + current_job.get('uuid'), json=current_job)
+    job_request = requests.put(TARGET_URI + '/' + CURRENT_JOB.get('uuid'), json=CURRENT_JOB)
     response_data = job_request.text
 
     return response_data
 
-@app.route('/jobs/current', methods = ['GET'])
+
+@APP.route('/jobs/current', methods=['GET'])
 def check_job_status():
     '''This function sends a GET request to the SMI for the details of the current job
 
@@ -58,16 +63,19 @@ def check_job_status():
 
        Data Structures:
        - SMI URI: /jobs/uuid
-       - SMI response data: {"uuid": <jobuuid>, "name": <jobname>, "jobs": [{"machine": <machinename>,
-                             "status": <jobstatus>, "executable": <exec>, "QueueID": <queueid>}, {}],
+       - SMI response data: {"uuid": <jobuuid>, "name": <jobname>,
+                             "jobs": [{"machine": <machinename>,
+                                       "status": <jobstatus>, "executable": <exec>,
+                                       "QueueID": <queueid>}, {}],
                              "date": <jobsubmitdate>, "status": <jobstatus>}
     '''
-    current_stat_req = requests.get(targetURI + '/' + str(current_job.get('uuid')))
+    current_stat_req = requests.get(TARGET_URI + '/' + str(CURRENT_JOB.get('uuid')))
     response_data = [current_stat_req.json()]
 
     return render_template('jobstatustable.html', jobs=response_data)
 
-@app.route('/jobs', methods = ['GET'])
+
+@APP.route('/jobs', methods=['GET'])
 def check_all_jobs_status():
     '''This function sends a GET request to the SMI for the details of all jobs
 
@@ -81,22 +89,26 @@ def check_all_jobs_status():
 
        Data Structures:
        - SMI URI: /jobs
-       - SMI response data: [{"uuid": <jobuuid>, "name": <jobname>, "jobs": [{"machine": <machinename>,
-                              "status": <jobstatus>, "executable": <exec>, "QueueID": <queueid>}, {}
-                             ], "date": <jobsubmitdate>, "status": <jobstatus>}, {}]
+       - SMI response data: [{"uuid": <jobuuid>, "name": <jobname>,
+                              "jobs": [{"machine": <machinename>,
+                                        "status": <jobstatus>, "executable": <exec>,
+                                        "QueueID": <queueid>}, {}
+                              ], "date": <jobsubmitdate>, "status": <jobstatus>}, {}]
     '''
-    all_stat_req = requests.get(targetURI)
+    all_stat_req = requests.get(TARGET_URI)
     response_data = all_stat_req.json()
 
     return render_template('jobstatustable.html', jobs=response_data)
 
-@app.errorhandler(404)
-def page_not_found(e):
-    # note that we set the 404 status explicitly
+
+@APP.errorhandler(404)
+def page_not_found():
+    '''note that we set the 404 status explicitly'''
     return render_template('404.html'), 404
+
 
 if __name__ == '__main__':
     if "VESTEC_MANAGER_URI" in os.environ:
-        targetURI = os.environ["VESTEC_MANAGER_URI"]
-    print("Website using SimulationManager URI: %s"%targetURI)
-    app.run(host='0.0.0.0', port=5000)
+        TARGET_URI = os.environ["VESTEC_MANAGER_URI"]
+    print("Website using SimulationManager URI: %s"%TARGET_URI)
+    APP.run(host='0.0.0.0', port=5000)
