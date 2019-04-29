@@ -1,23 +1,63 @@
+body {
+  margin: 0px;
+}
+
+.navbar {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background-color: #333;
+}
+
+.navbar li {
+  float: left;
+}
+
+.navbar li a {
+  display: block;
+  color: white;
+  text-align: center;
+  padding: 14px 16px;
+  text-decoration: none;
+}
+
+/* Change the link color to #111 (black) on hover */
+.navbar li a:hover {
+  background-color: #111;
+}
+
+.active {
+  background-color: #008CBA;
+}
+
+.body_container {
+  width: 96%;
+  margin: 2%;
+}
+
+/* Main page - index.html */
 input[type=text] {
-    width: 50%;
-    padding: 12px 20px;
-    margin: 8px 0;
-    box-sizing: border-box;
+  display: inline-flex;
+  padding: 12px 20px;
+  box-sizing: border-box;
+  width: 50%
 }
 
 input[type=text]:focus {
-    outline: none;
+  outline: none;
 }
 
 .button {
-    background-color: #008CBA;
-    border: none;
-    color: white;
-    padding: 12px 20px;
-    text-align: center;
-    text-decoration: none;
-    display: inline-block;
-    font-size: 14px;
+  background-color: #008CBA;
+  border: none;
+  color: white;
+  padding: 12px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-flex;
+  font-size: 14px;
+  border-radius: 3px;
 }
 
 .button:focus {
@@ -26,9 +66,25 @@ input[type=text]:focus {
 
 #confirmation {
   padding: 10px;
-  color: rgb(15, 153, 96);
+  color: white;
+  margin-top: 5px;
+  display: block;
+  width: 170px;
 }
 
+.success {
+  background: #02a775;
+}
+
+.fail {
+  background: #c53f3f;
+}
+
+.warning {
+  background: #bfa900;
+}
+
+/* Job status page */
 .jobs {
   font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
   border-collapse: collapse;

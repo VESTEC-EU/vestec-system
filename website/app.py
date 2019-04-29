@@ -102,9 +102,15 @@ def check_all_jobs_status():
 
 
 @APP.errorhandler(404)
-def page_not_found():
-    '''note that we set the 404 status explicitly'''
+def page_not_found(e):
+    '''Handling 404 errors by showing template'''
     return render_template('404.html'), 404
+
+
+@APP.errorhandler(500)
+def page_not_found(e):
+    '''Handling 500 errors by showing template'''
+    return render_template('500.html'), 500
 
 
 if __name__ == '__main__':

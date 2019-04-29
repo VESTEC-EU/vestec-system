@@ -9,19 +9,26 @@ $("#userInput").keyup(function(e) {
 function submitJob() {
     text = $("#userInput").val();
 
-    $.ajax({
-        url: "/submit",
-        type: "PUT",
-        data: {jsdata: text},
-        success: function(response) {
-            $("#userInput").val('');
-            $("#confirmation").html("Job successfully submitted");
-            $("#checkJobStatus").show();
-        },
-        error: function(xhr) {
-            $("#confirmation").html("Job submission failed");
-        }
-    });
+    if (text === "") {
+        $("#confirmation").removeClass().addClass("button warning");
+        $("#confirmation").html("<span>&#9888</span> Please enter a job name");
+    } else {
+        $.ajax({
+            url: "/submit",
+            type: "PUT",
+            data: {jsdata: text},
+            success: function(response) {
+                $("#userInput").val('');
+                $("#confirmation").removeClass().addClass("button success");
+                $("#confirmation").html("<span>&#10003</span> Job successfully submitted");
+                $("#checkJobStatus").show();
+            },
+            error: function(xhr) {
+                $("#confirmation").removeClass().addClass("button fail");
+                $("#confirmation").html("<span>&#10007</span> Job submission failed");
+            }
+        });
+    }
 }
 
 function getJobStatus() {
@@ -32,7 +39,8 @@ function getJobStatus() {
             window.location.href = "/jobs/current";
         },
         error: function(xhr) {
-            $("#confirmation").html("Job status check failed");
+            $("#confirmation").removeClass().addClass("button fail");
+            $("#confirmation").html("<span>&#10007</span> Job status check failed");
         }
     });
 }
@@ -45,7 +53,8 @@ function getAllJobsStatus(){
             window.location.href = "/jobs";
         },
         error: function(xhr) {
-            $("#confirmation").html("Jobs status check failed");
+            $("#confirmation").removeClass().addClass("button fail");
+            $("#confirmation").html("<span>&#10007</span> Jobs status check failed");
         }
     });
 }
