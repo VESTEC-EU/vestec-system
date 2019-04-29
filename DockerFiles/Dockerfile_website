@@ -1,7 +1,7 @@
 FROM python:3-slim
 EXPOSE 5000
 COPY . /app
-WORKDIR /app/Website
-RUN pip install -r /app/Website/requirements.txt
+WORKDIR /app/website
+RUN pip install -r /app/website/requirements.txt
 ENTRYPOINT ["python"]
 CMD ["app.py"]
