@@ -1,20 +1,37 @@
-version: '3'
+version: '3.1'
 services:
   website:
-    container_name: website
-    build:
-      context: ../
-      dockerfile: DockerFiles/Dockerfile_website
+    image: vestec-server/website
     ports:
      - "5000:5000"
     environment:
       VESTEC_MANAGER_URI: "http://manager:5500/jobs"
   manager:
-    container_name: manager
-    build:
-      context: ../
-      dockerfile: DockerFiles/Dockerfile_SimulationManager
+    image: vestec-server/manager
     environment:
       VESTEC_DATABASE_PATH: "/database/vestec.sqlite"
     volumes:
       - "../Database:/database"
+  rabbit:
+    hostname: rabbit
+    image: "rabbitmq:3.7-management-alpine"
+    ports:
+     - "15672:15672"
+     - "5672:5672"
+    environment:
+      RABBITMQ_DEFAULT_USER: "vestec"
+      RABBITMQ_DEFAULT_PASS_FILE: /run/secrets/rabbit_admin_password
+    secrets:
+     - rabbit_admin_password
+     - source: rabbit_erlang_cookie
+       target: /var/lib/rabbitmq/.erlang.cookie
+       mode: 0600
+       uid: '100'
+       gid: '101'
+
+secrets:
+  rabbit_erlang_cookie:
+    external: true
+  rabbit_admin_password:
+    external: true
+
