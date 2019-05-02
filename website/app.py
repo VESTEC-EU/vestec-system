@@ -8,7 +8,11 @@ from flask import Flask, render_template, request
 
 APP = Flask(__name__)  # create an instance if the imported Flask class
 
-TARGET_URI = 'http://127.0.0.1:5500/jobs'
+if "VESTEC_MANAGER_URI" in os.environ:
+    TARGET_URI = os.environ["VESTEC_MANAGER_URI"]
+else:
+    TARGET_URI = 'http://127.0.0.1:5500/jobs'
+    
 CURRENT_JOB = {'uuid': '', 'name': ''}
 
 def generate_id():
@@ -19,6 +23,7 @@ def generate_id():
 @APP.route('/')  # used to bind the following function to the specified URL
 def welcome_page():
     '''Render a static welcome template'''
+    print("TARGET_URI = %s"%TARGET_URI)
     return render_template('index.html')
 
 
