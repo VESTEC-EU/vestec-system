@@ -53,7 +53,7 @@ class Client:
     def _handle_response(self, channel, method, props, body):
         corr_id = props.correlation_id
         assert self._req_responses is None, "No outstanding request with ID: %s" % corr_id
-        assert props.content_type == 'text/json'
+        assert props.content_type == 'application/json'
         assert props.content_encoding == 'utf-8'
         headers = props.headers
         success_flag = {
@@ -72,7 +72,7 @@ class Client:
             properties=pika.BasicProperties(
                 reply_to=self.callback_queue,
                 correlation_id=corr_id,
-                content_type='text/json',
+                content_type='application/json',
                 content_encoding='utf-8'
                 ))
         # Poll until we have an answer

@@ -67,7 +67,7 @@ class RpcServer:
             # Default is fail
             headers = {'success': 'false'}
             # Which method?
-            assert props.content_type=='text/json', "Invalid content type '%s'" % props.content_type
+            assert props.content_type=='application/json', "Invalid content type '%s'" % props.content_type
             assert props.content_encoding='utf-8', "Invalid encoding '%s'" % props.content_encoding
             name, func_name = method.routing_key.split('.')
             method_descr = getattr(self.API, func_name)
@@ -91,7 +91,7 @@ class RpcServer:
                 routing_key=props.reply_to,
                 properties=pika.BasicProperties(
                     correlation_id=props.correlation_id,
-                    content_type='text/json',
+                    content_type='application/json',
                     content_encoding='utf-8',
                     headers=headers
                     ),
