@@ -7,7 +7,6 @@ setup(
     author_email="r.nash@epcc.ed.ac.uk",
     description="Machine Proxy API between client and server",
     packages=[
-        'mproxy',
         'mproxy.api',
         ],
     install_requires=[
