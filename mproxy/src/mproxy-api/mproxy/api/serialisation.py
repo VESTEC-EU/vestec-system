@@ -39,7 +39,10 @@ class JsonObjHelper:
       methods for converting.
     '''
 
-    BUILTIN_TYPES = set((dict, list, str, int, float, bool, type(None)))
+    BUILTIN_SCALARS = set((str, int, float, bool, type(None)))
+    BUILTIN_CONTAINERS = set((dict, list))
+    BUILTIN_TYPES = set.union(BUILTIN_SCALARS, BUILTIN_CONTAINERS)
+
     CONVERTERS = {
         bytes: BytesConverter,
         tuple: TupleConverter
@@ -69,9 +72,17 @@ class JsonObjHelper:
     def py2j(cls, pyobj):
         in_cls = type(pyobj)
 
-        # No-op if JSON builtin
-        if in_cls in cls.BUILTIN_TYPES:
+        # No-op if JSON builtin scalar
+        if in_cls in cls.BUILTIN_SCALARS:
             return pyobj
+
+        if in_cls is list:
+            # convert every element
+            return [cls.py2j(x) for x in pyobj]
+
+        if in_cls is dict:
+            # convert every element
+            return {cls.py2j(k): cls.py2j(v) for k,v in pyobj.items()}
 
         # Known special cases
         try:
@@ -96,7 +107,7 @@ class JsonSerialisable:
     @classmethod
     def _other_to_json(cls, obj):
         return {
-            attr: JsobObjHelper.py2j(getattr(obj, attr)) for attr in cls._JSON_ATTRS
+            attr: JsonObjHelper.py2j(getattr(obj, attr)) for attr in cls._JSON_ATTRS
             }
 
     def _to_json(self):
@@ -105,7 +116,8 @@ class JsonSerialisable:
     @classmethod
     def _from_json(cls, jobj):
         '''This assumes that your class has a constructor accepting all
-        attrs as keyword arguments.
+        attrs as keyword arguments and that all initialiser attributes
+        can be of JSON builtin types
         '''
         return cls(**jobj)
     pass
