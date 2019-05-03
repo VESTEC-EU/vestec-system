@@ -19,10 +19,13 @@ class TupleConverter:
     '''Json treats tuples as lists'''
     @staticmethod
     def py2j(t):
-        return [x for x in t]
+        return [JsonObjHelper.py2j(x) for x in t]
     @staticmethod
     def j2py(t):
         return tuple(x for x in t)
+    pass
+
+class JsonTypeError(TypeError):
     pass
 
 class JsonObjHelper:
@@ -52,6 +55,8 @@ class JsonObjHelper:
     def j2py(cls, out_cls, jobj):
         # No-op if JSON builtin
         if out_cls in cls.BUILTIN_TYPES:
+            if not isinstance(jobj, out_cls):
+                raise JsonTypeError('input not of expected type {}'.format(out_cls))
             return jobj
 
         # Known special cases
@@ -66,7 +71,7 @@ class JsonObjHelper:
         try:
             return out_cls._from_json(jobj)
         except AttributeError:
-            raise ValueError('Cannot reconstruct type: %s', out_cls)
+            raise JsonTypeError('Cannot reconstruct type: %s', out_cls)
 
     @classmethod
     def py2j(cls, pyobj):
@@ -96,7 +101,7 @@ class JsonObjHelper:
         try:
             return pyobj._to_json()
         except AttributeError:
-            raise ValueError('Cannot serialise type: %s', type(pyobj))
+            raise JsonTypeError('Cannot serialise type: %s', type(pyobj))
     pass
 
 class JsonSerialisable:

@@ -39,21 +39,22 @@ def test_simpleobject():
     assert_roundtrip(SimpleObject(2))
 
 class ComplexObject(JsonSerialisable):
-    _JSON_ATTRS = ('foo', 'tup', 'bs')
-    def __init__(self, foo='bar', tup=(), bs=b''):
-        self.foo = foo
-        self.tup = tup
-        self.bs = bs
+    _JSON_ATTRS = ('name', 'children', 'binary')
+    def __init__(self, name='bar', children=(), binary=b''):
+        self.name = name
+        self.children = children
+        self.binary = binary
 
     @classmethod
     def _from_json(cls, obj):
-        foo = obj.pop('foo')
-        tup = JsonObjHelper.j2py(tuple, obj.pop('tup'))
-        bs = JsonObjHelper.j2py(bytes, obj.pop('bs'))
-        return cls(foo, tup, bs)
+        name = obj.pop('name')
+        # tup = JsonObjHelper.j2py(tuple, obj.pop('tup'))
+        children = tuple(JsonObjHelper.j2py(cls, o) for o in obj.pop('children'))
+        binary = JsonObjHelper.j2py(bytes, obj.pop('binary'))
+        return cls(name, children, binary)
 
     def __eq__(self, other):
-        return (self.foo == other.foo) and (self.tup == other.tup) and (self.bs == other.bs)
+        return (self.name == other.name) and (self.children == other.children) and (self.binary == other.binary)
 
 def test_complex():
-    assert_roundtrip(ComplexObject('This is a string', bs=b'Complex binary data'))
+    assert_roundtrip(ComplexObject('This is a string', binary=b'Complex binary data'))

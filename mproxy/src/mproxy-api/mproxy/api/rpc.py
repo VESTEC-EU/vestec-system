@@ -1,5 +1,6 @@
 import inspect
-from .serialisation import JsonObjHelper
+import json
+from .serialisation import JsonObjHelper, JsonTypeError
 
 class RpcMethod:
     '''Encapsulate argument/result (de)serialisation for a function
@@ -7,8 +8,10 @@ class RpcMethod:
     '''
 
     def __init__(self, name, signature, doc=None):
+        if signature.return_annotation is None or signature.return_annotation is signature.empty:
+            signature = signature.replace(return_annotation=type(None))
         self.name = name
-        self.signature = signature
+        self.sig = signature
         self.doc = doc
 
     @classmethod
@@ -51,7 +54,7 @@ class RpcMethod:
         arg_dict = {}
         for name, param in self.sig.parameters.items():
             json_obj = dct.pop(name, param.default)
-            if json_obj is p.empty:
+            if json_obj is param.empty:
                 raise ValueError('Missing required argument: %s' % name)
             arg_dict[name] = JsonObjHelper.j2py(param.annotation, json_obj)
 
@@ -63,6 +66,9 @@ class RpcMethod:
 
     def serialise_result(self, pyobj):
         '''Turn an actual result object into bytes (UTF-8)'''
+        rt = self.sig.return_annotation
+        if not isinstance(pyobj, rt):
+            raise TypeError('Return value not of type "{}"'.format(rt))
         jobj = JsonObjHelper.py2j(pyobj)
         return json.dumps(jobj).encode()
 
@@ -71,7 +77,12 @@ class RpcMethod:
         annotation type.
         '''
         json_obj = json.loads(buf)
-        return JsonObjHelper.j2py(sig.return_annotation, json_obj)
+        try:
+            return JsonObjHelper.j2py(self.sig.return_annotation, json_obj)
+        except JsonTypeError as e:
+            # TypeErrors from j2py should be ValueError really
+            raise ValueError('reconstructed types do not match') from e
+
     pass
 
 rpcmethod = RpcMethod.from_function
