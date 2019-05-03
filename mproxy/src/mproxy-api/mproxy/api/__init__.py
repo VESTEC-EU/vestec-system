@@ -20,7 +20,7 @@ class CmdResult(JsonSerialisable):
 
 class API:
     @rpcmethod
-    def run(cmd : str, env : dict=None) -> Result:
+    def run(cmd : str, env : dict=None) -> CmdResult:
         '''Run a command on the remote server'''
         return
     @rpcmethod
