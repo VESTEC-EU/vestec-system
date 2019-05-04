@@ -12,20 +12,36 @@ class Throttle:
         self.cur_wait = self.min_wait
 
         # In ns
-        self.t_last = time.monotonic_ns()
+        self.t_last_ns = time.monotonic_ns() - (self.cur_wait*self.scale_ns + 1)
 
     def __call__(self):
         '''Pause to control waiting'''
         now = time.monotonic_ns()
-        ok_after = self.t_last + (self.cur_wait * self.scale_ns)
+        ok_after = self.t_last_ns + (self.cur_wait * self.scale_ns)
+
         if now < ok_after:
-            # We are in the forbidden zone must sleep until we're OK
-            # and the wait period doubles (up to the limit)
+            # We are early so must sleep until we're OK
             time.sleep((ok_after - now) * 1e-9)
-            self.cur_wait = min(self.cur_wait * 2, self.max_wait)
+
+            slow_more = self.t_last_ns + (self.cur_wait * self.scale_ns) // 2
+            if now < slow_more:
+                # We are hammering so the wait period doubles (up to
+                # the limit)
+                self.cur_wait = min(self.cur_wait * 2, self.max_wait)
+
         else:
             # We are ok, reduce the wait period (up to the limit)
-            self.cur_wait = max(self.cur_wait / 2, self.min_wait)
+            while now > ok_after:
+                new_wait = self.cur_wait / 2
+                if new_wait <= self.min_wait:
+                    self.cur_wait = self.min_wait
+                    break
+
+                self.cur_wait = new_wait
+                ok_after += self.cur_wait * self.scale_ns
+
+        self.t_last_ns = time.monotonic_ns()
+
     pass
 
 class NoThrottle:
@@ -36,7 +52,7 @@ class NoThrottle:
     pass
 
 
-def throttle(func_or_attr):
+def throttle(func):
     '''Decorator to annotate methods as needing rate-limited'''
     @wraps(func)
     def wrapper(self, *args, **kwargs):
@@ -45,9 +61,9 @@ def throttle(func_or_attr):
         return func(self, *args, **kwargs)
     return wrapper
 
-class ThrottableMixin:
+class ThrottlableMixin:
     def __init__(self, min_wait_ms, max_wait_ms):
-        if min_wait:
+        if min_wait_ms:
             self._throttle = Throttle(min_wait_ms, max_wait_ms)
         else:
             self._throttle = NoThrottle()

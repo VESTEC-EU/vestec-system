@@ -14,8 +14,8 @@ class CmdResult(JsonSerialisable):
         'hide'
         ))
     def __init__(self, stdout='', stderr='', encoding=None, command='', shell='', env=None, exited=0, pty=False, hide=()):
-        for k, v in kwargs.items():
-            setattr(self, k, v)
+        for attr in self._JSON_ATTRS:
+            setattr(self, attr, locals()[attr])
     pass
 
 class API:

@@ -7,9 +7,19 @@ log = logging.getLogger(__name__)
 
 class DummyMachineConnection(ThrottlableMixin):
     '''Don't do anything except log operations and return dummy data'''
-    def __init__(self, name, min_wait_ms=1, max_wait_ms=2**15):
-        super().__init__(min_wait_ms, max_wait_ms)
+    def __init__(
+            self, name,
+            min_wait_ms=1, max_wait_ms=2**15,
+            get=b'Some data',
+            cwd='/home/vestec',
+            ls=['README.md']
+            ):
         self.name = name
+        super().__init__(min_wait_ms, max_wait_ms)
+        self._get = get
+        self._cwd = cwd
+        self._ls = ls
+
     @throttle
     def run(self, command, env=None):
         log.info("%s.run(%s)", self.name, command)
@@ -21,7 +31,7 @@ class DummyMachineConnection(ThrottlableMixin):
     @throttle
     def get(self, src):
         log.info("%s.get(%s)", self.name, src)
-        return b'Some data'
+        return self._get
 
     @throttle
     def cd(self, dirname):
@@ -30,12 +40,12 @@ class DummyMachineConnection(ThrottlableMixin):
     @throttle
     def getcwd(self):
         log.info("%s.getcwd()", self.name)
-        return b'/home/vestec'
+        return self._cwd
 
     @throttle
     def ls(self, dirname="."):
         log.info("%s.ls(%s)", self.name, dirname)
-        return ['README.md']
+        return self._ls
 
     @throttle
     def mkdir(self, dirname):
