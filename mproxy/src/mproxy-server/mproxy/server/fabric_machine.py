@@ -2,12 +2,16 @@ import io
 import logging
 import fabric
 from .throttle import ThrottableMixin, throttle
+
 log = logging.getLogger(__name__)
 
 
 class FabricMachineConnection(ThrottlableMixin):
-    '''Perform operations on a remote machine with fabric'''
-    def __init__(self, fab_connection, remote_base_dir, min_wait_ms=1, max_wait_ms=2**15):
+    """Perform operations on a remote machine with fabric"""
+
+    def __init__(
+        self, fab_connection, remote_base_dir, min_wait_ms=1, max_wait_ms=2 ** 15
+    ):
         super().__init__(min_wait_ms, max_wait_ms)
 
         self.remote_base_dir = remote_base_dir

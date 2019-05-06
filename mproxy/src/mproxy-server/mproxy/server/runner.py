@@ -1,32 +1,34 @@
 import pika
 from .machine import MachineConnectionFactory
 
+
 class ServerRunner:
     def __init__(self, config, names):
         self.config = config
         self.names = names
-        self.mc_factory = MachineConnectionFactory(config['machines'])
+        self.mc_factory = MachineConnectionFactory(config["machines"])
 
     def make_mq_connection_params(self):
-        mq_conf = self.config['amqp']
-        
+        mq_conf = self.config["amqp"]
+
         default = pika.ConnectionParameters._DEFAULT
         try:
-            pw = mq_conf['password']
+            pw = mq_conf["password"]
         except KeyError:
-            pw_file = mq_conf['password_file']
+            pw_file = mq_conf["password_file"]
             with open(pw_file) as f:
                 pw = f.read()
             pass
 
-        mq_cred = pika.PlainCredentials(mq_conf['username'], pw)
-        
+        mq_cred = pika.PlainCredentials(mq_conf["username"], pw)
+
         return pika.ConnectionParameters(
-            mq_conf['hostname'],
-            port=mq_conf.get('port', default),
-            virtual_host=mq_conf.get('virtual_host', default),
-            credentials=mq_cred)
-        
+            mq_conf["hostname"],
+            port=mq_conf.get("port", default),
+            virtual_host=mq_conf.get("virtual_host", default),
+            credentials=mq_cred,
+        )
+
     def start(self):
         mq_conn = pika.BlockingConnection(self.make_mq_connection_params())
 
@@ -38,6 +40,7 @@ class ServerRunner:
             servers[0].start()
         else:
             from threading import Thread
+
             threads = [Thread(s.start) for s in servers]
             [t.start() for t in threads]
             [t.join() for t in threads]

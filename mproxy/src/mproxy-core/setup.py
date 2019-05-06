@@ -1,5 +1,6 @@
 from setuptools import setup
 
+# fmt: off
 setup(
     name="mproxy-core",
     version="0.1.0",

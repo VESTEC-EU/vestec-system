@@ -1,31 +1,37 @@
 from mproxy.core.rpc import RpcMethod
 from pytest import raises
 
+
 class Wrapper:
     def __init__(self, func):
-        self.called = False        
+        self.called = False
+
         def wrapper(*args, **kwargs):
             self.called = True
             return func(*args, **kwargs)
+
         fname = func.__name__
         setattr(self, fname, wrapper)
+
     pass
+
 
 def test_nullary():
     def null():
-        '''Most useless function'''
+        """Most useless function"""
         return
+
     meth = RpcMethod.from_function(null)
 
     # No arguments - but pack them
     sa = meth.serialise_args()
-    assert sa == b'{}'
-    
+    assert sa == b"{}"
+
     # Any args should fail
     with raises(TypeError):
         meth.serialise_args(1)
     with raises(TypeError):
-        meth.serialise_args(foo='bar')
+        meth.serialise_args(foo="bar")
 
     # And unpack
     da = meth.deserialise_args(sa)
@@ -43,21 +49,22 @@ def test_nullary():
 
     # Return is None
     sr = meth.serialise_result(res)
-    assert sr == b'null'
+    assert sr == b"null"
     # Error on not-None
     with raises(TypeError):
-        meth.serialise_result('Failure is guaranteed!')
+        meth.serialise_result("Failure is guaranteed!")
 
     # unpack
     dr = meth.deserialise_result(sr)
     assert dr is None
     with raises(ValueError):
-        meth.deserialise_result(b'{}')
+        meth.deserialise_result(b"{}")
+
 
 def roundtrip_compare(function, *args, **kwargs):
-    '''Take a function and some arguments, round trip args, call
+    """Take a function and some arguments, round trip args, call
     function, round trip result, and compare to f(args)
-    '''
+    """
     meth = RpcMethod.from_function(function)
     sa = meth.serialise_args(*args, **kwargs)
     da = meth.deserialise_args(sa)
@@ -66,9 +73,11 @@ def roundtrip_compare(function, *args, **kwargs):
     dr = meth.deserialise_result(sr)
     assert dr == function(*args, **kwargs)
 
+
 def test_simple():
-    def list_prod(n : int) -> list:
-        return [n]*n
+    def list_prod(n: int) -> list:
+        return [n] * n
+
     roundtrip_compare(list_prod, 1)
     roundtrip_compare(list_prod, 10)
 
@@ -91,7 +100,7 @@ def test_simple():
 
     # And unpack (as dictionary)
     da = meth.deserialise_args(sa)
-    assert da == {'n': 3}
+    assert da == {"n": 3}
 
     # Create the test object with list_prod method
     tobj = Wrapper(list_prod)
@@ -106,19 +115,22 @@ def test_simple():
 
     # Check deserialisation fails if 'n' is missing
     with raises(ValueError):
-        meth.deserialise_args(b'{}')
+        meth.deserialise_args(b"{}")
+
 
 def test_complex():
     from test_serialisation import ComplexObject
+
     # object p has 2 children, c1, c2
     # object c1 has 1 child, g
-    g = ComplexObject('g')
-    c1 = ComplexObject('c1', children=(g,), binary=b'OOOOO')
-    c2 = ComplexObject('c2', binary='Comment ça va? Très bien merci!'.encode('utf-8'))
-    p = ComplexObject('p', children=(c1, c2))
+    g = ComplexObject("g")
+    c1 = ComplexObject("c1", children=(g,), binary=b"OOOOO")
+    c2 = ComplexObject("c2", binary="Comment ça va? Très bien merci!".encode("utf-8"))
+    p = ComplexObject("p", children=(c1, c2))
 
-    def count_kids(co : ComplexObject) -> int:
+    def count_kids(co: ComplexObject) -> int:
         return len(co.children) + sum(count_kids(ch) for ch in co.children)
+
     # Self tests
     assert count_kids(p) == 3
 

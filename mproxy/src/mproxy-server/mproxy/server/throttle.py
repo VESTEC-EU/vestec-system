@@ -1,6 +1,7 @@
 import time
 from functools import wraps
 
+
 class Throttle:
     def __init__(self, min_wait_ms, max_wait_ms):
         # in nanoseconds
@@ -12,10 +13,10 @@ class Throttle:
         self.cur_wait = self.min_wait
 
         # In ns
-        self.t_last_ns = time.monotonic_ns() - (self.cur_wait*self.scale_ns + 1)
+        self.t_last_ns = time.monotonic_ns() - (self.cur_wait * self.scale_ns + 1)
 
     def __call__(self):
-        '''Pause to control waiting'''
+        """Pause to control waiting"""
         now = time.monotonic_ns()
         ok_after = self.t_last_ns + (self.cur_wait * self.scale_ns)
 
@@ -44,22 +45,28 @@ class Throttle:
 
     pass
 
+
 class NoThrottle:
     def __init__(self, *args, **kwargs):
         pass
+
     def __call__(self):
         return
+
     pass
 
 
 def throttle(func):
-    '''Decorator to annotate methods as needing rate-limited'''
+    """Decorator to annotate methods as needing rate-limited"""
+
     @wraps(func)
     def wrapper(self, *args, **kwargs):
         thr = self._throttle
         thr()
         return func(self, *args, **kwargs)
+
     return wrapper
+
 
 class ThrottlableMixin:
     def __init__(self, min_wait_ms, max_wait_ms):

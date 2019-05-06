@@ -5,15 +5,19 @@ from .throttle import ThrottlableMixin, throttle
 
 log = logging.getLogger(__name__)
 
+
 class DummyMachineConnection(ThrottlableMixin):
-    '''Don't do anything except log operations and return dummy data'''
+    """Don't do anything except log operations and return dummy data"""
+
     def __init__(
-            self, name,
-            min_wait_ms=1, max_wait_ms=2**15,
-            get=b'Some data',
-            cwd='/home/vestec',
-            ls=['README.md']
-            ):
+        self,
+        name,
+        min_wait_ms=1,
+        max_wait_ms=2 ** 15,
+        get=b"Some data",
+        cwd="/home/vestec",
+        ls=["README.md"],
+    ):
         self.name = name
         super().__init__(min_wait_ms, max_wait_ms)
         self._get = get
@@ -24,6 +28,7 @@ class DummyMachineConnection(ThrottlableMixin):
     def run(self, command, env=None):
         log.info("%s.run(%s)", self.name, command)
         return CmdResult(command=command, env=env)
+
     @throttle
     def put(self, src_bytes, dest):
         log.info("%s.put(%d B -> %s)", self.name, len(src_bytes), dest)
@@ -62,6 +67,7 @@ class DummyMachineConnection(ThrottlableMixin):
     @throttle
     def mv(self, src, dest):
         log.info("%s.mv(%s -> %s)", self.name, src, dest)
+
 
 def DummyMachineConnectionFactory(name):
     return DummyMachineConnection(name)
