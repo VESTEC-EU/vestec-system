@@ -1,4 +1,4 @@
-from mproxy.api.rpc import RpcMethod
+from mproxy.core.rpc import RpcMethod
 from pytest import raises
 
 class Wrapper:

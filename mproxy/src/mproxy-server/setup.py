@@ -10,7 +10,7 @@ setup(
         'mproxy.server'
         ],
     install_requires=[
-        'mproxy-api',
+        'mproxy-core',
         'pika',
         'fabric'
         ]

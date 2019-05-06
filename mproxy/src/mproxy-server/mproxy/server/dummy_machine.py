@@ -1,6 +1,6 @@
 import io
 import logging
-from mproxy.api import CmdResult
+from mproxy.core.model import CmdResult
 from .throttle import ThrottlableMixin, throttle
 
 log = logging.getLogger(__name__)

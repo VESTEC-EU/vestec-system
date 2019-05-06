@@ -1,5 +1,5 @@
 import json
-from mproxy.api.serialisation import JsonObjHelper, JsonSerialisable
+from mproxy.core.serialisation import JsonObjHelper, JsonSerialisable
 
 def roundtrip(obj):
     j = JsonObjHelper.py2j(obj)

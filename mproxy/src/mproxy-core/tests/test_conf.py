@@ -3,7 +3,7 @@ import json
 import yaml
 import io
 
-from mproxy.api.conf import ConfDict
+from mproxy.core.conf import ConfDict
 
 sample_data = {
     'greeting': 'hello',
