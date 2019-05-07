@@ -1,0 +1,22 @@
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"
+
+[tool.poetry]
+name = "mproxy.client"
+version = "0.1.0"
+description = "Machine Proxy client"
+authors = ["Rupert Nash <r.nash@epcc.ed.ac.uk>"]
+packages = [
+    { include = "mproxy" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.7"
+pyyaml = "^5.1"
+pika = "^1.0"
+"mproxy.core" = { path = "../mproxy-core", version = "0.1.0" }
+
+[tool.poetry.dev-dependencies]
+pytest = "^4.0"
+
