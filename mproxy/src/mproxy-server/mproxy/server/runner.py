@@ -1,6 +1,6 @@
 import pika
 from .machine import MachineConnectionFactory
-
+from .rpc_server import RpcServer
 
 class ServerRunner:
     def __init__(self, config, names):
@@ -36,8 +36,8 @@ class ServerRunner:
         for name in self.names:
             servers[name] = RpcServer(name, self.mc_factory, mq_conn)
 
-        if len(self.names <= 1):
-            servers[0].start()
+        if len(self.names) <= 1:
+            servers[self.names[0]].start()
         else:
             from threading import Thread
 

@@ -44,7 +44,7 @@ class RpcServer:
         self.channel = connection.channel()
 
         # Exchange for all machine proxy servers
-        self.channel.exchange_declare(exchange=self.exhange_name, exchange_type="topic")
+        self.channel.exchange_declare(exchange=self.exchange_name, exchange_type="topic")
 
         # Queue for this machine
         self.channel.queue_declare(self.queue_name)
