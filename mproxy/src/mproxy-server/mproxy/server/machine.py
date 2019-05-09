@@ -13,16 +13,16 @@ class MachineConnectionFactory:
         )
 
     def _mk_fab_machine_connection(self, name, conf):
-        from fabric_machine import FabricMachineConnection
+        from .fabric_machine import FabricMachineConnection
 
         fabconn = self._mk_fab(conf)
         d = conf["remote_base_dir"]
         return FabricMachineConnection(fabconn, d)
 
     def _mk_dummy_machine_connection(self, name, conf):
-        from dummy_machine import DummyMachineConnection
+        from .dummy_machine import DummyMachineConnection
 
-        return DummyMachine(name)
+        return DummyMachineConnection(name)
 
     def __call__(self, name):
         try:

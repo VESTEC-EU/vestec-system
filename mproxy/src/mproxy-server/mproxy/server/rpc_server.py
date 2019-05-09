@@ -1,6 +1,6 @@
 import logging
-import pika
-
+#import pika
+from aio_pika.exchange import Message, ExchangeType
 log = logging.getLogger(__name__)
 
 
@@ -23,7 +23,7 @@ class RpcServer:
         
         factory - callable - Factory function for making connection manager objects for the named machine
 
-        connection - pika.Connection - the AMQP server connection to use
+        connection - aio_pika.Connection - the AMQP server connection to use
 
         exchange_name - str - Exchange to declare on server (default == 'machine_proxy')
 
@@ -41,51 +41,52 @@ class RpcServer:
         self.exchange_name = exchange_name
         self.routing_key = "{}.*".format(name) if routing_key is None else routing_key
 
-        self.channel = connection.channel()
+    async def connect(self):
+        """Connect to the server"""
+        self.channel = await self.connection.channel()
 
         # Exchange for all machine proxy servers
-        self.channel.exchange_declare(exchange=self.exchange_name, exchange_type="topic")
+        await self.channel.declare_exchange(name=self.exchange_name, type=ExchangeType.TOPIC)
 
         # Queue for this machine
-        self.channel.queue_declare(self.queue_name)
+        self.queue = await self.channel.declare_queue(self.queue_name)
 
         # Subscribe the queue to all messages for this machine
-        self.channel.queue_bind(
+        await self.queue.bind(
             exchange=self.exchange_name,
-            queue=self.queue_name,
             routing_key=self.routing_key,
         )
         log.info(
             'RpcServer "%s" has set up AMQP with exchange "%s", queue "%s" bound with key "%s"',
-            name,
+            self.name,
             self.exchange_name,
             self.queue_name,
             self.routing_key,
         )
 
-    def handle_message(self, channel, method, props, body):
-        """Pika API calls this when messages arrive
+    async def handle_message(self, msg):
+        """API calls this when messages arrive
 
         Look up the name of the RPC method, deserialise arguments, get a
         connection manager, call the method, serialise the
         result, and send it back.
         """
-        log.info("RPC call: %s", method.routing_key)
-        channel.basic_ack(delivery_tag=method.delivery_tag)
+        log.info("RPC call: %s", msg.routing_key)
+        msg.ack()
         try:
             # Default is fail
             headers = {"success": "false"}
-            assert props.content_type == "application/json", (
-                "Invalid content type '%s'" % props.content_type
+            assert msg.content_type == "application/json", (
+                "Invalid content type '%s'" % msg.content_type
             )
-            assert props.content_encoding == "utf-8", (
-                "Invalid encoding '%s'" % props.content_encoding
+            assert msg.content_encoding == "utf-8", (
+                "Invalid encoding '%s'" % msg.content_encoding
             )
             # Which method?
-            name, func_name = method.routing_key.split(".")
+            name, func_name = msg.routing_key.split(".")
             method_descr = getattr(self.API, func_name)
             # Get args
-            args = method_descr.deserialise_args(body)
+            args = method_descr.deserialise_args(msg.body)
             # Create/get the object that actually does the work
             conn_mgr = self.factory(self.name)
             # Run the method
@@ -99,23 +100,24 @@ class RpcServer:
             log.exception("Exception while handling RPC call")
         finally:
             # Post the RPC reply message
-            channel.basic_publish(
-                exchange="",
-                routing_key=props.reply_to,
-                properties=pika.BasicProperties(
-                    correlation_id=props.correlation_id,
-                    content_type="application/json",
-                    content_encoding="utf-8",
-                    headers=headers,
-                ),
-                body=result_body,
+            reply = Message(
+                result_body,
+                correlation_id=msg.correlation_id,
+                content_type="application/json",
+                content_encoding="utf-8",
+                headers=headers,
             )
+            await self.channel.default_exchange.publish(reply, msg.reply_to)
 
-    def start(self):
-        """Run the server - this runs forever"""
-        self.channel.basic_consume(
-            queue=self.queue_name, on_message_callback=self.handle_message
-        )
-        self.channel.start_consuming()
+    async def start(self):
+        """Start the server"""
+        await self.connect()
+        self.request_queue_consumer_tag = await self.queue.consume(self.handle_message)
+
+    async def stop(self):
+        """Stop the server"""
+        # Stop consuming
+        await self.queue.cancel(self.request_queue_consumer_tag)
+        await self.channel.close()
 
     pass

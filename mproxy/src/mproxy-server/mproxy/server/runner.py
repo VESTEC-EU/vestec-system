@@ -1,4 +1,5 @@
-import pika
+import asyncio
+import aio_pika
 from .machine import MachineConnectionFactory
 from .rpc_server import RpcServer
 
@@ -7,11 +8,11 @@ class ServerRunner:
         self.config = config
         self.names = names
         self.mc_factory = MachineConnectionFactory(config["machines"])
+        self.connection = None
 
     def make_mq_connection_params(self):
         mq_conf = self.config["amqp"]
 
-        default = pika.ConnectionParameters._DEFAULT
         try:
             pw = mq_conf["password"]
         except KeyError:
@@ -20,27 +21,29 @@ class ServerRunner:
                 pw = f.read()
             pass
 
-        mq_cred = pika.PlainCredentials(mq_conf["username"], pw)
+        return {
+            "login": mq_conf["username"],
+            "password": pw,
+            "host": mq_conf["hostname"],
+            "port": mq_conf.get("port", 5672),
+            "virtualhost": mq_conf.get("vhost", "/")
+        }
 
-        return pika.ConnectionParameters(
-            mq_conf["hostname"],
-            port=mq_conf.get("port", default),
-            virtual_host=mq_conf.get("virtual_host", default),
-            credentials=mq_cred,
-        )
+    async def start(self, loop=None):
+        '''Create a connection and start all the servers listening to
+        it.
+        '''
+        self.connection = await aio_pika.connect(loop=loop, **self.make_mq_connection_params())
 
-    def start(self):
-        mq_conn = pika.BlockingConnection(self.make_mq_connection_params())
+        self.servers = {
+            name: RpcServer(name, self.mc_factory, self.connection)
+            for name in self.names
+        }
 
-        servers = {}
-        for name in self.names:
-            servers[name] = RpcServer(name, self.mc_factory, mq_conn)
+        await asyncio.gather(*(s.start() for s in self.servers.values()))
 
-        if len(self.names) <= 1:
-            servers[self.names[0]].start()
-        else:
-            from threading import Thread
-
-            threads = [Thread(s.start) for s in servers]
-            [t.start() for t in threads]
-            [t.join() for t in threads]
+    async def stop(self):
+        # Stop servers
+        # disconnect
+        await asyncio.gather(*(s.stop() for s in self.servers.values()))
+        await self.connection.close()

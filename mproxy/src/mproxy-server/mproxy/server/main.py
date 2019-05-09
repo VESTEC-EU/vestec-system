@@ -1,8 +1,10 @@
 import argparse
+import asyncio
+
 from mproxy.api.conf import ConfDict
 
 
-def main():
+async def main():
     p = argparse.ArgumentParser(description="Machine Proxy server")
     p.add_argument("--config", default="mproxy.yml", help="configuration file")
     p.add_argument(
@@ -19,8 +21,9 @@ def main():
     from .runner import ServerRunner
 
     runner = ServerRunner(config, names)
-    runner.start()
+    await runner.start()
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
+
