@@ -3,6 +3,7 @@ import aio_pika
 from .machine import MachineConnectionFactory
 from .rpc_server import RpcServer
 
+
 class ServerRunner:
     def __init__(self, config, names):
         self.config = config
@@ -26,14 +27,16 @@ class ServerRunner:
             "password": pw,
             "host": mq_conf["hostname"],
             "port": mq_conf.get("port", 5672),
-            "virtualhost": mq_conf.get("vhost", "/")
+            "virtualhost": mq_conf.get("vhost", "/"),
         }
 
     async def start(self, loop=None):
-        '''Create a connection and start all the servers listening to
+        """Create a connection and start all the servers listening to
         it.
-        '''
-        self.connection = await aio_pika.connect(loop=loop, **self.make_mq_connection_params())
+        """
+        self.connection = await aio_pika.connect(
+            loop=loop, **self.make_mq_connection_params()
+        )
 
         self.servers = {
             name: RpcServer(name, self.mc_factory, self.connection)

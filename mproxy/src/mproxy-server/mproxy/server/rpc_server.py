@@ -1,6 +1,6 @@
-import logging
-#import pika
 from aio_pika.exchange import Message, ExchangeType
+import logging
+
 log = logging.getLogger(__name__)
 
 
@@ -46,16 +46,15 @@ class RpcServer:
         self.channel = await self.connection.channel()
 
         # Exchange for all machine proxy servers
-        await self.channel.declare_exchange(name=self.exchange_name, type=ExchangeType.TOPIC)
+        await self.channel.declare_exchange(
+            name=self.exchange_name, type=ExchangeType.TOPIC
+        )
 
         # Queue for this machine
         self.queue = await self.channel.declare_queue(self.queue_name)
 
         # Subscribe the queue to all messages for this machine
-        await self.queue.bind(
-            exchange=self.exchange_name,
-            routing_key=self.routing_key,
-        )
+        await self.queue.bind(exchange=self.exchange_name, routing_key=self.routing_key)
         log.info(
             'RpcServer "%s" has set up AMQP with exchange "%s", queue "%s" bound with key "%s"',
             self.name,
