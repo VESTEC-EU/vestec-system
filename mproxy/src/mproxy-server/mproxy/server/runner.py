@@ -2,6 +2,7 @@ import asyncio
 import aio_pika
 from .machine import MachineConnectionFactory
 from .rpc_server import RpcServer
+from ..core.connect import aio_pika_connect_params
 
 
 class ServerRunner:
@@ -11,31 +12,12 @@ class ServerRunner:
         self.mc_factory = MachineConnectionFactory(config["machines"])
         self.connection = None
 
-    def make_mq_connection_params(self):
-        mq_conf = self.config["amqp"]
-
-        try:
-            pw = mq_conf["password"]
-        except KeyError:
-            pw_file = mq_conf["password_file"]
-            with open(pw_file) as f:
-                pw = f.read()
-            pass
-
-        return {
-            "login": mq_conf["username"],
-            "password": pw,
-            "host": mq_conf["hostname"],
-            "port": mq_conf.get("port", 5672),
-            "virtualhost": mq_conf.get("vhost", "/"),
-        }
-
     async def start(self, loop=None):
         """Create a connection and start all the servers listening to
         it.
         """
         self.connection = await aio_pika.connect(
-            loop=loop, **self.make_mq_connection_params()
+            loop=loop, **aio_pika_connect_params(self.config, "amqp")
         )
 
         self.servers = {

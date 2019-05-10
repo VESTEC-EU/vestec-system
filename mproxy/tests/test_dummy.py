@@ -5,6 +5,12 @@ from mproxy.server.runner import ServerRunner
 from mproxy.client import Client
 from mproxy.core import ConfDict
 
+# Filter out warning from paramiko as it will be fixed in an upcoming
+# release
+pytestmark = pytest.mark.filterwarnings(
+    "ignore:Using or importing the ABCs from 'collections' instead of from 'collections.abc' is deprecated"
+)
+
 
 @pytest.fixture
 def conf_for_dummy_machine(rabbit_temp_vhost):
