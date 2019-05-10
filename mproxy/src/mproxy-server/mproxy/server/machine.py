@@ -26,7 +26,7 @@ class MachineConnectionFactory:
 
     def __call__(self, name):
         try:
-            machine = self._machine_cache[name]
+            return self._machine_cache[name]
         except KeyError:
             try:
                 conf = self.configs[name]

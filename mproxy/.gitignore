@@ -1,0 +1,3 @@
+*.py[cod]
+.tox
+test_amq_server.json

@@ -1,4 +1,5 @@
 import uuid
+import json
 from aio_pika import Message, ExchangeType
 from aio_pika.tools import shield
 
@@ -40,16 +41,18 @@ class Client:
     mv = proxy(API.mv)
 
     @classmethod
-    async def create(cls, name, connection, exchange_name="machine_proxy"):
+    async def create(cls, name, connection, exchange_name=None):
         ans = cls(name, connection, exchange_name)
         await ans.connect()
         return ans
 
-    def __init__(self, name, connection, exchange_name="machine_proxy"):
+    def __init__(self, name, connection, exchange_name=None):
 
         self.name = name
         self.connection = connection
-        self.exchange_name = exchange_name
+        self.exchange_name = (
+            API.DEFAULT_EXCHANGE if exchange_name is None else exchange_name
+        )
         self._req_responses = {}
 
     @shield
@@ -88,8 +91,7 @@ class Client:
             future.set_exception(e)
             return
 
-        headers = msg.headers
-        ok = {"true": True, "false": False}[headers["success"]]
+        ok = json.loads(msg.headers["success"])
         if ok:
             future.set_result(msg.body)
         else:

@@ -16,6 +16,11 @@ async def main():
     args = p.parse_args()
 
     config = ConfDict.from_yaml(args.config)
+    for n in args.names:
+        assert (
+            n in config["machines"]
+        ), "Requested machine name '{}' not configured".format(n)
+
     names = args.names if len(args.names) else list(config["machines"].keys())
 
     from .runner import ServerRunner

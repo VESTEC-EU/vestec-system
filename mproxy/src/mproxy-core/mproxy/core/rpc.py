@@ -59,10 +59,15 @@ class RpcMethod:
         dct = json.loads(buf)
         arg_dict = {}
         for name, param in self.sig.parameters.items():
-            json_obj = dct.pop(name, param.default)
-            if json_obj is param.empty:
-                raise ValueError("Missing required argument: %s" % name)
-            arg_dict[name] = JsonObjHelper.j2py(param.annotation, json_obj)
+            try:
+                json_obj = dct.pop(name)
+            except KeyError:
+                py_obj = param.default
+                if py_obj is param.empty:
+                    raise ValueError("Missing required argument: %s" % name)
+            else:
+                py_obj = JsonObjHelper.j2py(param.annotation, json_obj)
+            arg_dict[name] = py_obj
 
         if len(dct):
             raise ValueError(

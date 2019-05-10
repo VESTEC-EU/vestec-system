@@ -1,18 +1,19 @@
 from aio_pika.exchange import Message, ExchangeType
+from mproxy.core import API
 import logging
 
 log = logging.getLogger(__name__)
 
 
 class RpcServer:
-    from mproxy.core import API
+    API = API
 
     def __init__(
         self,
         name,
         factory,
         connection,
-        exchange_name="machine_proxy",
+        exchange_name=None,
         queue_name=None,
         routing_key=None,
     ):
@@ -25,7 +26,7 @@ class RpcServer:
 
         connection - aio_pika.Connection - the AMQP server connection to use
 
-        exchange_name - str - Exchange to declare on server (default == 'machine_proxy')
+        exchange_name - str - Exchange to declare on server (default == 'mproxy')
 
         queue_name - str - Queue to declare on server (default == name)
 
@@ -38,7 +39,9 @@ class RpcServer:
 
         # Process defaults
         self.queue_name = name if queue_name is None else queue_name
-        self.exchange_name = exchange_name
+        self.exchange_name = (
+            API.DEFAULT_EXCHANGE if exchange_name is None else exchange_name
+        )
         self.routing_key = "{}.*".format(name) if routing_key is None else routing_key
 
     async def connect(self):

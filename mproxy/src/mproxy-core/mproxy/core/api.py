@@ -3,6 +3,8 @@ from .model import CmdResult
 
 
 class API:
+    DEFAULT_EXCHANGE = "mproxy"
+
     @rpcmethod
     def run(cmd: str, env: dict = None) -> CmdResult:
         """Run a command on the remote server"""
@@ -25,7 +27,7 @@ class API:
         pass
 
     @rpcmethod
-    def ls(dirname=".") -> list:
+    def ls(dirname: str = ".") -> list:
         pass
 
     @rpcmethod
