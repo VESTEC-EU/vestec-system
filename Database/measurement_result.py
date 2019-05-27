@@ -12,3 +12,11 @@ Created on Mon May 27 15:42:20 2019
 import datetime as dt
 import pony.orm as pny
 from Database import db
+
+
+class MeasurementResult(db.Entity): # pylint: disable=too-few-public-methods
+    """ base class to store results of performance measurements
+    """
+    timestamp = pny.Required(dt.datetime)
+    uuid = pny.Required(str)
+    duration = pny.Required(float)
