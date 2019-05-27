@@ -20,3 +20,11 @@ class MeasurementResult(db.Entity): # pylint: disable=too-few-public-methods
     timestamp = pny.Required(dt.datetime)
     uuid = pny.Required(str)
     duration = pny.Required(float)
+
+
+class DataTransferMeasurement(MeasurementResult): # pylint: disable=too-few-public-methods
+    """ class to store timings of data transfers
+    """
+    source = pny.Required("Machine")
+    target = pny.Required("Machine")
+    size = pny.Required(int)
