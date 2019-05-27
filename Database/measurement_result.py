@@ -28,3 +28,15 @@ class DataTransferMeasurement(MeasurementResult): # pylint: disable=too-few-publ
     source = pny.Required("Machine")
     target = pny.Required("Machine")
     size = pny.Required(int)
+
+
+class ExecutionMeasurement(MeasurementResult): # pylint: disable=too-few-public-methods
+    """ class to store timings of application executions
+    """
+    machine = pny.Required("Machine")
+    application = pny.Required("Application")
+    version = pny.Required(str) # "ApplicationVersion" could also be a database entity?
+    numNodes = pny.Required(int)
+    numProcPerNode = pny.Required(int)
+    numThreadsPerProc = pny.Required(int)
+    parameters = pny.Required(pny.Json)
