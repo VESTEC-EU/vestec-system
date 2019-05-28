@@ -15,7 +15,7 @@ services:
     container_name: website
     build:
       context: ../
-      dockerfile: DockerFiles/Dockerfile_website
+      dockerfile: website/Dockerfile
     environment:
       VESTEC_MANAGER_URI: "http://manager:5500/jobs"
 
@@ -25,7 +25,7 @@ services:
       - "maria"
     build:
       context: ../
-      dockerfile: DockerFiles/Dockerfile_SimulationManager
+      dockerfile: SimulationManager/Dockerfile
     #WE ONLY NEED THIS IF WE ARE USING SQLITE
     # volumes:
     #   - "../Database:/database"
