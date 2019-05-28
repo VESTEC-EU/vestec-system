@@ -25,17 +25,17 @@ class MeasurementResult(db.Entity): # pylint: disable=too-few-public-methods
 class DataTransferMeasurement(MeasurementResult): # pylint: disable=too-few-public-methods
     """ class to store timings of data transfers
     """
-    source = pny.Required("Machine")
-    target = pny.Required("Machine")
+    source = pny.Required(str)
+    target = pny.Required(str)
     size = pny.Required(int)
 
 
 class ExecutionMeasurement(MeasurementResult): # pylint: disable=too-few-public-methods
     """ class to store timings of application executions
     """
-    machine = pny.Required("Machine")
-    application = pny.Required("Application")
-    version = pny.Required(str) # "ApplicationVersion" could also be a database entity?
+    machine = pny.Required(str)
+    application = pny.Required(str) # "Application" could also be a database entity
+    version = pny.Required(str) # "ApplicationVersion" could also be a database entity
     numNodes = pny.Required(int)
     numProcPerNode = pny.Required(int)
     numThreadsPerProc = pny.Required(int)
