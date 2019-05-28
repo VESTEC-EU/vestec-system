@@ -1,5 +1,6 @@
 from Database import machine
 from Database import job
+from Database import measurement_result
 import pony.orm as pny
 from Database import db, initialiseDatabase
 
