@@ -1,0 +1,159 @@
+[
+  {
+    "id": "6236683",
+    "nodes": 4,
+    "predicted_time": "5:32:01"
+  },
+  {
+    "actual_time": "0:03:59",
+    "id": "6236696",
+    "nodes": 4,
+    "predicted_time": "5:41:04"
+  },
+  {
+    "actual_time": "0:29:55",
+    "id": "6236678",
+    "nodes": 7,
+    "predicted_time": "5:59:45"
+  },
+  {
+    "actual_time": "1:10:16",
+    "id": "6236687",
+    "nodes": 7,
+    "predicted_time": "6:11:32"
+  },
+  {
+    "actual_time": "1:09:22",
+    "id": "6236688",
+    "nodes": 7,
+    "predicted_time": "6:12:26"
+  },
+  {
+    "actual_time": "1:08:41",
+    "id": "6236689",
+    "nodes": 7,
+    "predicted_time": "6:13:08"
+  },
+  {
+    "id": "6236691",
+    "nodes": 7,
+    "predicted_time": "6:13:45"
+  },
+  {
+    "id": "6236692",
+    "nodes": 7,
+    "predicted_time": "6:14:19"
+  },
+  {
+    "id": "6236693",
+    "nodes": 7,
+    "predicted_time": "6:15:01"
+  },
+  {
+    "id": "6236694",
+    "nodes": 7,
+    "predicted_time": "6:15:33"
+  },
+  {
+    "id": "6236695",
+    "nodes": 7,
+    "predicted_time": "6:16:10"
+  },
+  {
+    "actual_time": "0:46:15",
+    "id": "6236646",
+    "nodes": 12,
+    "predicted_time": "6:14:40"
+  },
+  {
+    "actual_time": "0:45:20",
+    "id": "6236655",
+    "nodes": 12,
+    "predicted_time": "6:20:52"
+  },
+  {
+    "id": "6236659",
+    "nodes": 12,
+    "predicted_time": "6:23:52"
+  },
+  {
+    "id": "6236660",
+    "nodes": 12,
+    "predicted_time": "6:25:02"
+  },
+  {
+    "actual_time": "0:34:42",
+    "id": "6236665",
+    "nodes": 16,
+    "predicted_time": "6:57:55"
+  },
+  {
+    "actual_time": "0:30:20",
+    "id": "6236668",
+    "nodes": 16,
+    "predicted_time": "7:00:53"
+  },
+  {
+    "actual_time": "0:30:21",
+    "id": "6236669",
+    "nodes": 16,
+    "predicted_time": "7:00:53"
+  },
+  {
+    "actual_time": "0:30:21",
+    "id": "6236670",
+    "nodes": 16,
+    "predicted_time": "7:00:53"
+  },
+  {
+    "actual_time": "0:58:03",
+    "id": "6236641",
+    "nodes": 18,
+    "predicted_time": "6:34:33"
+  },
+  {
+    "id": "6236672",
+    "nodes": 21,
+    "predicted_time": "7:44:26"
+  },
+  {
+    "actual_time": "1:19:08",
+    "id": "6236624",
+    "nodes": 23,
+    "predicted_time": "6:51:54"
+  },
+  {
+    "actual_time": "1:34:27",
+    "id": "6236617",
+    "nodes": 32,
+    "predicted_time": "6:51:02"
+  },
+  {
+    "actual_time": "1:43:12",
+    "id": "6236610",
+    "nodes": 48,
+    "predicted_time": "8:36:03"
+  },
+  {
+    "actual_time": "0:52:00",
+    "id": "6236642",
+    "nodes": 75,
+    "predicted_time": "10:28:42"
+  },
+  {
+    "actual_time": "0:48:27",
+    "id": "6236643",
+    "nodes": 75,
+    "predicted_time": "10:32:16"
+  },
+  {
+    "id": "6236612",
+    "nodes": 88,
+    "predicted_time": "9:49:21"
+  },
+  {
+    "id": "6236622",
+    "nodes": 96,
+    "predicted_time": "10:21:46"
+  }
+]

@@ -1,3 +1,4 @@
+
 '''Decision maker for the submission of jobs based on the time
    required for it to wait to be processed by different machines.
 
@@ -14,13 +15,20 @@
    22.05.19 - v0.2 - BP: - upgrade decision maker to class
                          - take into consideration queue type
                          - take into consideration job size
+   28.05.19 - v0.3 - BP: - separate machines to config file
+                         - pass on job size to avoid overwriting
+                         - pass on current time to consider on
+                           make_decision, not class instantiation
+                         - remove write to and read from file for
+                           parsing machine response
 '''
 from __future__ import print_function
 from datetime import datetime, timedelta
 import logging
-import sys
+import os, sys
 from pytimeparse.timeparse import timeparse
-sys.path.append("../")
+sys.path.append(os.path.join(os.path.dirname(__file__), "../ConnectionManager"))
+import machines
 from ConnectionManager import RemoteConnection
 
 logging.basicConfig(filename='logging.log', level=logging.DEBUG)
@@ -29,13 +37,10 @@ logging.basicConfig(filename='logging.log', level=logging.DEBUG)
 class DecisionMaker:
     '''This class checks the availability of machines and tries
     to decide where to submit a job for faster processing'''
-    CURRENT_TIME = datetime.today()
-    MACHINES = [{'name': "ARCHER", 'queue': "standard"},
-                {'name': "CIRRUS", 'queue': "workq"}
-               ]
-    job_size = 0
+    def __init__(self):
+        self.machines = machines.machines
 
-    def query_machine(self, machine_name):
+    def query_machine(self, machine_name, command):
         '''Connects to a machine, executes a qstat command, makes use
         of save_queuedata to save and parse the response and then selects
         jobs only from the standard queue.
@@ -44,70 +49,51 @@ class DecisionMaker:
         connection = RemoteConnection(machine_name)
 
         logging.info("Querying the queue...")
-        response = connection.ExecuteCommand("qstat -f")
+        response = connection.ExecuteCommand(command)
+        jobs = self.parse_machine_response((response.stdout).splitlines(True))
 
-        jobs = self.save_queuedata("data/queuedata-%s.txt" % machine_name, response)
-
-        for machine in self.MACHINES:
-            if machine['name'] == machine_name:
-                jobs = self.get_queue(machine['queue'], jobs)
+        for machine in self.machines:
+            if machine == machine_name:
+                jobs = self.get_queue(self.machines[machine]["main_queue"], jobs)
 
         return jobs
 
 
-    def save_queuedata(self, fname, response):
-        '''Parses the string response from the qstat command and stores
-        it in a file. This then makes use of the parse response funct.
-        to return an array of job objects.
+    def parse_machine_response(self, queue_data):
+        '''Parses the qstat -f response from a file containing a single
+        line of data to an array of job objects containing the
+        required attributes for metrics measurements.
+
+        Data Structures:
+        jobs = [job, job, ...]
+        job = {"JobID": int, }
         '''
-        logging.info("Saving queue data in %s...", fname)
+        jobs = []
 
-        write_jobs = open(fname, "w")
-        write_jobs.write(response.stdout)
-        write_jobs.close()
+        for line in queue_data:
+            if line[0:6] == "Job Id":
+                num = ""
 
-        read_jobs = open(fname, "r")
-        data = read_jobs.readlines()
-        read_jobs.close()
+                for char in line:
+                    if char.isdigit():
+                        num += char
 
-        def parse_machine_response(queue_data):
-            '''Parses the qstat -f response from a file containing a single
-            line of data to an array of job objects containing the
-            required attributes for metrics measurements.
+                job = {}
+                job["JobID"] = num
+            elif line[0:4] == "    ":
+                pair = line.split(" = ")
+                key = pair[0].strip()
+                value = pair[1].strip()
+                job[key] = value
+            elif line[0] == "\t":
+                value = line.strip()
+                job[key] += value
+            elif line[0] == "\n":
+                jobs.append(job)
+            else:
+                print(line)
 
-            Data Structures:
-            jobs = [job, job, ...]
-            job = {"JobID": int, }
-            '''
-            logging.info("Parsing queue data in %s...", fname)
-            jobs = []
-
-            for line in queue_data:
-                if line[0:6] == "Job Id":
-                    num = ""
-
-                    for char in line:
-                        if char.isdigit():
-                            num += char
-
-                    job = {}
-                    job["JobID"] = num
-                elif line[0:4] == "    ":
-                    pair = line.split(" = ")
-                    key = pair[0].strip()
-                    value = pair[1].strip()
-                    job[key] = value
-                elif line[0] == "\t":
-                    value = line.strip()
-                    job[key] += value
-                elif line[0] == "\n":
-                    jobs.append(job)
-                else:
-                    print(line)
-
-            return jobs
-
-        return parse_machine_response(data)
+        return jobs
 
 
     def get_queue(self, queue_name, jobs):
@@ -136,7 +122,21 @@ class DecisionMaker:
         queued = []
 
         for job in jobs:
-            if job["job_state"] == "Q" and int(job["Resource_List.nodect"]) <= self.job_size:
+            if job["job_state"] == "Q":
+                queued.append(job)
+
+        return queued
+
+    def cut_queue(self, jobs, job_size):
+        '''Returns an array of the jobs that are currently in the
+        queue waiting to be processed and are of the same size as the
+        job to be submitted.
+        '''
+        logging.info("Cutting queuing jobs...")
+        queued = []
+
+        for job in jobs:
+            if int(job["Resource_List.nodect"]) <= job_size:
                 queued.append(job)
 
         return queued
@@ -186,14 +186,14 @@ class DecisionMaker:
             if job["job_state"] == "Q":
                 wait_time += walltime*no_nodes
             elif job["job_state"] == "R":
-                ran_time = self.CURRENT_TIME - self.parse_time(job["stime"])
+                ran_time = datetime.now() - self.parse_time(job["stime"])
                 left_time = timeparse(job["Resource_List.walltime"]) - ran_time.total_seconds()
                 wait_time += left_time*no_nodes
 
         return wait_time
 
 
-    def machine_wait_time(self, machine):
+    def machine_wait_time(self, machine, jobs, job_size):
         '''This makes use of query_machine to connect to a specified
         machine, perform a qstat, save the response to a file via the
         parse_file function which returns an array of jobs. This is then
@@ -206,13 +206,18 @@ class DecisionMaker:
         nodes available for each machine? This profile could perhaps hold the
         types of queues and their limits.
         '''
-        jobs = self.query_machine(machine)
+        logging.info("Calculating wait time...")
         queued = self.get_queued(jobs)
+        cut_queue = self.cut_queue(jobs, job_size)
         running = self.get_running(jobs)
 
-        queued_time = self.get_jobs_wait_time(queued)
+        queued_time = self.get_jobs_wait_time(cut_queue)
         running_time = self.get_jobs_wait_time(running)
         total_nodes = 4920 if machine == 'ARCHER' else 280
+        print("-Queued time-")
+        print(str(timedelta(seconds=queued_time/total_nodes))[:-7])
+        print("-Running time-")
+        print(str(timedelta(seconds=running_time/total_nodes))[:-7])
         total_time = (queued_time/total_nodes)+(running_time/total_nodes)
 
         wait_time = timedelta(seconds=total_time)
@@ -221,18 +226,17 @@ class DecisionMaker:
         return wait_time
 
 
-    def make_decision(self, sub_job_size):
+    def make_decision(self, job_size):
         '''This function gets the total estimated wait time for multiple machines
         and compares the results in order to decide which machine is less busy
         and where the next job could be sumbitted to.
         '''
-        self.job_size = sub_job_size
         availability = {}
 
-        for machine in self.MACHINES:
+        for machine in self.machines:
             print("---")
-            machine_name = machine['name']
-            availability[machine_name] = self.machine_wait_time(machine_name)
+            jobs = self.query_machine(machine, "qstat -f")
+            availability[machine] = self.machine_wait_time(machine, jobs, job_size)
 
         choice = min(availability, key=lambda k: availability[k]
                      if isinstance(availability[k], timedelta)
@@ -241,7 +245,7 @@ class DecisionMaker:
 
         print("Submitting to %s..." % choice)
 
-
 if __name__ == "__main__":
     DM = DecisionMaker()
-    DM.make_decision(2)  # no of nodes required by the job to be submitted
+    DM.make_decision(1)  # number of nodes of job to submit
+    
