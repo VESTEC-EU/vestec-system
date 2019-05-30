@@ -24,11 +24,12 @@
 '''
 from __future__ import print_function
 from datetime import datetime, timedelta
+import os
 import logging
-import os, sys
+import sys
 from pytimeparse.timeparse import timeparse
 sys.path.append(os.path.join(os.path.dirname(__file__), "../ConnectionManager"))
-import machines
+from machines import machines
 from ConnectionManager import RemoteConnection
 
 logging.basicConfig(filename='logging.log', level=logging.DEBUG)
@@ -38,16 +39,22 @@ class DecisionMaker:
     '''This class checks the availability of machines and tries
     to decide where to submit a job for faster processing'''
     def __init__(self):
-        self.machines = machines.machines
+        self.machines = machines
 
-    def query_machine(self, machine_name, command):
-        '''Connects to a machine, executes a qstat command, makes use
-        of save_queuedata to save and parse the response and then selects
-        jobs only from the standard queue.
-        '''
+    def machine_connect(self, machine_name):
+        '''Connects to machine and returns connection for use
+        by query_machine'''
         logging.info("Connecting to %s...", machine_name)
         connection = RemoteConnection(machine_name)
 
+        return connection
+
+
+    def query_machine(self, machine_name, connection, command):
+        '''Executes a qstat command, makes use of save_queuedata
+        to save and parse the response and then selects jobs only
+        from the standard queue.
+        '''
         logging.info("Querying the queue...")
         response = connection.ExecuteCommand(command)
         jobs = self.parse_machine_response((response.stdout).splitlines(True))
@@ -208,7 +215,7 @@ class DecisionMaker:
         '''
         logging.info("Calculating wait time...")
         queued = self.get_queued(jobs)
-        cut_queue = self.cut_queue(jobs, job_size)
+        cut_queue = self.cut_queue(queued, job_size)
         running = self.get_running(jobs)
 
         queued_time = self.get_jobs_wait_time(cut_queue)
@@ -235,7 +242,8 @@ class DecisionMaker:
 
         for machine in self.machines:
             print("---")
-            jobs = self.query_machine(machine, "qstat -f")
+            connection = self.machine_connect(machine)
+            jobs = self.query_machine(machine, connection, "qstat -f")
             availability[machine] = self.machine_wait_time(machine, jobs, job_size)
 
         choice = min(availability, key=lambda k: availability[k]

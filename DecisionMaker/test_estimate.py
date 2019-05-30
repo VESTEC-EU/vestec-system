@@ -7,16 +7,19 @@ waiting in the queue or while running.
 from __future__ import print_function
 from datetime import datetime
 import json
+import os
+import sys
 from DecisionMaker import DecisionMaker
-import os, sys
-sys.path.append(os.path.join(os.path.dirname(__file__), "data"))
+sys.path.append(os.path.join(os.path.dirname(__file__), "data/ARCHER/"))
 
 DM = DecisionMaker()
-JOBS = DM.query_machine('ARCHER', "qstat -f")
+CONNECTION = DM.machine_connect('ARCHER')
+JOBS = DM.query_machine('ARCHER', CONNECTION, "qstat -f")
+TIME = str(datetime.now())[:-7]
 
 def archer_queue_predict():
     '''
-    job = {id: '', nodes: '', predicted_time: '', actual_time: ''}
+    job = {id: '', nodes: '', walltime: '', predicted_time: '', actual_time: ''}
     '''
     jobs_to_predict = []
     queued = DM.get_queued(JOBS)
@@ -25,6 +28,7 @@ def archer_queue_predict():
         predict = {}
         predict['id'] = job['JobID']
         predict['nodes'] = int(job['Resource_List.nodect'])
+        predict['walltime'] = job["Resource_List.walltime"]
         job_size = predict['nodes']
         print("---")
         print(predict['nodes'])
@@ -35,12 +39,12 @@ def archer_queue_predict():
         predict['predicted_time'] = str(node_time - wait_time)[:-7]
         jobs_to_predict.append(predict)
 
-        save_to_file('predicted_times', jobs_to_predict)
+        save_to_file('data/ARCHER/predicted-%s.json' % TIME, jobs_to_predict)
 
 
-def check_running():
+def archer_check_running():
     '''
-    job = {id: '', nodes: '', start_time: '', estimated_time: ''}
+    job = {id: '', nodes: '', sumbitted: '', start_time: '', est_walltime: ''}
     '''
     running_jobs = []
     running = DM.get_running(JOBS)
@@ -49,21 +53,22 @@ def check_running():
         run = {}
         run['id'] = job['JobID']
         run['nodes'] = int(job['Resource_List.nodect'])
+        run['submitted'] = job['qtime']
         run['start_time'] = job['stime']
-        run['estimated_time'] = job['Resource_List.walltime']
+        run['est_walltime'] = job["Resource_List.walltime"]
 
         running_jobs.append(run)
 
-        save_to_file('running_jobs', running_jobs)
+        save_to_file('data/ARCHER/running-%s.json' % TIME, running_jobs)
 
 
 def save_to_file(file_name, jobs):
     '''Saves jobs to json file'''
-    with open('data/ARCHER/' + file_name + '.json', 'w') as sample_file:
+    with open(file_name, 'w') as sample_file:
         sorted_jobs = sorted(jobs, key=lambda k: k['nodes'])
         json.dump(sorted_jobs, sample_file, indent=2, sort_keys=True)
 
 
 if __name__ == "__main__":
     archer_queue_predict()
-    check_running()
+    archer_check_running()
