@@ -18,6 +18,8 @@ services:
       dockerfile: website/Dockerfile
     environment:
       VESTEC_MANAGER_URI: "http://manager:5500/jobs"
+    env_file:
+      - environment_variables.env
 
   manager:
     container_name: manager
