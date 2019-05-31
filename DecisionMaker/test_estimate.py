@@ -8,7 +8,6 @@ from __future__ import print_function
 from datetime import datetime
 import json
 import os
-import sys
 from DecisionMaker import DecisionMaker
 
 TIME = str(datetime.now())[:-7]
@@ -40,7 +39,7 @@ def archer_queue_predict():
         predict['predicted_time'] = str(node_time - wait_time)[:-7]
         jobs_to_predict.append(predict)
 
-    if len(jobs_to_predict >= 50):
+    if len(jobs_to_predict) >= 50:
         save_to_file('data/ARCHER/predicted-%s.json' % TIME, jobs_to_predict)
         print('Successfully extracted %s jobs from queue...' % len(jobs_to_predict))
     else:
@@ -66,7 +65,7 @@ def archer_check_running():
 
         running_jobs.append(run)
 
-    if len(running_jobs >= 50):
+    if len(running_jobs) >= 50:
         save_to_file('data/ARCHER/running-%s.json' % TIME, running_jobs)
         print('Successfully extracted %s running jobs...' % len(running_jobs))
     else:

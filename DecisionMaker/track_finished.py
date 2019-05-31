@@ -9,7 +9,6 @@ from __future__ import print_function
 from datetime import datetime
 import json
 import os
-import sys
 from glob import glob
 from DecisionMaker import DecisionMaker
 
@@ -37,12 +36,12 @@ def archer_track_finished():
                 ran = DM.query_machine('ARCHER', CONNECTION, "qstat %s" % job["id"])
                 finished_jobs.append(ran)
 
-        if len(finished_jobs) > 0:
+        if len(finished_jobs) >= 1:
             with open(os.path.join(os.path.dirname(__file__), "data/ARCHER/finished_jobs.json"), 'w') as sample_file:
                 json.dump(finished_jobs, sample_file, indent=2, sort_keys=True)
 
         print("Found and tracked %s jobs from %s" % (len(finished_jobs), jobs_file))
-    
+
 if __name__ == "__main__":
     archer_track_finished()
     

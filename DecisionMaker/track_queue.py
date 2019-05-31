@@ -7,7 +7,6 @@ from __future__ import print_function
 from datetime import datetime
 import json
 import os
-import sys
 from glob import glob
 from DecisionMaker import DecisionMaker
 
@@ -24,7 +23,7 @@ def archer_queue_track():
     jobs = DM.query_machine('ARCHER', CONNECTION, "qstat -f")
     running = DM.get_running(jobs)
 
-    jobs_files = glob(os.path.join(os.path.dirname(__file__),"data/ARCHER/predicted-*.json"))
+    jobs_files = glob(os.path.join(os.path.dirname(__file__), "data/ARCHER/predicted-*.json"))
 
     for jobs_file in jobs_files:
         jobs_to_track = []
