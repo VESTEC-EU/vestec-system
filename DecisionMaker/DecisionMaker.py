@@ -21,6 +21,7 @@
                            make_decision, not class instantiation
                          - remove write to and read from file for
                            parsing machine response
+   30.05.19 - v0.4 - BP: - separate machine connection from query
 '''
 from __future__ import print_function
 from datetime import datetime, timedelta
@@ -221,14 +222,10 @@ class DecisionMaker:
         queued_time = self.get_jobs_wait_time(cut_queue)
         running_time = self.get_jobs_wait_time(running)
         total_nodes = 4920 if machine == 'ARCHER' else 280
-        print("-Queued time-")
-        print(str(timedelta(seconds=queued_time/total_nodes))[:-7])
-        print("-Running time-")
-        print(str(timedelta(seconds=running_time/total_nodes))[:-7])
         total_time = (queued_time/total_nodes)+(running_time/total_nodes)
 
         wait_time = timedelta(seconds=total_time)
-        print("Estimated total wait time for %s is: %s" % (machine, str(wait_time)[:-7]))
+        #print("Estimated total wait time for %s is: %s" % (machine, str(wait_time)[:-7]))
 
         return wait_time
 

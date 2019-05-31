@@ -12,7 +12,9 @@ import os
 import sys
 from glob import glob
 from DecisionMaker import DecisionMaker
-sys.path.append(os.path.join(os.path.dirname(__file__), "data/ARCHER/"))
+
+print('---')
+print('Tracking finished jobs at %s...' % str(datetime.now())[:-7])
 
 DM = DecisionMaker()
 CONNECTION = DM.machine_connect('ARCHER')
@@ -21,10 +23,7 @@ def archer_track_finished():
     '''
     job = {id: '', nodes: '', sumbitted: '', start_time: '' , est_walltime: '', real_walltime: ''}
     '''
-    print('---')
-    print(str(datetime.now())[:-7])
-
-    jobs_files = glob("data/ARCHER/running-*.json")
+    jobs_files = glob(os.path.join(os.path.dirname(__file__), "data/ARCHER/running-*.json"))
 
     for jobs_file in jobs_files:
         jobs_to_track = []
@@ -34,14 +33,16 @@ def archer_track_finished():
             jobs_to_track = json.load(sample_file)
 
         for job in jobs_to_track:
-            ran = DM.query_machine('ARCHER', CONNECTION, "qstat %s" % job["id"])
+            if 'real_walltime' not in job:
+                ran = DM.query_machine('ARCHER', CONNECTION, "qstat %s" % job["id"])
+                finished_jobs.append(ran)
 
-            finished_jobs.append(ran)
+        if len(finished_jobs) > 0:
+            with open(os.path.join(os.path.dirname(__file__), "data/ARCHER/finished_jobs.json"), 'w') as sample_file:
+                json.dump(finished_jobs, sample_file, indent=2, sort_keys=True)
 
-        with open("data/ARCHER/finished_jobs.json", 'w') as sample_file:
-            #sorted_jobs = sorted(jobs_to_track, key=lambda k: k['nodes'])
-            json.dump(finished_jobs, sample_file, indent=2, sort_keys=True)
-
+        print("Found and tracked %s jobs from %s" % (len(finished_jobs), jobs_file))
+    
 if __name__ == "__main__":
     archer_track_finished()
     

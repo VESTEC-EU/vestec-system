@@ -10,12 +10,15 @@ import json
 import os
 import sys
 from DecisionMaker import DecisionMaker
-sys.path.append(os.path.join(os.path.dirname(__file__), "data/ARCHER/"))
+
+TIME = str(datetime.now())[:-7]
+
+print('---')
+print('Extracting jobs from queue at %s...' % TIME)
 
 DM = DecisionMaker()
 CONNECTION = DM.machine_connect('ARCHER')
 JOBS = DM.query_machine('ARCHER', CONNECTION, "qstat -f")
-TIME = str(datetime.now())[:-7]
 
 def archer_queue_predict():
     '''
@@ -30,8 +33,6 @@ def archer_queue_predict():
         predict['nodes'] = int(job['Resource_List.nodect'])
         predict['walltime'] = job["Resource_List.walltime"]
         job_size = predict['nodes']
-        print("---")
-        print(predict['nodes'])
 
         node_time = DM.machine_wait_time('ARCHER', JOBS, job_size)
         wait_time = datetime.now() - DM.parse_time(job['qtime'])
@@ -39,13 +40,19 @@ def archer_queue_predict():
         predict['predicted_time'] = str(node_time - wait_time)[:-7]
         jobs_to_predict.append(predict)
 
+    if len(jobs_to_predict >= 50):
         save_to_file('data/ARCHER/predicted-%s.json' % TIME, jobs_to_predict)
+        print('Successfully extracted %s jobs from queue...' % len(jobs_to_predict))
+    else:
+        print('Not enough jobs in queue...')
 
 
 def archer_check_running():
     '''
     job = {id: '', nodes: '', sumbitted: '', start_time: '', est_walltime: ''}
     '''
+    print('---')
+    print('Extracting running jobs...')
     running_jobs = []
     running = DM.get_running(JOBS)
 
@@ -59,12 +66,15 @@ def archer_check_running():
 
         running_jobs.append(run)
 
+    if len(running_jobs >= 50):
         save_to_file('data/ARCHER/running-%s.json' % TIME, running_jobs)
-
+        print('Successfully extracted %s running jobs...' % len(running_jobs))
+    else:
+        print('Not enough running jobs...')
 
 def save_to_file(file_name, jobs):
     '''Saves jobs to json file'''
-    with open(file_name, 'w') as sample_file:
+    with open(os.path.join(os.path.dirname(__file__), file_name), 'w') as sample_file:
         sorted_jobs = sorted(jobs, key=lambda k: k['nodes'])
         json.dump(sorted_jobs, sample_file, indent=2, sort_keys=True)
 
