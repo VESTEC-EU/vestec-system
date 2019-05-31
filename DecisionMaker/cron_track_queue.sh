@@ -1,5 +1,9 @@
 #!/bin/bash
+<<<<<<< HEAD
 export SSH_AUTH_SOCK=/tmp/XXX
+=======
+export SSH_AUTH_SOCK=/tmp/xxx
+>>>>>>> e9456704b07446cfceace6dd52a775167665ca9e
 export PATH=$PATH:/Library/Frameworks/Python.framework/Versions/3.7/bin/
 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/Library/Frameworks/Python.framework/Versions/3.7/lib/
 export PYTHONPATH=$PYTHONPATH:/Library/Frameworks/Python.framework/Versions/3.7/lib/python3.7/site-packages:/Library/Frameworks/Python.framework/Versions/3.7/lib/python3.7:/Library/Frameworks/Python.framework/Versions/3.7/bin/python3 
