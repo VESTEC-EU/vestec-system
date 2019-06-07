@@ -10,20 +10,7 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../ConnectionManager"))
 from machines import machines
-
-
-def connect():
-    '''This function connects to sqlite and creates a cursor
-    that is passed on to every function to avoid creation
-    of multiple connections.'''
-    print("Connecting to sqlite...")
-    try:
-        connection = sqlite3.connect('jobs_database.db')
-        cursor = connection.cursor()
-    except sqlite3.Error as err:
-        print("An error occurred:", err.args[0])
-
-    return connection, cursor
+from DatabaseManager import DatabaseManager
 
 
 def populate_machines_table():
@@ -36,7 +23,8 @@ def populate_machines_table():
     - machine_name text NOT NULL,
     - host text NOT NULL,
     - available_nodes integer NOT NULL,
-    - cores_per_node integer NOT NULL'''
+    - cores_per_node integer NOT NULL,
+    - scheduler text NOT NULL'''
     print("Populating Machines table...")
     machines_list = []
 
@@ -74,15 +62,19 @@ def populate_queues_table():
 
     for machine in machines:
         machine_id = machines[machine]["machine_id"]
+        default_queue = machines[machine]["main_queue"]
+
         for queue in machines[machine]["queues"]:
             queue_id = str(uuid.uuid4())
+            default = 1 if queue["queue_name"] == default_queue else 0
+
             queue_tuple = (queue_id, machine_id, queue["queue_name"], queue["max_nodes"],
-                           queue["min_time"], queue["max_time"])
+                           queue["min_time"], queue["max_time"], default)
 
             queues_list.append(queue_tuple)
 
     try:
-        CURSOR.executemany('INSERT INTO Queues VALUES (?, ?, ?, ?, ?, ?)', queues_list)
+        CURSOR.executemany('INSERT INTO Queues VALUES (?, ?, ?, ?, ?, ?, ?)', queues_list)
         CONNECTION.commit()
     except sqlite3.Error as err:
         print("An error occurred:", err.args[0])
@@ -94,10 +86,8 @@ def import_from_csv(file_name):
     objects to be used for the population of the SQLite database.
 
     Track statuses:
-    - phase0 (new)
-    - phase1 (estimated for queuing jobs)
-    - phase2 (actual data from finished jobs)
-    - lost (jobs that cannot be traced anymore)
+    - queuing (jobs currently in queue and estimated)
+    - finished (jobs that finished running and have all the data)
     '''
     print("Importing data from file...")
     with open(file_name, mode='r', encoding='utf-8-sig') as jobs_file:
@@ -105,11 +95,11 @@ def import_from_csv(file_name):
 
         jobs = []
         for row in parsed_jobs:
-            queue = get_queue_id(row['queue'].strip())
+            queue = DBM.get_queue_id(row['queue'].strip())
 
             if queue is not None:
                 job = {}
-                job["job_ID"] = row['id_string'].strip()[:-4]
+                job["job_id"] = row['id_string'].strip()
                 job["no_nodes"] = row['node_count'].strip()
                 job["no_cpus"] = row['ncpus'].strip()
                 job["queue"] = queue[0]
@@ -120,28 +110,11 @@ def import_from_csv(file_name):
                 job["exit_status"] = row['exit_status'].strip()
                 job["wait_time"] = int(row['waittime(s)'].strip())
                 job["wall_time"] = int(row["walltime(s)"].strip())
-                job["track_status"] = 'tracked'
+                job["track_status"] = 'finished'
 
                 jobs.append(job)
 
     return jobs
-
-
-def get_queue_id(queue_name):
-    '''This function queries the database for a queue id
-    based on the queue name.
-
-    Note: this should probably also take into consideration
-    the machine'''
-    try:
-        CURSOR.execute('''SELECT queue_id FROM Queues
-                          WHERE queue_name=?''', (queue_name,))
-
-        queue_id = CURSOR.fetchone()
-    except sqlite3.Error as err:
-        print("An error occurred:", err.args[0])
-
-    return queue_id
 
 
 def populate_jobs_table(jobs):
@@ -162,7 +135,7 @@ def populate_jobs_table(jobs):
     print("Populating Jobs table...")
     jobs_list = []
     for job in jobs:
-        job_tuple = (job['job_ID'], job['no_nodes'], job['no_cpus'],
+        job_tuple = (job['job_id'], job['no_nodes'], job['no_cpus'],
                      job['queue'], job['submit_time'], job['start_time'],
                      job['finish_time'], job['run_time'], job['exit_status'],
                      job['track_status'])
@@ -182,6 +155,7 @@ def populate_walltimes_table(jobs):
 
     Walltimes Table Columns:
     - job_id text PRIMARY KEY NOT NULL,
+    - queue text NOT NULL,
     - requested_walltime text NOT NULL,
     - actual_walltime text,
     - error text'''
@@ -189,19 +163,21 @@ def populate_walltimes_table(jobs):
     times_list = []
     for job in jobs:
         error_rate = job["wall_time"] - job["run_time"]
-        time_tuple = (job["job_ID"], job["wall_time"], job["run_time"], error_rate)
+        queue = DBM.get_job_queue_name(job["job_id"])
+        time_tuple = (job["job_id"], queue, job["wall_time"], job["run_time"], error_rate)
 
         times_list.append(time_tuple)
 
     try:
-        CURSOR.executemany('INSERT INTO Walltimes VALUES (?, ?, ?, ?)', times_list)
+        CURSOR.executemany('INSERT INTO Walltimes VALUES (?, ?, ?, ?, ?)', times_list)
         CONNECTION.commit()
     except sqlite3.Error as err:
         print("An error occurred:", err.args[0])
 
 
 if __name__ == "__main__":
-    CONNECTION, CURSOR = connect()
+    DBM = DatabaseManager('jobs_database.db')
+    CONNECTION, CURSOR = DBM.get_connection()
     populate_machines_table()
     populate_queues_table()
 
@@ -211,3 +187,5 @@ if __name__ == "__main__":
         imported_jobs = import_from_csv(job_file)
         populate_jobs_table(imported_jobs)
         populate_walltimes_table(imported_jobs)
+
+    DBM.disconnect()

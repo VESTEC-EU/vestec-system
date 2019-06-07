@@ -7,6 +7,7 @@ machines["ARCHER"]  = {
     "basedir": "/work/d170/d170/bpvestec/",
     "available_nodes": 4920,
     "cores_per_node": 24,
+    "scheduler": "pbs",
     "main_queue": "standard",
     "queues": [
         {
@@ -55,6 +56,7 @@ machines["CIRRUS"] = {
     "basedir": "/lustre/home/z04/bpcirrus/vestec",
     "available_nodes": 280,
     "cores_per_node": 36,
+    "scheduler": "pbs",
     "main_queue": "workq",
     "queues": [
         {

@@ -2,20 +2,8 @@
 into for improved tracking and querying.
 '''
 import sqlite3
+from DatabaseManager import DatabaseManager
 
-
-def connect():
-    '''This function connects to sqlite and creates a cursor
-    that is passed on to every function to avoid creation
-    of multiple connections.'''
-    print("Connecting to sqlite...")
-    try:
-        connection = sqlite3.connect('jobs_database.db')
-        cursor = connection.cursor()
-    except sqlite3.Error as err:
-        print("An error occurred:", err.args[0])
-
-    return connection, cursor
 
 def create_machines_table():
     '''This function creates a Machines table holding
@@ -58,6 +46,7 @@ def create_queues_table():
                 max_nodes integer NOT NULL,
                 min_time text NOT NULL,
                 max_time text NOT NULL,
+                default_queue integer NOT NULL DEFAULT 0,
                 FOREIGN KEY (machine) REFERENCES Machines(machine_id),
                 UNIQUE (machine, queue_name) ON CONFLICT REPLACE
             )'''
@@ -108,11 +97,12 @@ def create_waittimes_table():
         CURSOR.execute('''DROP TABLE IF EXISTS Waittimes''')
         CURSOR.execute('''CREATE TABLE Waittimes (
                             job_id text PRIMARY KEY NOT NULL,
+                            queue text NOT NULL,
                             estimated_waittime text NOT NULL,
                             actual_waittime text,
                             error text,
                             FOREIGN KEY (job_id) REFERENCES Jobs(job_id)
-                            UNIQUE (job_id) ON CONFLICT REPLACE
+                            UNIQUE (job_id, queue) ON CONFLICT REPLACE
                           )''')
 
         CONNECTION.commit()
@@ -131,11 +121,12 @@ def create_wallimes_table():
         CURSOR.execute(
             '''CREATE TABLE Walltimes (
                 job_id text PRIMARY KEY NOT NULL,
+                queue text NOT NULL,
                 requested_walltime text NOT NULL,
                 actual_walltime text,
                 error text,
                 FOREIGN KEY (job_id) REFERENCES Jobs(job_id),
-                UNIQUE (job_id) ON CONFLICT REPLACE
+                UNIQUE (job_id, queue) ON CONFLICT REPLACE
             )'''
         )
 
@@ -143,16 +134,13 @@ def create_wallimes_table():
     except sqlite3.Error as err:
         print("An error occurred:", err.args[0])
 
-def disconnect():
-    '''This function disconnects from the database'''
-    print("Disconnecting from the database...")
-    CONNECTION.close()
 
 if __name__ == "__main__":
-    CONNECTION, CURSOR = connect()
+    DBM = DatabaseManager('jobs_database.db')
+    CONNECTION, CURSOR = DBM.get_connection()
     create_machines_table()
     create_queues_table()
     create_jobs_table()
     create_waittimes_table()
     create_wallimes_table()
-    disconnect()
+    DBM.disconnect()

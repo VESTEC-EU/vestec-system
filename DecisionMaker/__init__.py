@@ -1,1 +1,1 @@
-from .DecisionMaker import DecisionMaker
+from decision_maker import DecisionMaker
