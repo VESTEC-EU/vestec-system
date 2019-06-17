@@ -1,9 +1,9 @@
 from __future__ import print_function
 import fabric
 import os
-from . import machines
+import sys
+import machines
 import socket
-
 
 
 keydir = os.path.join(os.path.expanduser("~"),".ssh")
