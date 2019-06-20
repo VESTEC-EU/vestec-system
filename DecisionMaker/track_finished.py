@@ -18,6 +18,14 @@ print('Tracking finished jobs at %s...' % str(datetime.now())[:-7])
 DM = DecisionMaker()
 CONNECTION = DM.machine_connect('ARCHER')
 
+'''To do:
+- update to loop through machines, like estimate_active_jobs
+- extract jobs from the database with tracking status 'queuing'
+- use qstat -xf command to extract more info about these jobs
+- use update functions update_job, insert_actual_waittime and insert_actual_walltime from
+DBM to insert the extracted data into the database
+'''
+
 def archer_track_finished():
     '''
     job = {id: '', nodes: '', sumbitted: '', start_time: '' , est_walltime: '', real_walltime: ''}

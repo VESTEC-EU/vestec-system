@@ -2,7 +2,7 @@
 into for improved tracking and querying.
 '''
 import sqlite3
-from DatabaseManager import DatabaseManager
+from database_manager import DatabaseManager
 
 
 def create_machines_table():
@@ -15,12 +15,12 @@ def create_machines_table():
         CURSOR.execute('''DROP TABLE IF EXISTS Machines''')
         CURSOR.execute(
             '''CREATE TABLE Machines (
-                machine_id text PRIMARY KEY NOT NULL,
-                machine_name text NOT NULL,
+                machine_name text PRIMARY KEY NOT NULL,
                 host text NOT NULL,
                 available_nodes integer NOT NULL,
                 cores_per_node integer NOT NULL,
-                UNIQUE (machine_name, host) ON CONFLICT REPLACE
+                scheduler text NOT NULL,
+                UNIQUE (machine_name, host)
             )'''
         )
 
@@ -41,14 +41,14 @@ def create_queues_table():
         CURSOR.execute(
             '''CREATE TABLE Queues (
                 queue_id text PRIMARY KEY NOT NULL,
-                machine text NOT NULL,
                 queue_name text NOT NULL,
+                machine_name text NOT NULL,
                 max_nodes integer NOT NULL,
                 min_time text NOT NULL,
                 max_time text NOT NULL,
                 default_queue integer NOT NULL DEFAULT 0,
-                FOREIGN KEY (machine) REFERENCES Machines(machine_id),
-                UNIQUE (machine, queue_name) ON CONFLICT REPLACE
+                FOREIGN KEY (machine_name) REFERENCES Machines(machine_name) ON DELETE CASCADE,
+                UNIQUE (queue_name, machine_name)
             )'''
         )
 
@@ -68,17 +68,18 @@ def create_jobs_table():
         CURSOR.execute(
             '''CREATE TABLE Jobs (
                 job_id text PRIMARY KEY NOT NULL,
+                system_id text NOT NULL,
+                queue_id text NOT NULL,
                 no_nodes integer NOT NULL,
                 no_cpus integer NOT NULL,
-                queue text ,
                 submit_time text NOT NULL,
                 start_time text,
                 finish_time text,
                 run_time text,
                 exit_status integer,
                 track_status text NOT NULL,
-                FOREIGN KEY (queue) REFERENCES Queues(queue_id)
-                UNIQUE (job_id, queue) ON CONFLICT REPLACE
+                FOREIGN KEY (queue_id) REFERENCES Queues(queue_id) ON DELETE CASCADE,
+                UNIQUE (system_id, queue_id)
             )'''
         )
 
@@ -97,13 +98,12 @@ def create_waittimes_table():
         CURSOR.execute('''DROP TABLE IF EXISTS Waittimes''')
         CURSOR.execute('''CREATE TABLE Waittimes (
                             job_id text PRIMARY KEY NOT NULL,
-                            queue text NOT NULL,
                             estimated_waittime text NOT NULL,
                             actual_waittime text,
                             error text,
-                            FOREIGN KEY (job_id) REFERENCES Jobs(job_id)
-                            UNIQUE (job_id, queue) ON CONFLICT REPLACE
-                          )''')
+                            FOREIGN KEY (job_id) REFERENCES Jobs(job_id) ON DELETE CASCADE
+                          )'''
+        )
 
         CONNECTION.commit()
     except sqlite3.Error as err:
@@ -118,16 +118,13 @@ def create_wallimes_table():
     try:
         print("Creating Walltimes table...")
         CURSOR.execute('''DROP TABLE IF EXISTS Walltimes''')
-        CURSOR.execute(
-            '''CREATE TABLE Walltimes (
-                job_id text PRIMARY KEY NOT NULL,
-                queue text NOT NULL,
-                requested_walltime text NOT NULL,
-                actual_walltime text,
-                error text,
-                FOREIGN KEY (job_id) REFERENCES Jobs(job_id),
-                UNIQUE (job_id, queue) ON CONFLICT REPLACE
-            )'''
+        CURSOR.execute('''CREATE TABLE Walltimes (
+                            job_id text PRIMARY KEY NOT NULL,
+                            requested_walltime text NOT NULL,
+                            actual_walltime text,
+                            error text,
+                            FOREIGN KEY (job_id) REFERENCES Jobs(job_id) ON DELETE CASCADE
+                        )'''
         )
 
         CONNECTION.commit()
@@ -138,6 +135,8 @@ def create_wallimes_table():
 if __name__ == "__main__":
     DBM = DatabaseManager('jobs_database.db')
     CONNECTION, CURSOR = DBM.get_connection()
+
+    print("CREATING FRESH DATABASE...")
     create_machines_table()
     create_queues_table()
     create_jobs_table()

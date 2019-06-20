@@ -40,6 +40,10 @@ logging.basicConfig(filename='logging.log', level=logging.DEBUG)
 class DecisionMaker:
     '''This class checks the availability of machines and tries
     to decide where to submit a job for faster processing'''
+    def __init__(self, database_path):
+        '''This function connects to the database'''
+        self.DBM = DatabaseManager(database_path)
+
     def machine_connect(self, machine_name):
         '''Connects to machine and returns connection for use
         by query_machine'''
@@ -58,7 +62,7 @@ class DecisionMaker:
         response = connection.ExecuteCommand(command)
         jobs = self.parse_machine_response((response.stdout).splitlines(True))
 
-        standard_queue = DBM.get_standard_queue(machine_name)
+        standard_queue = self.DBM.get_standard_queue(machine_name)
         jobs = self.get_queue(standard_queue, jobs)
 
         return jobs
@@ -218,7 +222,7 @@ class DecisionMaker:
 
         queued_time = self.get_jobs_wait_time(cut_queue)
         running_time = self.get_jobs_wait_time(running)
-        total_nodes = DBM.get_machine_nodes(machine)
+        total_nodes = self.DBM.get_machine_nodes(machine)
         total_time = (queued_time/total_nodes)+(running_time/total_nodes)
 
         wait_time = timedelta(seconds=total_time)
@@ -233,7 +237,7 @@ class DecisionMaker:
         and where the next job could be sumbitted to.
         '''
         availability = {}
-        machines = DBM.get_machine_names()
+        machines = self.DBM.get_machine_names()
 
         for machine in machines:
             print("---")
@@ -250,6 +254,5 @@ class DecisionMaker:
 
 if __name__ == "__main__":
     DM = DecisionMaker()
-    DBM = DatabaseManager('data/jobs_database.db')
     DM.make_decision(1)  # number of nodes of job to submit
     
