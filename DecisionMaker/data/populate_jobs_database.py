@@ -71,9 +71,14 @@ def import_from_csv(file_name):
     ARCHER and CIRRUS from csv files and creates a list of job
     objects to be used for the population of the SQLite database.
 
-    Track statuses:
-    - queuing (jobs currently in queue and estimated)
-    - finished (jobs that finished running and have all the data)
+    Job states:
+    System state         DB state
+    Q                    queuing (jobs currently in queue and have been estimated)
+    R                    running (jobs currently running and have been estimated)
+    T                    transiting (jobs in the process of being moved to a new destination)
+    F                    finished (jobs that finished running or extracted from logs)
+    F + exit_status > 0  failed (job failed running)
+                         deleted (qstat -xf on specific job comes back as empty)
     '''
     print("# Importing data from file...")
     with open(file_name, mode='r', encoding='utf-8-sig') as jobs_file:
@@ -97,7 +102,7 @@ def import_from_csv(file_name):
                 job["exit_status"] = row['exit_status'].strip()
                 job["wait_time"] = int(row['waittime(s)'].strip())
                 job["wall_time"] = int(row["walltime(s)"].strip())
-                job["track_status"] = 'finished'
+                job["job_state"] = 'finished'
 
                 jobs.append(job)
 

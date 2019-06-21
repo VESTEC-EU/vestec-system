@@ -58,10 +58,8 @@ def create_queues_table():
 
 
 def create_jobs_table():
-    '''This function creates a Jobs table holding
-    all the job details. This has as FKs the queue
-    id and the machine ID. The PK of this table acts
-    as FK for Waittimes and Walltimes tables.'''
+    '''This function creates a Jobs table holding all the job details. This has as FKs the queue
+    id and the machine ID. The PK of this table acts as FK for Waittimes and Walltimes tables.'''
     try:
         print("Creating Jobs table...")
         CURSOR.execute('''DROP TABLE IF EXISTS Jobs''')
@@ -75,9 +73,8 @@ def create_jobs_table():
                 submit_time text NOT NULL,
                 start_time text,
                 finish_time text,
-                run_time text,
                 exit_status integer,
-                track_status text NOT NULL,
+                job_state text NOT NULL,
                 FOREIGN KEY (queue_id) REFERENCES Queues(queue_id) ON DELETE CASCADE,
                 UNIQUE (system_id, queue_id)
             )'''

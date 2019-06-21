@@ -17,7 +17,7 @@ from database_manager import DatabaseManager
 
 
 def estimate_jobs(machine):
-    print("ESTIMATING WAITTIME FOR JOBS CURRENTLY IN THE QUEUE...")
+    print("%s - ESTIMATING WAITTIME FOR JOBS CURRENTLY IN THE QUEUE..." % str(datetime.now())[:-7])
     connection = DM.machine_connect(machine)
     jobs = DM.query_machine(machine, connection, "qstat -f")
     queued = DM.get_queued(jobs)
@@ -30,13 +30,15 @@ def estimate_jobs(machine):
         estimated["queue_id"] = DBM.get_queue_id(job['queue'])[0]
         estimated["no_nodes"] = int(job['Resource_List.nodect'])
         estimated["no_cpus"] = int(job['Resource_List.ncpus'])
-        estimated["submit_time"] = job['ctime']
+
+        date = DBM.date_to_db_format(DM.parse_time(job['ctime']))
+        estimated["submit_time"] = date
+
         estimated["start_time"] = None
         estimated["finish_time"] = None
-        estimated["run_time"] = None
         estimated["exit_status"] = None
         estimated["wall_time"] = int(timeparse(job['Resource_List.walltime']))
-        estimated["track_status"] = 'queuing'
+        estimated["job_state"] = 'queuing'
 
         estimated_time = DM.machine_wait_time('ARCHER', queued, estimated["no_nodes"])
         queued_time = datetime.now() - DM.parse_time(job['qtime'])
@@ -54,12 +56,14 @@ def insert_data(estimations):
     wait times in the Waittimes table and the requested walltime in the
     Walltimes table'''
     for estimation in estimations:
-        print(("# Inserting estimations...").format(estimation["job_id"]))
+        print("# Inserting estimations for job %s..." % estimation["job_id"])
 
         if estimation["queue_id"] is not None:
             DBM.insert_job(estimation)
-            DBM.insert_estimated_waittime(estimation["job_id"], estimation["estimated_waittime"])
-            DBM.insert_requested_walltime(estimation["job_id"], estimation["wall_time"])
+            # insert_waittime(job_id, estimated_waittime, actual_waittime=None, error=None)
+            DBM.insert_waittime(estimation["job_id"], estimation["estimated_waittime"])
+            # insert_waittime(job_id, requested_walltime, actual_walltime=None, error=None)
+            DBM.insert_walltime(estimation["job_id"], estimation["wall_time"])
 
 
 if __name__ == "__main__":

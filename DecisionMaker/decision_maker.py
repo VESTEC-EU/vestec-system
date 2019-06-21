@@ -81,14 +81,8 @@ class DecisionMaker:
 
         for line in queue_data:
             if line[0:6] == "Job Id":
-                num = ""
-
-                for char in line:
-                    if char.isdigit():
-                        num += char
-
                 job = {}
-                job["JobID"] = num
+                job["JobID"] = line.split(":")[-1:][0].strip()
             elif line[0:4] == "    ":
                 pair = line.split(" = ")
                 key = pair[0].strip()
