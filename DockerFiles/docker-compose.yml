@@ -8,14 +8,18 @@ services:
     ports:
       - "80:80"
       - "443:443"
+    volumes:
+      - "/var/vestec/certs:/var/vestec/certs"
 
   website:
     container_name: website
     build:
       context: ../
-      dockerfile: DockerFiles/Dockerfile_website
+      dockerfile: website/Dockerfile
     environment:
       VESTEC_MANAGER_URI: "http://manager:5500/jobs"
+    env_file:
+      - environment_variables.env
 
   manager:
     container_name: manager
@@ -23,21 +27,12 @@ services:
       - "maria"
     build:
       context: ../
-      dockerfile: DockerFiles/Dockerfile_SimulationManager
-    environment:
-      # "mysql" or "sqlite"
-      VESTEC_DB_TYPE: "mysql"
-      # sqlite variables
-      VESTEC_DB_PATH: "/database/vestec.sqlite"
-      # mysql variables
-      VESTEC_DB_USER: "root"
-      VESTEC_DB_PASSWD: "changeme"
-      VESTEC_DB_SERVER: "maria"
-      VESTEC_DB_PORT: "3306"
-      VESTEC_DB_NAME: "testdb"
+      dockerfile: SimulationManager/Dockerfile
     #WE ONLY NEED THIS IF WE ARE USING SQLITE
     # volumes:
     #   - "../Database:/database"
+    env_file:
+      - environment_variables.env
 
   maria:
     container_name: mariadb
@@ -45,4 +40,4 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "changeme"
     volumes:
-      - "/scratch/db/:/var/lib/mysql"
+      - "/var/vestec/db:/var/lib/mysql"
