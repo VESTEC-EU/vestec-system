@@ -9,6 +9,8 @@ import requests
 from flask import Flask, render_template, request
 import Utils.log as log
 import Database
+from website import logins
+
 
 import pony.orm as pny
 
@@ -133,6 +135,39 @@ def showLogs():
             logs.append(lg)
     return render_template("logs.html",logs=logs)
 
+
+@APP.route("/signup",methods=["GET","POST"])
+def signup():
+    if request.method=="GET":
+        return render_template("signup.html")
+    else:
+        username = request.form["username"]
+        name = request.form["name"]
+        password = request.form["password"]
+        email = request.form["email"]
+
+        if logins.AddUser(username,name,email,password):
+            return render_template("signup.html",success=True,username=username)
+        else:
+            return render_template("signup.html", success=False)
+
+
+@APP.route("/login",methods=["GET","POST"])
+def login():
+    if request.method == "GET":
+        return render_template("login.html")
+    else:
+        username=request.form["username"]
+        password=request.form["password"]
+
+    if logins.VerifyUser(username,password):
+        with pny.db_session:
+            user = Database.User.get(username=username)
+            name = user.name
+        
+        return render_template("login.html",success=True,name=name)
+    else:
+        return render_template("login.html",success=False)
 
 
 @APP.errorhandler(404)

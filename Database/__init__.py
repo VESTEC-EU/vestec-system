@@ -1,4 +1,6 @@
 from .database import db, initialiseDatabase
-from . import generate_db
-from . import job
-from . import machine
+from .job import Job, JobStatus
+from .queues import Queue
+from .machine import Machine
+from .activity import Activity, ActivityStatus
+from .users import User
