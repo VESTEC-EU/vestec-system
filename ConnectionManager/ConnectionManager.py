@@ -5,7 +5,6 @@ from machines import machines
 import socket
 
 
-
 keydir = os.path.join(os.path.expanduser("~"),".ssh")
 
 class RemoteConnection:
