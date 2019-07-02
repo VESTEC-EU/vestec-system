@@ -7,6 +7,7 @@ class User(db.Entity):
     passwordHash=pny.Required(str)
     email=pny.Required(str)
     accessRights=pny.Required(int)
+    tokens = pny.Set("Token")
 
     activities = pny.Set("Activity")
 
