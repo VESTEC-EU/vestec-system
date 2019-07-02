@@ -105,3 +105,7 @@ venv.bak/
 
 # database
 *.db
+
+# cronjobs
+cron_estimate.sh
+cron_track.sh
