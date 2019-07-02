@@ -16,17 +16,6 @@ from decision_maker import DecisionMaker
 sys.path.append(os.path.join(os.path.dirname(__file__), "data"))
 from database_manager import DatabaseManager
 
-'''To do:
-- update to loop through machines, like estimate_active_jobs
-- extract jobs from the database with tracking status 'queuing'
-- use qstat -xf command to extract more info about these jobs
-- select jobs with job_state = R
-- use update function to update job_state in Jobs table to 'running'
-- select jobs with job_state = F
-- use update functions update_job, insert_actual_waittime and insert_actual_walltime from
-DBM to insert the extracted data into the database
-'''
-
 def track_jobs(machine):
     '''
     job_details: (job_id, system_id, queue_id, no_nodes, no_cpus, submit_time, start_time,
