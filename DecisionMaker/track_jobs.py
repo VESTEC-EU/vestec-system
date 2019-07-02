@@ -11,6 +11,7 @@ import json
 import os
 import sys
 from glob import glob
+from pytimeparse.timeparse import timeparse
 from decision_maker import DecisionMaker
 sys.path.append(os.path.join(os.path.dirname(__file__), "data"))
 from database_manager import DatabaseManager
@@ -50,13 +51,11 @@ def track_jobs(machine):
 
     for job in jobs:
         print("---")
-        job_id = job[1]
-        job_details = DM.query_machine(machine, connection, "qstat -xf %s" % job_id)
-        job_id = DBM.get_job_id(job[1])
+        job_details = DM.query_machine(machine, connection, "qstat -xf %s" % job[1])
 
         if not job_details:
             print("# Job not found. Updating flag to 'deleted'...")
-            DBM.update_job(job_id, "deleted")
+            DBM.update_workflow(job[0], "deleted")
         else:
             job_details = job_details[0]
             job_state = job_details["job_state"]
@@ -65,38 +64,44 @@ def track_jobs(machine):
                 start_time = DBM.date_to_db_format(DM.parse_time(job_details["stime"]))
                 print("# Job running, updating start time to %s..." % start_time)
                 # update_job(job_id, job_state, start_time=None, finish_time=None, exit_status=None)
-                DBM.update_job(job_id, "running", start_time)
+                DBM.update_workflow(job[0], "running", start_time)
             else:
+                exit_status = -1
+                start_time = None
+                finish_time = None
+                qtime = None
+
                 try:
                     exit_status = int(job_details["Exit_status"])
-                    start_time = DBM.date_to_db_format(DM.parse_time(job_details["stime"]))
-                    finish_time = DBM.date_to_db_format(DM.parse_time(job_details["mtime"]))
-
-                    if exit_status > 0:
-                        print("# Job failed, updating details...")
-                        DBM.update_job(job_id, "failed", start_time, finish_time, exit_status)
-                    else:
-                        print("# Job finished, updating details...")
-                        estimated_waittime = int(DBM.get_estimated_waittime(job_id))
-                        actual_waittime = timeparse(job_details["qtime"])
-                        error_waittime = estimated_waittime - actual_waittime
-
-                        requested_walltime = timeparse(job_details["Resource_list.walltime"])
-                        actual_walltime = timeparse(job_details["resources_used.walltime"])
-                        error_walltime = requested_walltime - actual_walltime
-
-                        DBM.update_job(job_id, "finished", start_time, finish_time, exit_status)
-                        # insert_waittime(job_id, estimated_waittime, actual_waittime=None, error=None)
-                        DBM.insert_waittime(job_id, estimated_waittime, actual_waittime, error_waittime)
-                        # insert_waittime(job_id, requested_walltime, actual_walltime=None, error=None)
-                        DBM.insert_walltime(job_id, requested_walltime, actual_walltime, error_walltime)
+                    start_time = DM.parse_time(job_details["stime"])
+                    finish_time = DM.parse_time(job_details["mtime"])
+                    qtime = DM.parse_time(job_details["qtime"])
                 except:
                     print("# Job state: %s and no exit status. Skipping..." % job_state)
 
+                if start_time and finish_time and qtime and exit_status == 0:
+                    print("# Job finished, updating details...")
+                    estimated_waittime = int(DBM.get_estimated_waittime(job[0]))
+                    actual_waittime = timeparse(str(start_time - qtime))
+                    error_waittime = estimated_waittime - actual_waittime
+
+                    requested_walltime = timeparse(job_details["Resource_List.walltime"])
+                    actual_walltime = timeparse(job_details["resources_used.walltime"])
+                    error_walltime = requested_walltime - actual_walltime
+
+                    DBM.update_workflow(job[0], "finished", start_time, finish_time, exit_status)
+                    # insert_waittime(job_id, estimated_waittime, actual_waittime=None, error=None)
+                    DBM.insert_waittime(job[0], estimated_waittime, actual_waittime, abs(error_waittime))
+                    # insert_waittime(job_id, requested_walltime, actual_walltime=None, error=None)
+                    DBM.insert_walltime(job[0], requested_walltime, actual_walltime, abs(error_walltime))
+                elif exit_status > 0:
+                    print("# Job failed, updating details...")
+                    DBM.update_workflow(job[0], "failed", start_time, finish_time, exit_status)
+
 
 if __name__ == "__main__":
-    DM = DecisionMaker('data/jobs_database.db')
-    DBM = DatabaseManager('data/jobs_database.db')
+    DM = DecisionMaker(os.path.join(os.path.dirname(__file__), 'data/jobs_database.db'))
+    DBM = DatabaseManager(os.path.join(os.path.dirname(__file__), 'data/jobs_database.db'))
     machines = DBM.get_machine_names()
 
     for machine in machines:

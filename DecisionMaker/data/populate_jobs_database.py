@@ -3,15 +3,15 @@
 with the use of the create_jobs_database script.
 '''
 from datetime import datetime
+from datetime import timedelta
 from glob import glob
-import sqlite3
 import uuid
 import csv
 import sys
 import os
+from database_manager import DatabaseManager
 sys.path.append(os.path.join(os.path.dirname(__file__), "../../ConnectionManager"))
 from machines import machines
-from database_manager import DatabaseManager
 
 
 def populate_machines_table():
@@ -91,18 +91,21 @@ def import_from_csv(file_name):
             if queue is not None:
                 job = {}
                 job["job_id"] = str(uuid.uuid4())
-                job["system_id"] = row['id_string'].strip()
+                job["system_job_id"] = row['id_string'].strip()
                 job["queue_id"] = queue[0]
                 job["no_nodes"] = row['node_count'].strip()
                 job["no_cpus"] = row['ncpus'].strip()
                 job["submit_time"] = row['submit_time(date)'].strip()
                 job["start_time"] = row['start_time(date)'].strip()
-                job["finish_time"] = row['end_time(date)'].strip()
-                job["run_time"] = int(row['runtime(s)'].strip())
-                job["exit_status"] = row['exit_status'].strip()
                 job["wait_time"] = int(row['waittime(s)'].strip())
                 job["wall_time"] = int(row["walltime(s)"].strip())
-                job["job_state"] = 'finished'
+
+                queue_time = datetime.strptime(job["start_time"], "%Y-%m-%d %H:%M:%S")
+                job["queue_time"] = str(queue_time - timedelta(seconds=job["wait_time"]))
+                job["run_time"] = int(row['runtime(s)'].strip())
+                job["finish_time"] = row['end_time(date)'].strip()
+                job["exit_status"] = row['exit_status'].strip()
+                job["current_state"] = 'finished'
 
                 jobs.append(job)
 
@@ -115,13 +118,20 @@ def populate_jobs(jobs):
     print("# Populating Jobs and Walltimes tables...")
 
     for job in jobs:
-        DBM.insert_job(job)
+        # Insert job into the Jobs table
+        DBM.insert_job(job["job_id"], job["system_job_id"], job["queue_id"],
+                       job["no_nodes"], job["no_cpus"])
+        # Insert job workflow into the Workflow table
+        workflow = {"job_id": job["job_id"], "submit_time": job["submit_time"],
+                    "current_state": job["current_state"], "queue_time": job["queue_time"],
+                    "start_time": job["start_time"], "finish_time": job["finish_time"],
+                    "exit_status": job["exit_status"], "transit_time": None}
 
+        DBM.insert_workflow(workflow)
+        # Calculate walltime error rate between requested and actual
         error_rate = job["wall_time"] - job["run_time"]
-        walltime = {"job_id": job["job_id"], "requested_walltime": job["wall_time"],
-                    "actual_walltime": job["run_time"], "error": error_rate}
-
-        DBM.insert_full_walltime(walltime)
+        # insert_walltime(job_id, requested_walltime, actual_walltime=None, error=None)
+        DBM.insert_walltime(job["job_id"], job["wall_time"], job["run_time"], error_rate)
 
 
 if __name__ == "__main__":

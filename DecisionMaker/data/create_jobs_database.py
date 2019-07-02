@@ -66,17 +66,39 @@ def create_jobs_table():
         CURSOR.execute(
             '''CREATE TABLE Jobs (
                 job_id text PRIMARY KEY NOT NULL,
-                system_id text NOT NULL,
+                system_job_id text NOT NULL,
                 queue_id text NOT NULL,
                 no_nodes integer NOT NULL,
                 no_cpus integer NOT NULL,
-                submit_time text NOT NULL,
-                start_time text,
-                finish_time text,
-                exit_status integer,
-                job_state text NOT NULL,
                 FOREIGN KEY (queue_id) REFERENCES Queues(queue_id) ON DELETE CASCADE,
-                UNIQUE (system_id, queue_id)
+                UNIQUE (system_job_id, queue_id)
+            )'''
+        )
+
+        CONNECTION.commit()
+    except sqlite3.Error as err:
+        print("An error occurred:", err.args[0])
+
+
+def create_workflow_table():
+    '''This function creates a Workflow table holding the different stages of every job
+    and the dates of when these states have been achieved. This has been created in order
+    to support state tracking on the user interface.'''
+    try:
+        print("Creating Workflow table...")
+        CURSOR.execute('''DROP TABLE IF EXISTS Workflow''')
+        CURSOR.execute(
+            '''CREATE TABLE Workflow (
+                job_id text PRIMARY KEY NOT NULL,
+                submit_time text,
+                queue_time text,
+                start_time text,
+                transit_time text,
+                finish_time text,
+                current_state text,
+                exit_status integer,
+                FOREIGN KEY (job_id) REFERENCES Jobs(job_id) ON DELETE CASCADE,
+                UNIQUE (job_id, submit_time)
             )'''
         )
 
@@ -99,8 +121,7 @@ def create_waittimes_table():
                             actual_waittime text,
                             error text,
                             FOREIGN KEY (job_id) REFERENCES Jobs(job_id) ON DELETE CASCADE
-                          )'''
-        )
+                          )''')
 
         CONNECTION.commit()
     except sqlite3.Error as err:
@@ -121,8 +142,7 @@ def create_wallimes_table():
                             actual_walltime text,
                             error text,
                             FOREIGN KEY (job_id) REFERENCES Jobs(job_id) ON DELETE CASCADE
-                        )'''
-        )
+                        )''')
 
         CONNECTION.commit()
     except sqlite3.Error as err:
@@ -137,6 +157,7 @@ if __name__ == "__main__":
     create_machines_table()
     create_queues_table()
     create_jobs_table()
+    create_workflow_table()
     create_waittimes_table()
     create_wallimes_table()
     DBM.disconnect()

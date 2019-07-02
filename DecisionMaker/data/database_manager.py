@@ -95,7 +95,7 @@ class DatabaseManager:
         print("# Getting machine names from database...")
         machine_names = []
         try:
-            self.cursor.execute('SELECT machine_name FROM Machines')
+            self.cursor.execute('''SELECT machine_name FROM Machines''')
 
             machine_names = self.cursor.fetchall()
         except sqlite3.Error as err:
@@ -107,7 +107,7 @@ class DatabaseManager:
     def get_machine_nodes(self, machine):
         '''This function returns the number of available nodes for the
         specified machine from the Machines table'''
-        print("# Getting machine available nodes from database...")
+        print("#### Getting machine available nodes from database...")
         available_nodes = ""
         try:
             self.cursor.execute('''SELECT available_nodes FROM Machines
@@ -130,7 +130,7 @@ class DatabaseManager:
         - available_nodes integer NOT NULL
         - cores_per_node integer NOT NULL
         - scheduler text NOT NULL
-        
+
         Data structures:
         machine: {"machine_name": "", "host": "", "available_nodes": "", "cores_per_node": "",
                   "scheduler": ""}
@@ -138,8 +138,9 @@ class DatabaseManager:
         try:
             print("## Inserting machine %s..." % machine["machine_name"])
             self.cursor.execute('INSERT INTO Machines VALUES (?, ?, ?, ?, ?)',
-                                (machine["machine_name"], machine["host"], machine["available_nodes"],
-                                 machine["cores_per_node"], machine["scheduler"])
+                                (machine["machine_name"], machine["host"],
+                                 machine["available_nodes"], machine["cores_per_node"],
+                                 machine["scheduler"])
                                )
             self.connection.commit()
         except sqlite3.Error as err:
@@ -157,62 +158,18 @@ class DatabaseManager:
         - min_time text NOT NULL,
         - max_time text NOT NULL
         - default_queue integer NOT NULL DEFAULT 0
-        
+
         Data structures:
         queue: {"queue_id": "", "queue_name": "", "machine_name": "", "max_nodes": "",
                 "min_time": "", "max_time": "", "default_queue": ""}
         '''
         try:
-            print("## Inserting queue %s belonging to %s..." % (queue["queue_name"], queue["machine_name"]))
+            print("## Inserting queue %s belonging to %s..." % (queue["queue_name"],
+                                                                queue["machine_name"]))
             self.cursor.execute('INSERT INTO Queues VALUES (?, ?, ?, ?, ?, ?, ?)',
                                 (queue["queue_id"], queue["queue_name"], queue["machine_name"],
-                                 queue["max_nodes"], queue["min_time"], queue["max_time"], queue["default_queue"])
-                               )
-            self.connection.commit()
-        except sqlite3.Error as err:
-            print("An error occurred:", err.args[0])
-
-
-    def insert_job(self, job):
-        '''This function takes a job object as input and inserts it into the Jobs table
-
-        Job Table Columns:
-        - job_id text PRIMARY KEY NOT NULL,
-        - system_id text NOT NULL,
-        - queue_id text NOT NULL,
-        - no_nodes integer NOT NULL,
-        - no_cpus integer NOT NULL,
-        - submit_time text NOT NULL,
-        - start_time text,
-        - finish_time text,
-        - exit_status integer,
-        - job_state text NOT NULL
-        
-        Data structures:
-        job: {"job_id": "", "system_id": "", "queue_is": "", "no_nodes": "", "no_cpus": "", "submit_time": "",
-              "start_time": "", "finish_time": "", "exit_status": "",
-              "wall_time": "", "job_state": "", "estimated_waittime": "", "machine": ""}
-        '''
-        print("## Inserting job %s belonging to queue %s..." % (job["job_id"], job["queue_id"]))
-        try:
-            self.cursor.execute('''INSERT INTO Jobs VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                                   (job["job_id"], job["system_id"], job["queue_id"], job["no_nodes"],
-                                    job["no_cpus"], job["submit_time"], job["start_time"], job["finish_time"],
-                                    job["exit_status"], job["job_state"])
-                               )
-            self.connection.commit()
-        except sqlite3.Error as err:
-            print("An error occurred:", err.args[0])
-
-
-    def update_job(self, job_id, job_state, start_time=None, finish_time=None, exit_status=None):
-        '''This function updates the job_status flag and on the Jobs table'''
-        print("# Updating job %s..." % job_id)
-        try:
-            self.cursor.execute('''UPDATE Jobs SET start_time = ?, finish_time = ?, exit_status = ?,
-                                   job_state = ? WHERE job_id = ?''', (
-                                        start_time, finish_time, exit_status, job_state, job_id
-                                   )
+                                 queue["max_nodes"], queue["min_time"], queue["max_time"],
+                                 queue["default_queue"])
                                )
             self.connection.commit()
         except sqlite3.Error as err:
@@ -232,6 +189,75 @@ class DatabaseManager:
         return job_id
 
 
+    def check_job_existence(self, system_job_id, queue_id):
+        '''This function checks if a job is already in the database in order to avoid
+        database insert errors on job id constraint'''
+        print("## Checking if job %s is already in the system..." % system_job_id)
+        results = ""
+        try:
+            self.cursor.execute('SELECT * FROM Jobs WHERE system_job_id = ? AND queue_id = ?',
+                                (system_job_id, queue_id))
+            results = self.cursor.fetchone()
+        except sqlite3.Error as err:
+            print("An error occurred:", err.args[0])
+
+        return True if results else False
+
+
+    def insert_job(self, job_id, system_job_id, queue_id, nodes, cpus):
+        '''This function takes a job object as input and inserts it into the Jobs table
+
+        Job Table Columns:
+        - job_id text PRIMARY KEY NOT NULL,
+        - system_job_id text NOT NULL,
+        - queue_id text NOT NULL,
+        - no_nodes integer NOT NULL,
+        - no_cpus integer NOT NULL
+
+        Data structures:
+        job: {"job_id": "", "system_job_id": "", "queue_is": "", "no_nodes": "", "no_cpus": "",
+              "submit_time": "", "start_time": "", "finish_time": "", "exit_status": "",
+              "wall_time": "", "job_state": "", "estimated_waittime": "", "machine": ""}
+        '''
+        print("## Inserting job %s belonging to queue %s..." % (job_id, queue_id))
+        try:
+            self.cursor.execute('INSERT INTO Jobs VALUES (?, ?, ?, ?, ?)',
+                                (job_id, system_job_id, queue_id, nodes, cpus))
+            self.connection.commit()
+        except sqlite3.Error as err:
+            print("An error occurred:", err.args[0])
+
+
+    def insert_workflow(self, workflow):
+        '''This function inserts the workflow of a job into the Workflow table.'''
+        print("## Inserting workflow...")
+        try:
+            self.cursor.execute('INSERT INTO Workflow VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                                (workflow["job_id"], workflow["submit_time"],
+                                 workflow["queue_time"], workflow["start_time"],
+                                 workflow["transit_time"], workflow["finish_time"],
+                                 workflow["current_state"], workflow["exit_status"])
+                               )
+            self.connection.commit()
+        except sqlite3.Error as err:
+            print("An error occurred:", err.args[0])
+
+
+    def update_workflow(self, job_id, current_state, start=None, finish=None,
+                        exit_status=None, transit=None):
+        '''This function inserts the workflow of a job into the Workflow table.'''
+        print("# Updating job %s workflow..." % job_id)
+        try:
+            self.cursor.execute('''UPDATE Workflow SET current_state = ?, start_time = ?,
+                                   finish_time = ?, exit_status = ?, transit_time = ?
+                                   WHERE job_id = ?''', (current_state, start, finish,
+                                                         exit_status, transit, job_id)
+                               )
+            self.connection.commit()
+        except sqlite3.Error as err:
+            print("An error occurred:", err.args[0])
+
+
     def insert_waittime(self, job_id, estimated_waittime, actual_waittime=None, error=None):
         '''This function inserts the estimated time for a job to wait in the queue
         depending on the job size into the Waittimes table. This is usually used for
@@ -248,10 +274,10 @@ class DatabaseManager:
         job_id: str
         waittime: int (seconds)
         '''
-        print("## Inserting waittime for job %s..." % job_id)
+        print("## Inserting waittime...")
         try:
             self.cursor.execute('INSERT OR REPLACE INTO Waittimes VALUES (?, ?, ?, ?)',
-                                 (job_id, estimated_waittime, actual_waittime, error)
+                                (job_id, estimated_waittime, actual_waittime, error)
                                )
             self.connection.commit()
         except sqlite3.Error as err:
@@ -259,11 +285,13 @@ class DatabaseManager:
 
 
     def get_estimated_waittime(self, job_id):
-        '''This function queries the Waittimes table with a job id and returns the estimated waittime'''
+        '''This function queries the Waittimes table with a job id and returns
+           the estimated waittime'''
         print("## Getting estimated waittime for job %s..." % job_id)
         estimated_waittime = ""
         try:
-            self.cursor.execute('SELECT estimated_waittime FROM Waittimes WHERE job_id = ?', (job_id,))
+            self.cursor.execute('''SELECT estimated_waittime FROM Waittimes
+                                 WHERE job_id = ?''', (job_id,))
             estimated_waittime = self.cursor.fetchone()[0]
         except sqlite3.Error as err:
             print("An error occurred:", err.args[0])
@@ -274,7 +302,7 @@ class DatabaseManager:
     def insert_walltime(self, job_id, requested_walltime, actual_walltime=None, error=None):
         '''This function inserts the requested walltime, the actual walltime and the error rate
         between the two for a job in the Walltimes table. This is usually used for log data.
-        
+
         Walltimes Table Columns:
         - job_id text PRIMARY KEY NOT NULL,
         - requested_walltime text NOT NULL,
@@ -284,10 +312,10 @@ class DatabaseManager:
         Data structures:
         walltime: {"job_id": "", "requested_walltime": "", "actual_walltime": "", "error": ""}
         '''
-        print("## Inserting walltime for job %s..." % "job_id")
+        print("## Inserting walltime...")
         try:
-            self.cursor.execute('INSERT OR REPLACE INTO Walltimes VALUES (?, ?, ?, ?)', (
-                                    job_id, requested_walltime, actual_walltime, error)
+            self.cursor.execute('INSERT OR REPLACE INTO Walltimes VALUES (?, ?, ?, ?)',
+                                (job_id, requested_walltime, actual_walltime, error)
                                )
             self.connection.commit()
         except sqlite3.Error as err:
@@ -295,15 +323,17 @@ class DatabaseManager:
 
 
     def get_queued_jobs(self, machine):
-        '''This function queries the Jobs table and extracts all the jobs with job_state "queuing".
-        This is usually used by track_finished.py to track jobs and extract data after they finish running'''
+        '''This function queries the Jobs table and extracts all the jobs with
+        job_state "queuing". This is usually used by track_finished.py to track jobs
+        and extract data after they finish running'''
         print("# Extracting jobs with status 'queuing' from the database...")
         jobs = []
         try:
-            self.cursor.execute('''SELECT * FROM Jobs AS J
+            self.cursor.execute('''SELECT J.job_id, J.system_job_id FROM Jobs AS J
                                    INNER JOIN Queues AS Q ON J.queue_id = Q.queue_id
+                                   INNER JOIN Workflow AS W ON J.job_id = W.job_id
                                    WHERE Q.machine_name = ?
-                                   AND J.job_state = "queuing";''', (machine,))
+                                   AND W.current_state = "queuing";''', (machine,))
 
             jobs = self.cursor.fetchall()
         except sqlite3.Error as err:
