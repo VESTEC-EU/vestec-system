@@ -153,7 +153,9 @@ def signup():
         email = request.form["email"]
 
         if logins.AddUser(username,name,email,password):
-            return render_template("signup.html",success=True,username=username)
+            msg = "Account created for user %s"%username
+            logger.Log(log.LogType.Logins,msg,user=username)
+            return render_template("signup.html",success=True,user=username)
         else:
             return render_template("signup.html", success=False)
 
@@ -197,6 +199,8 @@ def auth():
             jti = jwt.get_jti(token)
             now=datetime.datetime.now()
             userToken = Database.Token(jti=jti,date_created=now,date_accessed=now,user=user)
+            msg = "User %s logged in"%username
+            logger.Log(log.LogType.Logins,msg,user=username)
             return jsonify({"token":token})
     
     else:
@@ -208,9 +212,12 @@ def auth():
 def logout():
     #get the jti
     jti = jwt.get_raw_jwt()["jti"]
+    username=jwt.get_jwt_identity()
     with pny.db_session:
         token = Database.Token.get(jti=jti)
         token.delete()
+        msg = "User %s logged out"%username
+        logger.Log(log.LogType.Logins,msg,user=username)
     return jsonify(msg="User logged out")
 
 #tests if a user has a valid jwt
@@ -228,14 +235,14 @@ def supersecret():
 @APP.errorhandler(404)
 def page_not_found(e):
     '''Handling 404 errors by showing template'''
-    logger.Log(log.LogType.Website,"404 Not Found: "+str(request))
+    logger.Log(log.LogType.Error,"404 Not Found: "+str(request))
     return render_template('404.html'), 404
 
 
 @APP.errorhandler(500)
 def page_not_found(e):
     '''Handling 500 errors by showing template'''
-    logger.Log(log.LogType.Website,"500 Internal server error: "+str(request)+str(e))
+    logger.Log(log.LogType.Error,"500 Internal server error: "+str(request)+str(e))
     return render_template('500.html'), 500
 
 

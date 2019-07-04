@@ -11,6 +11,8 @@ class LogType(Enum):
     Job=2
     Query=3
     Website=4
+    Logins=5
+    Error=6
 
 
 class DBLog(db.Entity):

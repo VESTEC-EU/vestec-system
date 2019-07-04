@@ -19,8 +19,8 @@ def login_required(fn):
         with pny.db_session:
             #first check for expired tokens and delete them
             now=datetime.datetime.now()
-            dt = datetime.timedelta(hours=6)
-            ddt = datetime.timedelta(days=7)
+            dt = datetime.timedelta(hours=1) #timeout period of token
+            ddt = datetime.timedelta(days=7) #maximum allowed age of token
 
             tokens=pny.select(a for a in Database.Token)[:]
             for token in tokens:
