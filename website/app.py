@@ -29,15 +29,15 @@ def generate_id():
     return str(uuid.uuid1())
 
 
-@APP.route('/')  # used to bind the following function to the specified URL
+@APP.route('/flask/auth')  # used to bind the following function to the specified URL
 def welcome_page():
     '''Render a static welcome template'''
     print("TARGET_URI = %s"%TARGET_URI)
     logger.Log(log.LogType.Website,str(request))
-    return render_template('index.html')
+    return "real"
 
 
-@APP.route('/submit', methods=['PUT'])
+@APP.route('/flask/submit', methods=['PUT'])
 def submit_job():
     '''This function sends a PUT request to the SMI for a CURRENT_JOB
        to be created
@@ -65,7 +65,7 @@ def submit_job():
     return response_data
 
 
-@APP.route('/jobs/current', methods=['GET'])
+@APP.route('/flask/jobs/current', methods=['GET'])
 def check_job_status():
     '''This function sends a GET request to the SMI for the details of the current job
 
@@ -92,7 +92,7 @@ def check_job_status():
     return render_template('jobstatustable.html', jobs=response_data)
 
 
-@APP.route('/jobs', methods=['GET'])
+@APP.route('/flask/jobs', methods=['GET'])
 def check_all_jobs_status():
     '''This function sends a GET request to the SMI for the details of all jobs
 
@@ -118,7 +118,7 @@ def check_all_jobs_status():
 
     return render_template('jobstatustable.html', jobs=response_data)
 
-@APP.route("/logs")
+@APP.route("/flask/logs")
 def showLogs():
     logs=[]
     with pny.db_session:

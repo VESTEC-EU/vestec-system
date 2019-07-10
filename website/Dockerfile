@@ -1,5 +1,5 @@
 FROM python:3-slim
-ARG port=5000
+ARG port=8000
 ENV port $port
 EXPOSE $port
 COPY . /app

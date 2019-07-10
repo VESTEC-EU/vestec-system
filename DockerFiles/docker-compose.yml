@@ -2,20 +2,26 @@ version: '3'
 services:
   nginx:
     container_name: nginx
+    #network_mode: "host"
     build:
       context: ../Nginx
       dockerfile: Dockerfile
     ports:
-      - "80:80"
-      - "443:443"
+      - 80:80
+      - 443:443
     volumes:
-      - "/var/vestec/certs:/var/vestec/certs"
+      - /var/vestec/certs:/var/vestec/certs
+      - ../Nginx/static/:/var/www/
+    links:
+      - website:website
 
   website:
     container_name: website
     build:
       context: ../
       dockerfile: website/Dockerfile
+    ports:
+      - 8000:8000
     environment:
       VESTEC_MANAGER_URI: "http://manager:5500/jobs"
     env_file:

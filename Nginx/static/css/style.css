@@ -12,9 +12,6 @@ body {
 
 .navbar li {
   float: left;
-}
-
-.navbar li a {
   display: block;
   color: white;
   text-align: center;
@@ -23,7 +20,7 @@ body {
 }
 
 /* Change the link color to #111 (black) on hover */
-.navbar li a:hover {
+.navbar li:hover {
   background-color: #111;
 }
 
@@ -31,7 +28,7 @@ body {
   background-color: #008CBA;
 }
 
-.body_container {
+.job-wizard {
   width: 96%;
   margin: 2%;
 }
@@ -106,4 +103,19 @@ input[type=text]:focus {
   text-align: left;
   background-color: #008CBA;
   color: white;
+}
+
+#dashboard {
+  display: inline-flex;
+  width: 100%;
+}
+
+.we-card-4 {
+  width: 30%;
+  margin: 20px;
+}
+
+.blue-card {
+  color: white;
+  background-color: #018cba !important;
 }

@@ -1,11 +1,7 @@
-{% extends "base.html" %}
-{% block nav_create %}active{% endblock %}
-{% block content %}
-<div>
+<div id="job-wizard">
     <input type="text" id="userInput" placeholder="Enter a job name to submit...">
     <button class="button" id="submitJob" onClick="submitJob()">Submit Job</button>
     <button class="button" id="checkJobStatus" onClick="getJobStatus()">Check Job Status</button>
-
+    
     <div id="confirmation"></div>
 </div>
-{% endblock %}
