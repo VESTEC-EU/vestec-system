@@ -1,12 +1,10 @@
 body {
   margin: 0px;
-  display: flex;
   height: 100vh;
 }
 
 .center {
   margin: auto;
-  width: 40%;
   padding: 10px;
   text-align: center;
   display: inline-grid;
@@ -27,9 +25,7 @@ input[type=text]:focus, input[type=password]:focus {
 }
   
 .button {
-  background-color: #008CBA;
   border: none;
-  color: white;
   padding: 12px 20px;
   text-align: center;
   text-decoration: none;
@@ -46,8 +42,29 @@ a:link {
 
 .button a:link {
   color: white;
-}
-  
+} 
+
 .button:focus {
   outline: none;
+}
+  
+/* COLORS */
+.white-txt {
+  color: white;
+}
+
+.blue {
+  background-color: #018cba;
+}
+
+.red {
+  background-color: #f44336;
+}
+
+.amber {
+  background-color: #ff9800;
+}
+
+.green {
+  background-color: #4CAF50;
 }

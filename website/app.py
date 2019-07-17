@@ -5,6 +5,7 @@ import sys
 sys.path.append("../")
 import os
 import uuid
+import json
 import requests
 from flask import Flask, render_template, request
 import Utils.log as log
@@ -86,10 +87,10 @@ def check_job_status():
                              "date": <jobsubmitdate>, "status": <jobstatus>}
     '''
     current_stat_req = requests.get(TARGET_URI + '/' + str(CURRENT_JOB.get('uuid')))
-    response_data = [current_stat_req.json()]
+    response_data = current_stat_req.json()
     logger.Log(log.LogType.Website,str(request))
 
-    return render_template('jobstatustable.html', jobs=response_data)
+    return json.dumps(response_data)
 
 
 @APP.route('/flask/jobs', methods=['GET'])
@@ -116,7 +117,8 @@ def check_all_jobs_status():
     response_data = all_stat_req.json()
     logger.Log(log.LogType.Website,str(request))
 
-    return render_template('jobstatustable.html', jobs=response_data)
+    return response_data
+
 
 @APP.route("/flask/logs")
 def showLogs():
@@ -131,26 +133,11 @@ def showLogs():
             lg["type"] = l.type.name
             lg["comment"] = l.comment
             logs.append(lg)
-    return render_template("logs.html",logs=logs)
-
-
-
-@APP.errorhandler(404)
-def page_not_found(e):
-    '''Handling 404 errors by showing template'''
-    logger.Log(log.LogType.Website,"404 Not Found: "+str(request))
-    return render_template('404.html'), 404
-
-
-@APP.errorhandler(500)
-def page_not_found(e):
-    '''Handling 500 errors by showing template'''
-    logger.Log(log.LogType.Website,"500 Internal server error: "+str(request)+str(e))
-    return render_template('500.html'), 500
+    return logs
 
 
 if __name__ == '__main__':
     if "VESTEC_MANAGER_URI" in os.environ:
         TARGET_URI = os.environ["VESTEC_MANAGER_URI"]
     print("Website using SimulationManager URI: %s"%TARGET_URI)
-    APP.run(host='0.0.0.0', port=5000)
+    APP.run(host='0.0.0.0', port=8000)

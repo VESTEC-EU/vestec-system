@@ -1,7 +1,12 @@
-<div id="job-wizard">
-    <input type="text" id="userInput" placeholder="Enter a job name to submit...">
-    <button class="button" id="submitJob" onClick="submitJob()">Submit Job</button>
-    <button class="button" id="checkJobStatus" onClick="getJobStatus()">Check Job Status</button>
-    
-    <div id="confirmation"></div>
+<div id="job-wizard" style="display:flex;">
+    <div class="center" style="width:80%;">
+        <h2>Please enter a job name</h2>
+        <input type="text" id="userInput" placeholder="Enter a job name to submit...">
+        
+        <div style="display:inline-block;">
+            <button id="submitJob" class="button blue white-txt" onClick="submitJob()">Submit Job</button>
+            <button id="checkJobStatus" class="button blue white-txt" onClick="getJobStatus()">Check Job Status</button>
+        </div>
+        <div id="confirmation"></div>
+    </div>
 </div>

@@ -2,7 +2,7 @@ version: '3'
 services:
   nginx:
     container_name: nginx
-    #network_mode: "host"
+    #network_mode: "bridge"
     build:
       context: ../Nginx
       dockerfile: Dockerfile
@@ -14,6 +14,8 @@ services:
       - ../Nginx/static/:/var/www/
     links:
       - website:website
+    networks:
+      - vestec
 
   website:
     container_name: website
@@ -26,6 +28,8 @@ services:
       VESTEC_MANAGER_URI: "http://manager:5500/jobs"
     env_file:
       - environment_variables.env
+    networks:
+      - vestec
 
   manager:
     container_name: manager
@@ -39,6 +43,8 @@ services:
     #   - "../Database:/database"
     env_file:
       - environment_variables.env
+    networks:
+      - vestec
 
   maria:
     container_name: mariadb
@@ -47,3 +53,9 @@ services:
       MYSQL_ROOT_PASSWORD: "changeme"
     volumes:
       - "/var/vestec/db:/var/lib/mysql"
+    networks:
+      - vestec
+
+networks:
+  vestec:
+    driver: "bridge"

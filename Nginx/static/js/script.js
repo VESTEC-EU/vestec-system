@@ -27,7 +27,7 @@ function userLogin() {
         type: "GET",
         success: function(response) {
             if (response == "real") {
-                window.location = "/base.html";
+                window.location.href = "/home";
             }
         },
         error: function(xhr) {
@@ -49,12 +49,12 @@ function submitJob() {
             data: {jsdata: text},
             success: function(response) {
                 $("#userInput").val('');
-                $("#confirmation").removeClass().addClass("button success");
+                $("#confirmation").removeClass().addClass("button green");
                 $("#confirmation").html("<span>&#10003</span> Job successfully submitted");
                 $("#checkJobStatus").show();
             },
             error: function(xhr) {
-                $("#confirmation").removeClass().addClass("button fail");
+                $("#confirmation").removeClass().addClass("button red");
                 $("#confirmation").html("<span>&#10007</span> Job submission failed");
             }
         });
@@ -65,14 +65,37 @@ function getJobStatus() {
     $.ajax({
         url: "/flask/jobs/current",
         type: "GET",
-        success: function() {
-            window.location.href = "/jobs/current";
+        success: function(response) {
+            var job = JSON.parse(response);
+            loadJobDetails(job);
+
+            console.log(job.status);
+
+            if (job.status !== "COMPLETED") {
+                setTimeout(getJobStatus, 5000);
+            } else {
+                console.log("finished");
+            }
         },
         error: function(xhr) {
-            $("#confirmation").removeClass().addClass("button fail");
+            $("#confirmation").removeClass().addClass("button red");
             $("#confirmation").html("<span>&#10007</span> Job status check failed");
         }
     });
+}
+
+function loadJobDetails(job) {
+    var job_html = '<div class="jobDetails">Name: <div id="jobName">' + job.Name + '</div></div><div class="jobDetails">Date: <div id="jobDate">' + job.date + '</div></div>';
+
+    if (job.status == "PENDING") {
+        job_html += '<div class="jobDetails">Status: <button id="jobStatus" class="button amber">' + job.status + '</button></div>';
+    } else if (job.status == "ACTIVE") {  
+        job_html += '<div class="jobDetails">Status: <button id="jobStatus" class="button green">' + job.status + '</button></div>';
+    } else { 
+        job_html += '<div class="jobDetails">Status: <button id="jobStatus" class="button blue">' + job.status + '</button></div>';
+    }
+
+    $("#body-container").html(job_html);
 }
 
 function getAllJobsStatus(){

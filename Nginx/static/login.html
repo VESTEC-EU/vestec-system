@@ -1,14 +1,14 @@
 <!DOCTYPE html>
     <head>
         <title>VESTEC Login</title>
-        <link rel="stylesheet" href="css/login.css" />
+        <link rel="stylesheet" href="css/general.css" />
     </head>
-    <body>
-        <div id="login-container" class="center">
+    <body style="display:flex;">
+        <div id="login-container" class="center" style="width:40%;">
             <input type="text" id="username" placeholder="Enter your username...">
             <input type="password" id="password" placeholder="Enter your password...">
-            <button class="button" id="login" onClick="userLogin()">Log In</button>
-            <div id="login-message" style="color: red;"></div>
+            <button class="button blue white-txt" id="login" onClick="userLogin()">Log In</button>
+            <div id="login-message" class="red"></div>
         </div>
     </body>
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
