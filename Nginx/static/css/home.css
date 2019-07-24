@@ -29,14 +29,6 @@
   margin: 2%;
 }
 
-#confirmation {
-  padding: 10px;
-  color: white;
-  margin-top: 5px;
-  display: block;
-  width: 170px;
-}
-
 /* Job status page */
 .jobs {
   font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
@@ -64,6 +56,7 @@
 #dashboard {
   display: inline-flex;
   width: 100%;
+  flex-wrap: wrap;
 }
 
 .we-card-4 {

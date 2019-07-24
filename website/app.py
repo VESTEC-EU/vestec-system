@@ -117,7 +117,7 @@ def check_all_jobs_status():
     response_data = all_stat_req.json()
     logger.Log(log.LogType.Website,str(request))
 
-    return response_data
+    return json.dumps(response_data)
 
 
 @APP.route("/flask/logs")

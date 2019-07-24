@@ -3,13 +3,6 @@ body {
   height: 100vh;
 }
 
-.center {
-  margin: auto;
-  padding: 10px;
-  text-align: center;
-  display: inline-grid;
-}
-
 input[type=text], input[type=password] {
   display: inline-flex;
   padding: 12px 20px;
@@ -25,6 +18,7 @@ input[type=text]:focus, input[type=password]:focus {
 }
   
 .button {
+  color: white;
   border: none;
   padding: 12px 20px;
   text-align: center;
@@ -32,8 +26,6 @@ input[type=text]:focus, input[type=password]:focus {
   display: inline-flex;
   font-size: 14px;
   border-radius: 3px;
-  margin-right: 0px;
-  margin-left: auto;
 }
 
 a:link {
@@ -47,7 +39,11 @@ a:link {
 .button:focus {
   outline: none;
 }
-  
+
+.navbar .blue:hover {
+  background-color: #018cba;
+}
+
 /* COLORS */
 .white-txt {
   color: white;
@@ -58,13 +54,52 @@ a:link {
 }
 
 .red {
-  background-color: #f44336;
+  background-color: #c15048;
 }
 
 .amber {
-  background-color: #ff9800;
+  background-color: #e4ad5c;
 }
 
 .green {
-  background-color: #4CAF50;
+  background-color: #4c904f;
+}
+
+/* POSITIONS */
+.self-right {
+  margin-right: 0px;
+}
+
+.self-left {
+  margin-left: 0px;
+}
+
+.self-center {
+  margin: auto;
+}
+
+.contents-right {
+  margin: auto;
+  padding: 10px;
+  text-align: right;
+}
+
+.contents-center { 
+  margin: auto;
+  padding: 10px;
+  text-align: center;
+  display: inline-grid;
+}
+
+/* LAYOUTS */
+.inline {
+  display: inline;
+}
+
+.block {
+  display: block;
+}
+
+.flex {
+  display: flex;
 }
