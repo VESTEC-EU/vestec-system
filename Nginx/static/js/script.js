@@ -139,11 +139,10 @@ function loadJobCards(order) {
         } else {
             for (var i=all_jobs.length-1; i>=0; i--) {
                 var job = all_jobs[i];
-                console.log(job);
                 var card = $(job_card)[0];
                 $(card).attr("id", "card_" + i);
                 $(card).find("header").html("<h3>" + job.Name + "</h3>");
-                $(card).find("#cardBody").html("<p>Machine: " + job.jobs[0].Machine + "</p><p>Status: " + job.jobs[0].status + "</p>");
+                $(card).find("#cardBody").html("<p>Machine: " + job.jobs[0].machine + "</p><p>Status: " + job.jobs[0].status + "</p>");
                 $(card).find("footer").html("<h5>Submitted on " + job.date + "</h5>");
                 $("#dashboard").append(card);
             }

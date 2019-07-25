@@ -70,3 +70,13 @@
   width: 60%;
   margin: 10px;
 }
+
+header {
+  border-top-left-radius: 5px;
+  border-top-right-radius: 5px;
+}
+
+footer {
+  border-bottom-left-radius: 5px;
+  border-bottom-right-radius: 5px;
+}
