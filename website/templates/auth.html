@@ -1,0 +1,123 @@
+<html>
+    <h1> Login Page</h1>
+    
+    <div id = "loginform" style="display: block;">
+        Username: <br>
+        <input id="username" type="text"> <br>
+        Password: <br>
+        <input id="password" type="password"> <br>
+        <button onclick="login()"> Login </button> <br><br>
+        <a href="/signup"> Signup </a> 
+    </div>
+    <div id="loginMessage"></div> <br>
+    
+    <div id="afterlogin" style="display: none;">
+        <button onclick="TestToken()">Test Token</button> 
+        <button onclick="TestAuth()">Test Admin access</button>
+        <button onclick="logout()"> Logout </button>
+        <div id="secret"> </div>
+    </div>
+    
+   
+</html>
+
+<script>
+    function login(){
+        var loginUrl = "http://0.0.0.0:5000/authenticate";
+        var xhr = new XMLHttpRequest();
+
+        var username = document.getElementById("username").value;
+        var password = document.getElementById("password").value;
+
+        var msg = document.getElementById("loginMessage");
+        var loginform=document.getElementById("loginform")
+        var afterlogin=document.getElementById("afterlogin")
+
+        xhr.open('POST', loginUrl, true);
+        xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+        xhr.addEventListener('load', function() {
+            try{
+                var responseObject = JSON.parse(this.response);
+                console.log(responseObject);
+                if (responseObject.token) {
+                    msg.innerHTML = "Login Successful!";
+                    msg.style.color = "green";
+                    sessionStorage.setItem("VestecAuthToken",responseObject.token);
+                    loginform.style.display = "None"
+                    afterlogin.style.display = "block"
+                } else {
+                    msg.innerHTML = "Invalid username/password. Try logging in again, or go to the <a href='/signup'> signup <a> page";
+                    msg.style.color = "red";
+                }
+            } catch {
+                msg.innerHTML = "Whoops something went wrong. Please try again";
+                msg.style.color = "red";
+            }
+        });
+
+        var sendObject = JSON.stringify({username: username, password: password});
+
+        console.log('going to send', sendObject);
+
+        xhr.send(sendObject);
+    }
+
+    function TestAuth(){
+        var url = "http://0.0.0.0:5000/supersecret";
+        var xhr = new XMLHttpRequest();
+        var secret = document.getElementById('secret');
+        xhr.open('GET', url, true);
+        xhr.setRequestHeader("Authorization", "Bearer " + sessionStorage.getItem("VestecAuthToken"));
+        // xhr.setRequestHeader("Authorization", "Bearer " + tokenElement.innerHTML);
+        console.log(xhr.RequestHeader);
+        xhr.addEventListener('load', function() {
+            var responseObject = JSON.parse(this.response);
+            console.log(responseObject);
+            secret.innerHTML = responseObject.responseText;
+            secret.innerHTML = this.responseText;
+        });
+
+        xhr.send(null);
+    }
+
+    function TestToken(){
+        var url = "http://0.0.0.0:5000/secret";
+        var xhr = new XMLHttpRequest();
+        var secret = document.getElementById('secret');
+        xhr.open('GET', url, true);
+        xhr.setRequestHeader("Authorization", "Bearer " + sessionStorage.getItem("VestecAuthToken"));
+        // xhr.setRequestHeader("Authorization", "Bearer " + tokenElement.innerHTML);
+        console.log(xhr.RequestHeader);
+        xhr.addEventListener('load', function() {
+            var responseObject = JSON.parse(this.response);
+            console.log(responseObject);
+            secret.innerHTML = responseObject.responseText;
+            secret.innerHTML = this.responseText;
+        });
+
+        xhr.send(null);
+    }
+
+    function logout(){
+        var url = "http://0.0.0.0:5000/logout";
+        var xhr = new XMLHttpRequest();
+        var secret = document.getElementById('secret');
+        var msg = document.getElementById("loginMessage");
+        xhr.open('DELETE', url, true);
+        xhr.setRequestHeader("Authorization", "Bearer " + sessionStorage.getItem("VestecAuthToken"));
+        // xhr.setRequestHeader("Authorization", "Bearer " + tokenElement.innerHTML);
+        console.log(xhr.RequestHeader);
+        xhr.addEventListener('load', function() {
+            var responseObject = JSON.parse(this.response);
+            console.log(responseObject);
+            secret.innerHTML = responseObject.responseText;
+            secret.innerHTML = this.responseText;
+            msg.innerHTML = "You are logged out"
+        });
+
+        xhr.send(null);
+    }
+    
+
+
+</script>

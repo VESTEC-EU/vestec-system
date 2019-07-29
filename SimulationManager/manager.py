@@ -9,7 +9,8 @@ import json
 import Database
 import pony.orm as pny
 from pony.orm.serialization import to_dict
-from Database.job import SubmittedJobStatus, SubmittedActivityStatus
+from Database.job import JobStatus
+from Database.activity import ActivityStatus
 import datetime
 from uuid import uuid4
 import ConnectionManager
@@ -161,19 +162,19 @@ def task(JobID):
     logger.Log(type=log.LogType.Activity,comment="Selected machine %s for activity %s"%(machine.name,JobID))
     time.sleep(3)
 
-    act.setStatus(SubmittedActivityStatus.ACTIVE)
+    act.setStatus(ActivityStatus.ACTIVE)
     ID = str(uuid4())
     job=act.addSubmittedJob(uuid=ID,machine=machine,executable="test.exe",queue_id="Q341592",wkdir="/work/files")
     logger.Log(type=log.LogType.Job,comment="Submitted job %s for activity %s"%(ID,JobID))
     pny.commit()
     time.sleep(10)
 
-    job.updateStatus(SubmittedJobStatus.RUNNING)
+    job.updateStatus(JobStatus.RUNNING)
     logger.Log(type=log.LogType.Job,comment="Job %s running for activity %s"%(ID,JobID))
     pny.commit()
     time.sleep(10)
 
-    act.setStatus(SubmittedActivityStatus.COMPLETED)
+    act.setStatus(ActivityStatus.COMPLETED)
     logger.Log(type=log.LogType.Job,comment="Job %s completed for activity %s"%(ID,JobID))
     job.updateStatus(SubmittedJobStatus.COMPLETED)
     logger.Log(type=log.LogType.Activity,comment="Activity %s completed"%(JobID))

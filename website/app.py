@@ -7,9 +7,13 @@ import os
 import uuid
 import json
 import requests
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 import Utils.log as log
 import Database
+from website import logins
+import flask_jwt_extended as jwt
+import datetime
+
 
 import pony.orm as pny
 
@@ -17,6 +21,10 @@ Database.initialiseDatabase()
 logger=log.VestecLogger("Website")
 
 APP = Flask(__name__)  # create an instance if the imported Flask class
+APP.config["JWT_SECRET_KEY"] = "SECRET"
+
+JWT=jwt.JWTManager(APP)
+
 
 if "VESTEC_MANAGER_URI" in os.environ:
     TARGET_URI = os.environ["VESTEC_MANAGER_URI"]
@@ -134,6 +142,110 @@ def showLogs():
             lg["comment"] = l.comment
             logs.append(lg)
     return logs
+
+
+@APP.route("/signup",methods=["GET","POST"])
+def signup():
+    if request.method=="GET":
+        return render_template("signup.html")
+    else:
+        username = request.form["username"]
+        name = request.form["name"]
+        password = request.form["password"]
+        email = request.form["email"]
+
+        if logins.AddUser(username,name,email,password):
+            msg = "Account created for user %s"%username
+            logger.Log(log.LogType.Logins,msg,user=username)
+            return render_template("signup.html",success=True,user=username)
+        else:
+            return render_template("signup.html", success=False)
+
+
+#old HTML-only login page
+@APP.route("/login2",methods=["GET","POST"])
+def loginpage():
+    if request.method == "GET":
+        return render_template("login.html")
+    else:
+        username=request.form["username"]
+        password=request.form["password"]
+
+    if logins.VerifyUser(username,password):
+        with pny.db_session:
+            user = Database.User.get(username=username)
+            name = user.name
+        return render_template("login.html",success=True,name=name)
+    else:
+        return render_template("login.html",success=False)
+
+#new login page (with javascript and some jwt test functionalty)
+@APP.route("/login")
+def login():
+    return render_template("auth.html")
+
+
+#checks if a user is authorised, and if so, gives them a jwt
+@APP.route("/authenticate",methods=["POST"])
+def auth():
+    username = request.json.get('username', None)
+    password = request.json.get('password', None)
+    print("user = %s"%username)
+
+    if logins.VerifyUser(username,password):
+        with pny.db_session:
+            user = Database.User.get(username=username)
+            name = user.name
+            token = jwt.create_access_token(identity=username)
+            print("JWT= %s"%token)
+            jti = jwt.get_jti(token)
+            now=datetime.datetime.now()
+            userToken = Database.Token(jti=jti,date_created=now,date_accessed=now,user=user)
+            msg = "User %s logged in"%username
+            logger.Log(log.LogType.Logins,msg,user=username)
+            return jsonify({"token":token})
+    
+    else:
+        return jsonify({"msg":"Error: Invalid user"})
+
+#removes the user's JWT from the authorised list (essentially logs the user out)
+@APP.route("/logout", methods=["DELETE"])
+@logins.login_required
+def logout():
+    #get the jti
+    jti = jwt.get_raw_jwt()["jti"]
+    username=jwt.get_jwt_identity()
+    with pny.db_session:
+        token = Database.Token.get(jti=jti)
+        token.delete()
+        msg = "User %s logged out"%username
+        logger.Log(log.LogType.Logins,msg,user=username)
+    return jsonify(msg="User logged out")
+
+#tests if a user has a valid jwt
+@APP.route("/secret")
+@logins.login_required
+def secret():
+    return jsonify({"msg":"Token works!"})
+
+#tests if a user has authentication
+@APP.route("/supersecret")
+@logins.admin_required
+def supersecret():
+    return jsonify({"msg":"You are an admin"})
+
+@APP.errorhandler(404)
+def page_not_found(e):
+    '''Handling 404 errors by showing template'''
+    logger.Log(log.LogType.Error,"404 Not Found: "+str(request))
+    return render_template('404.html'), 404
+
+
+@APP.errorhandler(500)
+def page_not_found(e):
+    '''Handling 500 errors by showing template'''
+    logger.Log(log.LogType.Error,"500 Internal server error: "+str(request)+str(e))
+    return render_template('500.html'), 500
 
 
 if __name__ == '__main__':
