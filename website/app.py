@@ -31,7 +31,7 @@ if "VESTEC_MANAGER_URI" in os.environ:
 else:
     TARGET_URI = 'http://127.0.0.1:5500/jobs'
 
-CURRENT_JOB = {'uuid': '', 'name': ''}
+CURRENT_JOB = {'job_id': '', 'job_name': ''}
 
 def generate_id():
     '''auto-generates a uuid'''
@@ -64,13 +64,13 @@ def submit_job():
        - CURRENT_JOB object: {'uuid': <id>, 'name': <title>}
        - SMI response data: 'SUCCESS' or 'FAILURE'
     '''
-    CURRENT_JOB['uuid'] = generate_id()
-    CURRENT_JOB['name'] = request.form.get('jsdata')
+    CURRENT_JOB['job_id'] = generate_id()
+    CURRENT_JOB['job_name'] = request.form.get('jsdata')
 
-    job_request = requests.put(TARGET_URI + '/' + CURRENT_JOB.get('uuid'), json=CURRENT_JOB)
+    job_request = requests.put(TARGET_URI + '/' + CURRENT_JOB.get("job_id"), json=CURRENT_JOB)
     response_data = job_request.text
-    logger.Log(log.LogType.Website,str(request))
-
+    logger.Log(log.LogType.Website, str(request))
+    
     return response_data
 
 
@@ -94,9 +94,9 @@ def check_job_status():
                                        "QueueID": <queueid>}, {}],
                              "date": <jobsubmitdate>, "status": <jobstatus>}
     '''
-    current_stat_req = requests.get(TARGET_URI + '/' + str(CURRENT_JOB.get('uuid')))
-    response_data = current_stat_req.json()
-    logger.Log(log.LogType.Website,str(request))
+    current_stat_req = requests.get(TARGET_URI + '/' + CURRENT_JOB.get("job_id", None))
+    response_data = current_stat_req.json
+    logger.Log(log.LogType.Website, str(request))
 
     return json.dumps(response_data)
 
@@ -144,23 +144,21 @@ def showLogs():
     return logs
 
 
-@APP.route("/signup",methods=["GET","POST"])
+@APP.route("/flask/signup", methods=["POST"])
 def signup():
-    if request.method=="GET":
-        return render_template("signup.html")
+    user = request.json
+    username = user["username"]
+    name = user["name"]
+    email = user["email"]
+    password = user["password"]
+
+    if logins.AddUser(username, name, email, password):
+        msg = "Account created for user %s" % username
+        logger.Log(log.LogType.Logins, msg, user=username)
+
+        return True
     else:
-        username = request.form["username"]
-        name = request.form["name"]
-        password = request.form["password"]
-        email = request.form["email"]
-
-        if logins.AddUser(username,name,email,password):
-            msg = "Account created for user %s"%username
-            logger.Log(log.LogType.Logins,msg,user=username)
-            return render_template("signup.html",success=True,user=username)
-        else:
-            return render_template("signup.html", success=False)
-
+        return False
 
 #old HTML-only login page
 @APP.route("/login2",methods=["GET","POST"])
@@ -233,20 +231,6 @@ def secret():
 @logins.admin_required
 def supersecret():
     return jsonify({"msg":"You are an admin"})
-
-@APP.errorhandler(404)
-def page_not_found(e):
-    '''Handling 404 errors by showing template'''
-    logger.Log(log.LogType.Error,"404 Not Found: "+str(request))
-    return render_template('404.html'), 404
-
-
-@APP.errorhandler(500)
-def page_not_found(e):
-    '''Handling 500 errors by showing template'''
-    logger.Log(log.LogType.Error,"500 Internal server error: "+str(request)+str(e))
-    return render_template('500.html'), 500
-
 
 if __name__ == '__main__':
     if "VESTEC_MANAGER_URI" in os.environ:

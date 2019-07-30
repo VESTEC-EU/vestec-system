@@ -19,24 +19,6 @@ function getJobWizard() {
     $("#body-container").load("../templates/createJobWizard.html");
 }
 
-function userLogin() {
-    var username = $("#username").val();
-    var password = $("#password").val();
-
-    $.ajax({
-        url: "/flask/auth",
-        type: "GET",
-        success: function(response) {
-            if (response == "real") {
-                window.location.href = "/home";
-            }
-        },
-        error: function(xhr) {
-            $("#login-message").text("Username or password incorrect. Please try again.");
-        }
-    });
-}
-
 function submitJob() {
     text = $("#userInput").val();
 

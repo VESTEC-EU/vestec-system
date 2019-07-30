@@ -3,7 +3,7 @@ body {
   height: 100vh;
 }
 
-input[type=text], input[type=password] {
+input[type=text], input[type=password], input[type=email] {
   display: inline-flex;
   padding: 12px 20px;
   box-sizing: border-box;
@@ -13,7 +13,7 @@ input[type=text], input[type=password] {
   border-radius: 5px;
 }
   
-input[type=text]:focus, input[type=password]:focus {
+input[type=text]:focus, input[type=password]:focus, input[type=email] {
   outline: none;
 }
   
@@ -47,6 +47,13 @@ a:link {
 /* COLORS */
 .white-txt {
   color: white;
+}
+
+.white-btn {
+  background-color: white;
+  color: #018cba;
+  border: 2px solid #018cba;
+  padding: 10px 18px;
 }
 
 .blue {

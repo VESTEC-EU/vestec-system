@@ -15,15 +15,18 @@ class JobStatus(Enum):
 class Job(db.Entity):
     job_id = pny.PrimaryKey(str)
     queue_id = pny.Required(Queue)
-    
     no_nodes = pny.Required(int)
-    walltime = pny.Required(datetime.timedelta)
-    
+    walltime = pny.Required(int)
     submit_time = pny.Required(datetime.datetime)
     run_time = pny.Optional(datetime.datetime)
     end_time = pny.Optional(datetime.datetime)
+
+    work_directory = pny.Required(str)
+    executable = pny.Required(str)
     
     status = pny.Required(JobStatus)
 
     activities = pny.Set("ActivityJobs")
 
+    def setStatus(self, status):
+        self.status = status

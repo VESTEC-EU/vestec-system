@@ -1,10 +1,12 @@
 from passlib.hash import sha256_crypt as sha256
-import Database
+from Database.users import User
+from uuid import uuid4
 import pony.orm as pny
 from flask import jsonify
 import flask_jwt_extended as jwt
 from functools import wraps
 import datetime
+
 
 
 #Custom function decorator for functions that require a login
@@ -43,22 +45,25 @@ def admin_required(fn):
 
 
 @pny.db_session
-def AddUser(username,name,email,password):
-    
+def AddUser(username, name, email, password): 
     #check if the user already exists
-    test = Database.User.get(username=username)
-    if test != None:
+    test_user = User.get(username=username)
+
+    if test is None:
+        user_id = str(uuid4())
+        #hash the password to be stored
+        passwordHash = sha256.hash(password)
+
+        #create user
+        user = User(user_id=user_id, username=username, name=name, email=email, passwordHash=passwordHash, accessRights=1)
+
+        pny.commit()
+
+        print("User '%s' created"%username)
+        return True
+    else: 
         print("User already exists")
         return False
-    
-    #hash the password to be stored
-    passwordHash = sha256.hash(password)
-
-    #create user
-    user = Database.User(username=username,name=name,email=email,passwordHash=passwordHash,accessRights=1)
-
-    print("User '%s' created"%username)
-    return True
 
 
 @pny.db_session
