@@ -49,21 +49,21 @@ def AddUser(username, name, email, password):
     #check if the user already exists
     test_user = User.get(username=username)
 
-    if test is None:
+    if test_user is None:
         user_id = str(uuid4())
         #hash the password to be stored
-        passwordHash = sha256.hash(password)
+        password_hash = sha256.hash(password)
 
         #create user
-        user = User(user_id=user_id, username=username, name=name, email=email, passwordHash=passwordHash, accessRights=1)
+        user = User(user_id=user_id, username=username, name=name, email=email, password_hash=password_hash, access_rights=1)
 
         pny.commit()
 
-        print("User '%s' created"%username)
-        return True
+        print("User '%s' created" % username)
+        return "True"
     else: 
         print("User already exists")
-        return False
+        return "False"
 
 
 @pny.db_session

@@ -26,6 +26,7 @@ input[type=text]:focus, input[type=password]:focus, input[type=email] {
   display: inline-flex;
   font-size: 14px;
   border-radius: 3px;
+  margin: 5px;
 }
 
 a:link {
@@ -45,10 +46,16 @@ a:link {
 }
 
 /* COLORS */
+/* -- text -- */
 .white-txt {
-  color: white;
+  color: white !important;
 }
 
+.blue-txt {
+  color: #018cba !important;
+}
+
+/* -- special buttons -- */
 .white-btn {
   background-color: white;
   color: #018cba;
@@ -56,6 +63,7 @@ a:link {
   padding: 10px 18px;
 }
 
+/* -- background colors -- */
 .blue {
   background-color: #018cba;
 }
@@ -79,10 +87,12 @@ a:link {
 /* POSITIONS */
 .self-right {
   margin-right: 0px;
+  float: right;
 }
 
 .self-left {
   margin-left: 0px;
+  float: left;
 }
 
 .self-center {

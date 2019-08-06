@@ -152,13 +152,15 @@ def signup():
     email = user["email"]
     password = user["password"]
 
-    if logins.AddUser(username, name, email, password):
+    user_create = logins.AddUser(username, name, email, password)
+
+    if user_create == "True":
         msg = "Account created for user %s" % username
         logger.Log(log.LogType.Logins, msg, user=username)
 
-        return True
+        return "True"
     else:
-        return False
+        return "False"
 
 #old HTML-only login page
 @APP.route("/login2",methods=["GET","POST"])

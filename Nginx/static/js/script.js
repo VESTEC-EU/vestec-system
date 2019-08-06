@@ -13,6 +13,28 @@ $("#userInput").keyup(function(e) {
     }
 });
 
+$("#signup").click(function() {
+    window.location.replace("/signup");
+});
+
+function userLogin() {
+    var username = $("#login-container #username").val();
+    var password = $("#login-container #password").val();
+
+    $.ajax({
+        url: "/flask/auth",
+        type: "GET",
+        success: function(response) {
+            if (response == "real") {
+                window.location.href = "/home";
+            }
+        },
+        error: function(xhr) {
+            $("#login-message").text("Username or password incorrect. Please try again.");
+        }
+    });
+}
+
 function getJobWizard() {
     $("#nav-dash").removeClass();
     $("#nav-home").addClass("blue");
