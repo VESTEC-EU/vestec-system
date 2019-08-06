@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+    <head>
+        <title>VESTEC Login</title>
+        <link rel="stylesheet" href="css/general.css" />
+    </head>
+    <body class="flex">
+        <div id="signup-container" class="contents-right" style="width:40%;">
+            <input type="text" id="su-username" placeholder="Enter your username..." required>
+            <input type="text" id="su-name" placeholder="Enter your name..." required>
+            <input type="email" id="su-email" placeholder="Enter your email address..." required>
+            <input type="password" id="su-password" placeholder="Enter your password..." required minlength=8>
+            <input type="password" id="su-confirm-pass" placeholder="Confirm password..." required minlength=8>
+            <div id="create-user" class="button white-btn self-right" onclick="signUp()">Sign Up</div>
+            <div id="login-message" class="button white-btn self-left" style="display: none;"></div>
+        </div>
+    </body>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script> 
+    <script type="text/javascript" src="js/signup.js"></script>
+</html>
+
