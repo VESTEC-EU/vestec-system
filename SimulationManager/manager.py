@@ -11,6 +11,8 @@ import pony.orm as pny
 from pony.orm.serialization import to_dict
 from Database.job import Job, JobStatus
 from Database.activity import Activity, ActivityStatus
+from Database.users import User
+from Database.generate_db import generate
 import datetime
 from uuid import uuid4
 import ConnectionManager
@@ -26,10 +28,41 @@ def welcome_page():
     logger.Log(type=log.LogType.Query, comment=str(request))
     return("VESTEC simulation manager")
 
-#submit (PUT) or view info on a submitted job (GET)
-@app.route("/jobs/<activity_id>", methods=["GET","PUT"])
+
+@app.route("/jobs/<activity_id>", methods=["PUT"])
 @pny.db_session
-def manage_activity(activity_id):
+def create_activity(activity_id):    
+    data = dict=flask.request.get_json()
+    name = data["job_name"]
+
+    user_id = pny.select(user.user_id for user in User if user.name == "Vestec")[:]
+    activity_creation = ""
+
+    try:
+        new_activity = Activity(activity_id=activity_id, activity_name=name,
+                                date_submitted=datetime.datetime.now(), activity_type="to be developed",
+                                location="to be developed", user_id=user_id[0])
+
+        new_activity.setStatus(ActivityStatus.PENDING)
+
+        pny.commit()
+
+        #kick off a thread to "manage" this job. In reality it just changes the status a few times and exits
+        t=threading.Thread(target=task, args=(activity_id,), name=activity_id)
+        t.start()
+
+        logger.Log(type=log.LogType.Activity, comment="Activity successfully created")
+        activity_creation = "True"
+    except Exception as e:
+        logger.Log(type=log.LogType.Activity, comment="Activity creation failed: " + str(e))
+        activity_creation = "False"
+
+    return activity_creation
+
+#submit (PUT) or view info on a submitted job (GET)
+@app.route("/jobs/<activity_id>", methods=["GET"])
+@pny.db_session
+def get_activity_details(activity_id):
     logger.Log(type=log.LogType.Activity, comment=str(request))
 
     if flask.request.method == "GET":
@@ -49,25 +82,6 @@ def manage_activity(activity_id):
         else:
             logger.Log(type=log.LogType.Activity, comment="activity is empty")    
            
-
-    elif flask.request.method == "PUT":
-        data = dict=flask.request.get_json()
-        name=data["job_name"]
-
-        new_activity = Activity(activity_id=activity_id, activity_name=name,
-                                date_submitted=datetime.datetime.now(), activity_type="to be developed",
-                                location="to be developed", user="to_be_developed")
-
-        new_activity.setStatus(ActivityStatus.PENDING)
-
-        pny.commit()
-
-        #put some code in here to determine machine to run the job on, job parameters etc
-
-        #kick off a thread to "manage" this job. In reality it just changes the status a few times and exits
-        t=threading.Thread(target=task, args=(activity_id,), name=activity_id)
-        t.start()
-
         return activity_id
 
 
@@ -160,5 +174,6 @@ def job_summary():
 
 
 if __name__ == "__main__":
-    Database.initialiseDatabase()
+    #Database.initialiseDatabase()
+    generate()
     app.run(host="0.0.0.0",port=5500)

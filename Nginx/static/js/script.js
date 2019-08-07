@@ -42,9 +42,10 @@ function getJobWizard() {
 }
 
 function submitJob() {
-    text = $("#userInput").val();
+    job = {}
+    job["job_name"] = $("#userInput").val();
 
-    if (text === "") {
+    if (job["job_name"] == "") {
         $("#confirmation").removeClass().addClass("button amber self-center");
         $("#confirmation").html("<span>&#9888</span> Please enter a job name");
         $("#confirmation").show();
@@ -52,12 +53,20 @@ function submitJob() {
         $.ajax({
             url: "/flask/submit",
             type: "PUT",
-            data: {jsdata: text},
+            contentType: "application/json",
+            data: JSON.stringify(job),
+            dataType: "text",
             success: function(response) {
-                $("#userInput").val('');
-                $("#confirmation").show();
-                $("#confirmation").removeClass().addClass("button green self-center");
-                $("#confirmation").html("<span>&#10003</span> Job successfully submitted");
+                if (response == "True") {
+                    $("#userInput").val('');
+                    $("#confirmation").show();
+                    $("#confirmation").removeClass().addClass("button green self-center");
+                    $("#confirmation").html("<span>&#10003</span> Job successfully submitted");
+                } else {
+                    $("#confirmation").show();
+                    $("#confirmation").removeClass().addClass("button red self-center");
+                    $("#confirmation").html("<span>&#10007</span> Job submission failed");
+                }
             },
             error: function(xhr) {
                 $("#confirmation").show();

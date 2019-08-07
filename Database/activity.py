@@ -19,7 +19,7 @@ class Activity(db.Entity):
     status = pny.Required(ActivityStatus, default=ActivityStatus.PENDING)
     activity_type = pny.Required(str)
     location = pny.Required(str)
-    user = pny.Required(User)
+    user_id = pny.Required(User)
 
     jobs = pny.Set("ActivityJobs")
 

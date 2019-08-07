@@ -64,15 +64,20 @@ def submit_job():
        - CURRENT_JOB object: {'uuid': <id>, 'name': <title>}
        - SMI response data: 'SUCCESS' or 'FAILURE'
     '''
-    CURRENT_JOB['job_id'] = generate_id()
-    CURRENT_JOB['job_name'] = request.form.get('jsdata')
+    CURRENT_JOB = request.json
+    CURRENT_JOB["job_id"] = generate_id()
+    logger.Log(log.LogType.Website, CURRENT_JOB["job_name"])
+    response = ""
 
-    job_request = requests.put(TARGET_URI + '/' + CURRENT_JOB.get("job_id"), json=CURRENT_JOB)
-    response_data = job_request.text
-    logger.Log(log.LogType.Website, str(request))
-    
-    return response_data
+    try:
+        job_request = requests.put(TARGET_URI + '/' + CURRENT_JOB["job_id"], json=CURRENT_JOB)
+        response = job_request.text
+        logger.Log(log.LogType.Website, "Connection with manager established. Activity created: " + response)
+    except requests.exceptions.ConnectionError:
+        logger.Log(log.LogType.Website, "Connection with manager refused")
+        response = "False"
 
+    return response
 
 @APP.route('/flask/jobs/current', methods=['GET'])
 def check_job_status():
