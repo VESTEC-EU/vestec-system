@@ -9,5 +9,5 @@ class User(db.Entity):
     email = pny.Required(str)
     access_rights = pny.Required(int)
 
-    activities = pny.Set("Activity")
+    activities = pny.Set("Activity", cascade_delete=True)
 

@@ -35,13 +35,13 @@ def create_activity(activity_id):
     data = dict=flask.request.get_json()
     name = data["job_name"]
 
-    user_id = pny.select(user.user_id for user in User if user.name == "Vestec").first()
+    user = User.get(name="Vestec")
     activity_creation = ""
 
     try:
         new_activity = Activity(activity_id=activity_id, activity_name=name,
                                 date_submitted=datetime.datetime.now(), activity_type="to be developed",
-                                location="to be developed", user_id=user_id)
+                                location="to be developed", user_id=user)
 
         pny.commit()
 
@@ -99,23 +99,23 @@ def task(activity_id):
     activity = Activity.get(activity_id=activity_id)
     logger.Log(type=log.LogType.Activity, comment="Creating job for activity %s with id %s" % (activity.activity_name, activity_id))
 
-    queue_id = pny.select(queue.queue_id for queue in Queue if queue.queue_name == "standard").first()
-    logger.Log(type=log.LogType.Activity, comment="Selected queue %s for activity %s" % (queue_id, activity.activity_name))
+    queue = Queue.get(queue_name="standard")
+    logger.Log(type=log.LogType.Activity, comment="Selected queue %s for activity %s" % (queue.queue_id, activity.activity_name))
 
-    time.sleep(3)    
+    time.sleep(3)
     job_id = str(uuid4()) 
 
     try:
-        job = Job(job_id=job_id, queue_id=queue_id, no_nodes=1, walltime=300, submit_time=datetime.datetime.now(), executable="test.exe", work_directory="/work/files")
+        job = Job(job_id=job_id, queue_id=queue, no_nodes=1, walltime=300, submit_time=datetime.datetime.now(), executable="test.exe", work_directory="/work/files")
         activity.setStatus(ActivityStatus.ACTIVE)
         pny.commit()
-        logger.Log(type=log.LogType.Job, comment="Created job %s for activity %s on queue %s" % (job_id, activity.activity_name, queue_id))
+        logger.Log(type=log.LogType.Job, comment="Created job %s for activity %s on queue %s" % (job_id, activity.activity_name, queue.queue_id))
     except Exception as e:
         activity.setStatus(ActivityStatus.ERROR)
         logger.Log(type=log.LogType.Job, comment="Job creation failed: " + str(e))
 
     try:
-        link = ActivityJobs(activity_id=activity_id, job_id=job_id, description="test subtask", executable="test.exe")
+        link = ActivityJobs(activity_id=activity, job_id=job, description="test subtask", executable="test.exe")
         pny.commit()
         logger.Log(type=log.LogType.Activity, comment="Created job %s link with activity %s" % (job_id, activity.activity_name))
     except Exception as e:
