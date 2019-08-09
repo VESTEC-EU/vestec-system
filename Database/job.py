@@ -24,9 +24,11 @@ class Job(db.Entity):
     work_directory = pny.Required(str)
     executable = pny.Required(str)
     
-    status = pny.Required(JobStatus)
+    status = pny.Required(JobStatus, default=JobStatus.QUEUED)
 
     activities = pny.Set("ActivityJobs")
 
     def setStatus(self, status):
         self.status = status
+
+

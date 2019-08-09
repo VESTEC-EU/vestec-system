@@ -66,16 +66,11 @@ def submit_job():
     '''
     CURRENT_JOB = request.json
     CURRENT_JOB["job_id"] = generate_id()
-    logger.Log(log.LogType.Website, CURRENT_JOB["job_name"])
-    response = ""
 
-    try:
-        job_request = requests.put(TARGET_URI + '/' + CURRENT_JOB["job_id"], json=CURRENT_JOB)
-        response = job_request.text
-        logger.Log(log.LogType.Website, "Connection with manager established. Activity created: " + response)
-    except requests.exceptions.ConnectionError:
-        logger.Log(log.LogType.Website, "Connection with manager refused")
-        response = "False"
+    job_request = requests.put(TARGET_URI + '/' + CURRENT_JOB["job_id"], json=CURRENT_JOB)
+    response = job_request.text
+
+    logger.Log(log.LogType.Website, "Creation of activity %s is %s" % (CURRENT_JOB["job_name"], response))
 
     return response
 

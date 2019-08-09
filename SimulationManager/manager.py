@@ -6,13 +6,13 @@ from flask import request
 import threading
 import time
 import json
-import Database
 import pony.orm as pny
 from pony.orm.serialization import to_dict
 from Database.job import Job, JobStatus
-from Database.activity import Activity, ActivityStatus
+from Database.activity import Activity, ActivityStatus, ActivityJobs
 from Database.users import User
 from Database.generate_db import generate
+from Database.queues import Queue
 import datetime
 from uuid import uuid4
 import ConnectionManager
@@ -35,26 +35,22 @@ def create_activity(activity_id):
     data = dict=flask.request.get_json()
     name = data["job_name"]
 
-    user_id = pny.select(user.user_id for user in User if user.name == "Vestec")[:]
+    user_id = pny.select(user.user_id for user in User if user.name == "Vestec").first()
     activity_creation = ""
 
     try:
         new_activity = Activity(activity_id=activity_id, activity_name=name,
                                 date_submitted=datetime.datetime.now(), activity_type="to be developed",
-                                location="to be developed", user_id=user_id[0])
-
-        new_activity.setStatus(ActivityStatus.PENDING)
+                                location="to be developed", user_id=user_id)
 
         pny.commit()
 
         #kick off a thread to "manage" this job. In reality it just changes the status a few times and exits
-        t=threading.Thread(target=task, args=(activity_id,), name=activity_id)
-        t.start()
+        thread = threading.Thread(target=task, args=(activity_id,), name=activity_id)
+        thread.start()
 
-        logger.Log(type=log.LogType.Activity, comment="Activity successfully created")
         activity_creation = "True"
     except Exception as e:
-        logger.Log(type=log.LogType.Activity, comment="Activity creation failed: " + str(e))
         activity_creation = "False"
 
     return activity_creation
@@ -100,28 +96,38 @@ def thread_info():
 # task to be run in a thread for each job. Currently just changes the job status then exits
 @pny.db_session
 def task(activity_id):
-    activity = Database.activity.Activity.get(activity_id=activity_id)
-    logger.Log(type=log.LogType.Activity, comment="Activating activity %s" % (activity_id, ))
-    time.sleep(3)
+    activity = Activity.get(activity_id=activity_id)
+    logger.Log(type=log.LogType.Activity, comment="Creating job for activity %s with id %s" % (activity.activity_name, activity_id))
 
-    activity.setStatus(ActivityStatus.ACTIVE)
-    job_id = str(uuid4())
-    job = Job(job_id=job_id, no_nodes=1, walltime= 300, submit_time=datetime.datetime.now(), executable="test.exe", work_directory="/work/files")
-    job.setStatus(JobStatus.QUEUING)
-    
-    pny.commit()
+    queue_id = pny.select(queue.queue_id for queue in Queue if queue.queue_name == "standard").first()
+    logger.Log(type=log.LogType.Activity, comment="Selected queue %s for activity %s" % (queue_id, activity.activity_name))
 
-    link = ActivityJob(activity_id=activity_id, job_id=job_id, description="to be developed", executable="to be developed")
+    time.sleep(3)    
+    job_id = str(uuid4()) 
 
-    logger.Log(type=log.LogType.Job, comment="Submitted job %s for activity %s" % (job_id, activity_id))
+    try:
+        job = Job(job_id=job_id, queue_id=queue_id, no_nodes=1, walltime=300, submit_time=datetime.datetime.now(), executable="test.exe", work_directory="/work/files")
+        activity.setStatus(ActivityStatus.ACTIVE)
+        pny.commit()
+        logger.Log(type=log.LogType.Job, comment="Created job %s for activity %s on queue %s" % (job_id, activity.activity_name, queue_id))
+    except Exception as e:
+        activity.setStatus(ActivityStatus.ERROR)
+        logger.Log(type=log.LogType.Job, comment="Job creation failed: " + str(e))
+
+    try:
+        link = ActivityJobs(activity_id=activity_id, job_id=job_id, description="test subtask", executable="test.exe")
+        pny.commit()
+        logger.Log(type=log.LogType.Activity, comment="Created job %s link with activity %s" % (job_id, activity.activity_name))
+    except Exception as e:
+        logger.Log(type=log.LogType.Activity, comment="Activity-job link creation failed: " + str(e))
+
     time.sleep(10)
-
     job.setStatus(JobStatus.RUNNING)
     logger.Log(type=log.LogType.Job, comment="Job %s running for activity %s" % (job_id, activity_id))
     pny.commit()
-    time.sleep(10)
 
-    job.updateStatus(JobStatus.COMPLETED)
+    time.sleep(10)
+    job.setStatus(JobStatus.COMPLETED)
     logger.Log(type=log.LogType.Job, comment="Job %s completed for activity %s" % (job_id, activity_id))
     activity.setStatus(ActivityStatus.COMPLETED)
     logger.Log(type=log.LogType.Activity, comment="Activity %s completed" % (activity_id))
