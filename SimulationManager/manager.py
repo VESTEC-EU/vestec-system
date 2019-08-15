@@ -9,7 +9,7 @@ import json
 import pony.orm as pny
 from pony.orm.serialization import to_dict
 from Database.job import Job, JobStatus
-from Database.activity import Activity, ActivityStatus, ActivityJobs
+from Database.activity import Activity, ActivityStatus
 from Database.users import User
 from Database.generate_db import generate
 from Database.queues import Queue
@@ -114,13 +114,6 @@ def task(activity_id):
         activity.setStatus(ActivityStatus.ERROR)
         logger.Log(type=log.LogType.Job, comment="Job creation failed: " + str(e))
 
-    try:
-        link = ActivityJobs(activity_id=activity, job_id=job, description="test subtask", executable="test.exe")
-        pny.commit()
-        logger.Log(type=log.LogType.Activity, comment="Created job %s link with activity %s" % (job_id, activity.activity_name))
-    except Exception as e:
-        logger.Log(type=log.LogType.Activity, comment="Activity-job link creation failed: " + str(e))
-
     time.sleep(10)
     job.setStatus(JobStatus.RUNNING)
     logger.Log(type=log.LogType.Job, comment="Job %s running for activity %s" % (job_id, activity_id))
@@ -180,6 +173,6 @@ def job_summary():
 
 
 if __name__ == "__main__":
-    #Database.initialiseDatabase()
     generate()
+
     app.run(host="0.0.0.0",port=5500)

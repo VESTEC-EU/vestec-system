@@ -1,9 +1,8 @@
 import pony.orm as pny
-from Database import db
 import datetime
 from enum import Enum
+from Database import db
 from Database.users import User
-from Database.job import Job
 
 
 class ActivityStatus(Enum):
@@ -21,21 +20,8 @@ class Activity(db.Entity):
     location = pny.Required(str)
     user_id = pny.Required(User)
 
-    jobs = pny.Set("ActivityJobs", cascade_delete=True)
+    jobs = pny.Set("Job", cascade_delete=True)
 
     def setStatus(self, status):
         self.status = status
-
-    def getJobs(self):
-        job_ids = pny.select(link.job_id for link in ActivityJobs if link.activity_id == self.activity_id)[:]
-        sub_jobs = pny.select(job for job in Jobs if job.job_id in job_ids)[:]
-
-        return sub_jobs
-
-
-class ActivityJobs(db.Entity):
-    activity_id = pny.Required(Activity)
-    job_id = pny.Required(Job)
-    description = pny.Required(str)
-    executable = pny.Required(str)
 
