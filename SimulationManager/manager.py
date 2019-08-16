@@ -7,12 +7,13 @@ import threading
 import time
 import json
 import pony.orm as pny
-from pony.orm.serialization import to_dict
+from Database import initialiseDatabase
+from Database.generate_db import initialiseStaticInformation
+from Database.machine import Machine
+from Database.queues import Queue
+from Database.users import User
 from Database.job import Job, JobStatus
 from Database.activity import Activity, ActivityStatus
-from Database.users import User
-from Database.generate_db import generate
-from Database.queues import Queue
 import datetime
 from uuid import uuid4
 import ConnectionManager
@@ -35,13 +36,13 @@ def create_activity(activity_id):
     data = dict=flask.request.get_json()
     name = data["job_name"]
 
-    user = User.get(name="Vestec")
     activity_creation = ""
 
-    try:
-        new_activity = Activity(activity_id=activity_id, activity_name=name,
-                                date_submitted=datetime.datetime.now(), activity_type="to be developed",
-                                location="to be developed", user_id=user)
+    try:        
+        user = User.get(name="Vestec")
+        user.activities.create(activity_id=activity_id, activity_name=name,
+                               date_submitted=datetime.datetime.now(), activity_type="to be developed",
+                               location="to be developed")
 
         pny.commit()
 
@@ -54,31 +55,6 @@ def create_activity(activity_id):
         activity_creation = "False"
 
     return activity_creation
-
-#submit (PUT) or view info on a submitted job (GET)
-@app.route("/jobs/<activity_id>", methods=["GET"])
-@pny.db_session
-def get_activity_details(activity_id):
-    logger.Log(type=log.LogType.Activity, comment=str(request))
-
-    if flask.request.method == "GET":
-        activity = Activity.get(activity_id=activity_id)
-
-        if activity is not None:
-            jobs_tuples = activity.getJobs()
-            jobs = []  # list of dicts
-
-            for job in jobs:
-                jobs.append(job.to_dict())
-
-            actvity.to_dict()
-            actvity["jobs"] = jobs
-
-            return(json.dumps(activity))
-        else:
-            logger.Log(type=log.LogType.Activity, comment="activity is empty")    
-           
-        return activity_id
 
 
 # Displays a simple HTML page with the currently active threads
@@ -106,73 +82,44 @@ def task(activity_id):
     job_id = str(uuid4()) 
 
     try:
-        job = Job(job_id=job_id, queue_id=queue, no_nodes=1, walltime=300, submit_time=datetime.datetime.now(), executable="test.exe", work_directory="/work/files")
-        activity.setStatus(ActivityStatus.ACTIVE)
+        job = Job(job_id=job_id, activity_id=activity, queue_id=queue, no_nodes=1, walltime=300, submit_time=datetime.datetime.now(), executable="test.exe", work_directory="/work/files")
+        activity.jobs.add(job)
+        queue.jobs.add(job)
+        activity.setStatus("ACTIVE")
         pny.commit()
+
+        start_time = time.time()
         logger.Log(type=log.LogType.Job, comment="Created job %s for activity %s on queue %s" % (job_id, activity.activity_name, queue.queue_id))
     except Exception as e:
-        activity.setStatus(ActivityStatus.ERROR)
+        activity.setStatus("ERROR")
         logger.Log(type=log.LogType.Job, comment="Job creation failed: " + str(e))
 
     time.sleep(10)
-    job.setStatus(JobStatus.RUNNING)
+    job.setStatus("RUNNING")
     logger.Log(type=log.LogType.Job, comment="Job %s running for activity %s" % (job_id, activity_id))
     pny.commit()
 
     time.sleep(10)
-    job.setStatus(JobStatus.COMPLETED)
+    job.setStatus("COMPLETED")
+    job.setRunTime(datetime.timedelta(seconds=start_time - time.time()))
+    job.setEndTime(datetime.datetime.now())
     logger.Log(type=log.LogType.Job, comment="Job %s completed for activity %s" % (job_id, activity_id))
-    activity.setStatus(ActivityStatus.COMPLETED)
+    activity.setStatus("COMPLETED")
     logger.Log(type=log.LogType.Activity, comment="Activity %s completed" % (activity_id))
 
     return
 
-#Return a json of the properties of all jobs
-@app.route("/jobs")
-def job_summary():
-    logger.Log(type=log.LogType.Query, comment=str(request))
 
-    Tasks=[]
-    #get all activities, loop through them and create dictionaries to store the information
+@pny.db_session
+def generate_database():
+    machine = pny.count(m for m in Machine)
+    queues = pny.count(q for q in Queue)
 
-    with pny.db_session:
-        activities = pny.select(act for act in Database.activity.Activity)[:]
-
-        for activity in activities:
-            jobs = a.getSubmittedJobs()
-
-            #get all jobs for activity and construct dictionary for each job
-            jobs=[]
-            jbs = pny.select(j for j in sjbs)[:]
-            for jb in jbs:
-                machine = jb.getMachine().name
-                status=jb.getStatus().name
-                exe=jb.getExecutable()
-                qid=jb.getQueueId()
-                juuid=jb.getUUID()
-
-                job={}
-                job["machine"] = machine
-                job["status"] = status
-                job["executable"] = exe
-                job["QueueID"] = qid
-                job["UUID"] = juuid
-
-                jobs.append(job)
-
-            act={}
-            act["Name"] = name
-            act["UUID"] = uuid
-            act["jobs"] = jobs
-            act["date"] = str(a.getDate())
-            act["status"] = a.getStatus().name
-
-            Tasks.append(act)
-
-    print(json.dumps(Tasks,indent=4))
+    if (machine == 0) or (queues == 0):
+        initialiseStaticInformation()
 
 
 if __name__ == "__main__":
-    generate()
-
-    app.run(host="0.0.0.0",port=5500)
+    initialiseDatabase()
+    generate_database()
+    app.run(host="0.0.0.0", port=5500)

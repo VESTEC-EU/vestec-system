@@ -15,7 +15,7 @@ class Activity(db.Entity):
     activity_id = pny.PrimaryKey(str)
     activity_name = pny.Required(str)
     date_submitted = pny.Required(datetime.datetime)
-    status = pny.Required(ActivityStatus, default=ActivityStatus.PENDING)
+    status = pny.Required(str, default="PENDING")
     activity_type = pny.Required(str)
     location = pny.Required(str)
     user_id = pny.Required(User)

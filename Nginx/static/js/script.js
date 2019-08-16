@@ -123,6 +123,7 @@ function getJobsDashboard() {
         type: "GET",
         success: function(response) {
             all_jobs = JSON.parse(response);
+            console.log(all_jobs);
             loadJobCards("DESC");
         },
         error: function(xhr) {
@@ -133,7 +134,28 @@ function getJobsDashboard() {
 }
 
 function loadJobCards(order) {
-    // jobs = json of jobs resulted from getJobsDashboard GET request
+    /* jobs = {activity0: {
+                   activity_id: str(uuid4()),
+                   activity_name: str,
+                   date_submitted: 'mm/dd/yyyy, HH:MM:SS',
+                   status: 'PENDING'/'ACTIVE'/'COMPLETED'/'ERROR',
+                   activity_type: str,
+                   location: str,
+                   jobs: [
+                       {job_id: str(uuid4()),
+                        queue_id: str(uuid4()),
+                        no_nodes: int,
+                        work_directory: str,
+                        executable: str, 
+                        walltime: int, 
+                        submit_time: 'dd/mm/yyyy, HH:MM:SS', 
+                        run_time: 'HH:MM:SS', 
+                        end_time: 'dd/mm/yyyy, HH:MM:SS', 
+                        status: 'QUEUED'/'RUNNING'/'COMPLETED'/'ERROR', 
+                        machine: str}
+                   ]
+              }
+    */ 
     // order = string; if "ASC", the list of jobs is loaded in ascending order, if "DESC", in descending order
  
     $.get("../templates/jobCard.html", function(job_card) {
@@ -141,21 +163,21 @@ function loadJobCards(order) {
 
         if (order == "ASC") {
             for (var i=0; i<all_jobs.length; i++) {
-                var job = all_jobs[i];
+                var activity = all_jobs[i];
                 var card = $(job_card)[0];
                 $(card).attr("id", "card_" + i);
-                $(card).find("header").html("<h3>" + job.Name + "</h3>");
-                $(card).find("#cardBody").html("<p>Machine: " + job.jobs[0].machine + "</p><p>Status: " + job.jobs[0].status + "</p>");
-                $(card).find("footer").html("<h5>Submitted on " + job.date + "</h5>");
+                $(card).find("header").html("<h3>" + activity.activity_name + "</h3>");
+                $(card).find("#cardBody").html("<p>Machine: " + activity.jobs[0].machine + "</p><p>Status: " + activity.status + "</p>");
+                $(card).find("footer").html("<h5>Submitted on " + activity.date_submitted + "</h5>");
                 $("#dashboard").append(card);
             }
         } else {
             for (var i=all_jobs.length-1; i>=0; i--) {
-                var job = all_jobs[i];
+                var activity = all_jobs[i];
                 var card = $(job_card)[0];
                 $(card).attr("id", "card_" + i);
-                $(card).find("header").html("<h3>" + job.Name + "</h3>");
-                $(card).find("#cardBody").html("<p>Machine: " + job.jobs[0].machine + "</p><p>Status: " + job.jobs[0].status + "</p>");
+                $(card).find("header").html("<h3>" + activity.activity_name + "</h3>");
+                $(card).find("#cardBody").html("<p>Machine: " + activity.jobs[0].machine + "</p><p>Status: " + activity.status + "</p>");
                 $(card).find("footer").html("<h5>Submitted on " + job.date + "</h5>");
                 $("#dashboard").append(card);
             }

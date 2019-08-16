@@ -23,11 +23,17 @@ class Job(db.Entity):
 
     walltime = pny.Required(int)
     submit_time = pny.Required(datetime.datetime)
-    run_time = pny.Optional(datetime.datetime)
+    run_time = pny.Optional(datetime.timedelta)
     end_time = pny.Optional(datetime.datetime) 
-    status = pny.Required(JobStatus, default=JobStatus.QUEUED)
+    status = pny.Required(str, default="QUEUED")
 
     def setStatus(self, status):
         self.status = status
+
+    def setRunTime(self, run_time):
+        self.run_time = run_time
+
+    def setEndTime(self, end_time):
+        self.end_time = end_time
 
 

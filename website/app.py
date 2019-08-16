@@ -7,15 +7,20 @@ import os
 import uuid
 import json
 import requests
-from flask import Flask, render_template, request, jsonify
+import pony.orm as pny
 import Utils.log as log
 import Database
-from website import logins
 import flask_jwt_extended as jwt
 import datetime
+from website import logins
+from Database.users import User
+from Database.job import Job
+from Database.queues import Queue
+from Database.machine import Machine
+from Database.activity import Activity
+from pony.orm.serialization import to_dict
+from flask import Flask, render_template, request, jsonify
 
-
-import pony.orm as pny
 
 Database.initialiseDatabase()
 logger=log.VestecLogger("Website")
@@ -74,58 +79,45 @@ def submit_job():
 
     return response
 
-@APP.route('/flask/jobs/current', methods=['GET'])
-def check_job_status():
-    '''This function sends a GET request to the SMI for the details of the current job
-
-       Process:
-       - send get request to the SMI passing the current job as parameter
-       - get SMI response job dictionary
-       - render SMI response on table template
-
-       Input Params: none
-       Output Params: response_data - SMI response dictionary
-
-       Data Structures:
-       - SMI URI: /jobs/uuid
-       - SMI response data: {"uuid": <jobuuid>, "name": <jobname>,
-                             "jobs": [{"machine": <machinename>,
-                                       "status": <jobstatus>, "executable": <exec>,
-                                       "QueueID": <queueid>}, {}],
-                             "date": <jobsubmitdate>, "status": <jobstatus>}
-    '''
-    current_stat_req = requests.get(TARGET_URI + '/' + CURRENT_JOB.get("job_id", None))
-    response_data = current_stat_req.json
-    logger.Log(log.LogType.Website, str(request))
-
-    return json.dumps(response_data)
-
 
 @APP.route('/flask/jobs', methods=['GET'])
+@pny.db_session
 def check_all_jobs_status():
-    '''This function sends a GET request to the SMI for the details of all jobs
+    '''This function sends a GET request to the database for the details of all jobs'''
+    user = User.get(name="Vestec")
+    #activity_records = user.activities  # this returns user, activities and jobs
+    activity_records = pny.select(a for a in Activity if a.user_id==user)[:]
+    activities = {}
 
-       Process:
-       - send get request to the SMI for all jobs
-       - get SMI response jobs dictionary of dictionaries
-       - render SMI response on table template
+    for i,a in enumerate(activity_records):
+        activity = a.to_dict()
+        activity.pop("user_id")
+        activity_date = a.date_submitted.strftime("%d/%m/%Y, %H:%M:%S")
+        activity["date_submitted"] = activity_date
+        activity_jobs = a.jobs
+        jobs = []
 
-       Input Params: none
-       Output Params: response_data - SMI response dictionary
+        for job in activity_jobs:
+            job_dict = job.to_dict()
+            job_dict["machine"] = job.queue_id.machine_id.machine_name
+            job_dict["submit_time"] = job.submit_time.strftime("%d/%m/%Y, %H:%M:%S")
 
-       Data Structures:
-       - SMI URI: /jobs
-       - SMI response data: [{"uuid": <jobuuid>, "name": <jobname>,
-                              "jobs": [{"machine": <machinename>,
-                                        "status": <jobstatus>, "executable": <exec>,
-                                        "QueueID": <queueid>}, {}
-                              ], "date": <jobsubmitdate>, "status": <jobstatus>}, {}]
-    '''
-    all_stat_req = requests.get(TARGET_URI)
-    response_data = all_stat_req.json()
-    logger.Log(log.LogType.Website,str(request))
+            if job.end_time is not None:
+                job_dict["run_time"] = str(job.run_time)
+                job_dict["end_time"] = job.end_time.strftime("%d/%m/%Y, %H:%M:%S")
 
-    return json.dumps(response_data)
+            jobs.append(job_dict)
+
+        activity["jobs"] = jobs
+
+        activities["activity" + str(i)] = activity
+
+    logger.Log(log.LogType.Website, "User %s is trying to extract %s activities" % (user.username, len(activities)))
+
+    serialised_dates = {key: str(value) for key, value in activities.items()}
+    logger.Log(log.LogType.Website, "%s activities had their dates converted to strings" % (len(serialised_dates),))
+
+    return json.dumps(serialised_dates)
 
 
 @APP.route("/flask/logs")
@@ -237,5 +229,6 @@ def supersecret():
 if __name__ == '__main__':
     if "VESTEC_MANAGER_URI" in os.environ:
         TARGET_URI = os.environ["VESTEC_MANAGER_URI"]
+
     print("Website using SimulationManager URI: %s"%TARGET_URI)
     APP.run(host='0.0.0.0', port=8000)
