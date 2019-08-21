@@ -1,9 +1,9 @@
 var current_job = {};
-var all_jobs = {}; 
+var all_activities = {};
 
 $("#checkJobStatus").hide();
 
-$(function(){
+$(function() {
     $("#body-container").load("../templates/createJobWizard.html");
 });
 
@@ -122,9 +122,8 @@ function getJobsDashboard() {
         url: "/flask/jobs",
         type: "GET",
         success: function(response) {
-            all_jobs = JSON.parse(response);
-            console.log(all_jobs);
-            loadJobCards("DESC");
+            all_activities = JSON.parse(response)
+            loadActivityCards("DESC");
         },
         error: function(xhr) {
             $("#confirmation").removeClass().addClass("button fail");
@@ -133,57 +132,42 @@ function getJobsDashboard() {
     });
 }
 
-function loadJobCards(order) {
-    /* jobs = {activity0: {
-                   activity_id: str(uuid4()),
-                   activity_name: str,
-                   date_submitted: 'mm/dd/yyyy, HH:MM:SS',
-                   status: 'PENDING'/'ACTIVE'/'COMPLETED'/'ERROR',
-                   activity_type: str,
-                   location: str,
-                   jobs: [
-                       {job_id: str(uuid4()),
-                        queue_id: str(uuid4()),
-                        no_nodes: int,
-                        work_directory: str,
-                        executable: str, 
-                        walltime: int, 
-                        submit_time: 'dd/mm/yyyy, HH:MM:SS', 
-                        run_time: 'HH:MM:SS', 
-                        end_time: 'dd/mm/yyyy, HH:MM:SS', 
-                        status: 'QUEUED'/'RUNNING'/'COMPLETED'/'ERROR', 
-                        machine: str}
-                   ]
-              }
-    */ 
+function loadActivityCards(order) {
     // order = string; if "ASC", the list of jobs is loaded in ascending order, if "DESC", in descending order
- 
-    $.get("../templates/jobCard.html", function(job_card) {
+    
+    $.get("../templates/jobCard.html", function(template) {
         $('<div id="dashboard" class="w3-container">').appendTo("#body-container");
 
+        activities_length = Object.keys(all_activities).length
+
         if (order == "ASC") {
-            for (var i=0; i<all_jobs.length; i++) {
-                var activity = all_jobs[i];
-                var card = $(job_card)[0];
-                $(card).attr("id", "card_" + i);
-                $(card).find("header").html("<h3>" + activity.activity_name + "</h3>");
-                $(card).find("#cardBody").html("<p>Machine: " + activity.jobs[0].machine + "</p><p>Status: " + activity.status + "</p>");
-                $(card).find("footer").html("<h5>Submitted on " + activity.date_submitted + "</h5>");
-                $("#dashboard").append(card);
+            for (i=0; i<activities_length; i++) {
+                createActivityCard(template, i);
             }
         } else {
-            for (var i=all_jobs.length-1; i>=0; i--) {
-                var activity = all_jobs[i];
-                var card = $(job_card)[0];
-                $(card).attr("id", "card_" + i);
-                $(card).find("header").html("<h3>" + activity.activity_name + "</h3>");
-                $(card).find("#cardBody").html("<p>Machine: " + activity.jobs[0].machine + "</p><p>Status: " + activity.status + "</p>");
-                $(card).find("footer").html("<h5>Submitted on " + job.date + "</h5>");
-                $("#dashboard").append(card);
+            for (i=activities_length-1; i>=0; i--) {
+                createActivityCard(template, i);
             }
         }
+
         $('</div>').appendTo("#body-container");
     });
 }
 
+function createActivityCard(template, index) {
+    var activity = all_activities["activity" + i];
+    var card = $(template)[0];
+    $(card).attr("id", "card_" + i);
+    $(card).find("header").html("<h3>" + activity.activity_name + "</h3>");
+
+    try {
+        machine = activity.jobs[0].machine;
+    } catch(error) {
+        machine = "PENDING..."
+    }
+
+    $(card).find("#cardBody").html("<p>Machine: " + machine + "</p><p>Status: " + activity.status + "</p>");
+    $(card).find("footer").html("<h5>Submitted on " + activity.date_submitted + "</h5>");
+    $("#dashboard").append(card);
+}
 

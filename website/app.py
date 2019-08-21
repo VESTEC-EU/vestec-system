@@ -109,15 +109,11 @@ def check_all_jobs_status():
             jobs.append(job_dict)
 
         activity["jobs"] = jobs
-
         activities["activity" + str(i)] = activity
 
     logger.Log(log.LogType.Website, "User %s is trying to extract %s activities" % (user.username, len(activities)))
 
-    serialised_dates = {key: str(value) for key, value in activities.items()}
-    logger.Log(log.LogType.Website, "%s activities had their dates converted to strings" % (len(serialised_dates),))
-
-    return json.dumps(serialised_dates)
+    return json.dumps(activities)
 
 
 @APP.route("/flask/logs")
