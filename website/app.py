@@ -2,15 +2,14 @@
 '''render_template loads html pages of the application
 '''
 import sys
-sys.path.append("../")
 import os
+sys.path.append("../")
 import uuid
 import json
 import requests
 import pony.orm as pny
 import Utils.log as log
 import Database
-import flask_jwt_extended as jwt
 import datetime
 from website import logins
 from Database.users import User
@@ -20,38 +19,66 @@ from Database.machine import Machine
 from Database.activity import Activity
 from pony.orm.serialization import to_dict
 from flask import Flask, render_template, request, jsonify
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 
-
+# Initialise database
 Database.initialiseDatabase()
-logger=log.VestecLogger("Website")
 
-APP = Flask(__name__)  # create an instance if the imported Flask class
-APP.config["JWT_SECRET_KEY"] = "SECRET"
-
-JWT=jwt.JWTManager(APP)
-
+# Initialise services
+app = Flask(__name__)  # create an instance if the imported Flask class
+logger = log.VestecLogger("Website")
 
 if "VESTEC_MANAGER_URI" in os.environ:
     TARGET_URI = os.environ["VESTEC_MANAGER_URI"]
 else:
     TARGET_URI = 'http://127.0.0.1:5500/jobs'
 
-CURRENT_JOB = {'job_id': '', 'job_name': ''}
-
-def generate_id():
-    '''auto-generates a uuid'''
-    return str(uuid.uuid1())
+# Initialise JWT
+app.config["JWT_SECRET_KEY"] = os.environ["JWT_PASSWD"]
+jwt = JWTManager(app)
 
 
-@APP.route('/flask/auth')  # used to bind the following function to the specified URL
-def welcome_page():
-    '''Render a static welcome template'''
-    print("TARGET_URI = %s"%TARGET_URI)
+@app.route("/flask/signup", methods=["POST"])
+def signup():
+    if not request.is_json:
+        return jsonify({"msg": "Required JSON not found in request"}), 400
+
+    user = request.json
+    username = user.get("username", None)
+    name = user.get("name", None)
+    email = user.get("email", None)
+    password = user.get("password", None)
+
+    user_create = logins.AddUser(username, name, email, password)
+
+    if user_create == "True":
+        msg = "Account created for user %s" % username
+        logger.Log(log.LogType.Logins, msg, user=username)
+
+        return "True"
+    else:
+        return "False"
+
+
+@app.route('/flask/login', methods=['POST'])
+def login():
     logger.Log(log.LogType.Website,str(request))
-    return "real"
+
+    if not request.is_json:
+        return "nope"
+
+    login = request.json
+    username = login.get("username", None)
+    password = login.get("password", None)
+
+    if username != 'test' or password != 'test':
+        return jsonify({"msg": "Incorrect username or password"})  
+    else:
+        access_token = create_access_token(identity=username)
+        return jsonify(access_token=access_token)
 
 
-@APP.route('/flask/submit', methods=['PUT'])
+@app.route('/flask/submit', methods=['PUT'])
 def submit_job():
     '''This function sends a PUT request to the SMI for a CURRENT_JOB
        to be created
@@ -69,18 +96,18 @@ def submit_job():
        - CURRENT_JOB object: {'uuid': <id>, 'name': <title>}
        - SMI response data: 'SUCCESS' or 'FAILURE'
     '''
-    CURRENT_JOB = request.json
-    CURRENT_JOB["job_id"] = generate_id()
+    job = request.json
+    job["job_id"] = str(uuid4())
 
-    job_request = requests.put(TARGET_URI + '/' + CURRENT_JOB["job_id"], json=CURRENT_JOB)
+    job_request = requests.put(TARGET_URI + '/' + job["job_id"], json=job)
     response = job_request.text
 
-    logger.Log(log.LogType.Website, "Creation of activity %s is %s" % (CURRENT_JOB["job_name"], response))
+    logger.Log(log.LogType.Website, "Creation of activity %s is %s" % (job["job_name"], response))
 
     return response
 
 
-@APP.route('/flask/jobs', methods=['GET'])
+@app.route('/flask/jobs', methods=['GET'])
 @pny.db_session
 def check_all_jobs_status():
     '''This function sends a GET request to the database for the details of all jobs'''
@@ -116,7 +143,7 @@ def check_all_jobs_status():
     return json.dumps(activities)
 
 
-@APP.route("/flask/logs")
+@app.route("/flask/logs")
 def showLogs():
     logs=[]
     with pny.db_session:
@@ -132,26 +159,9 @@ def showLogs():
     return logs
 
 
-@APP.route("/flask/signup", methods=["POST"])
-def signup():
-    user = request.json
-    username = user["username"]
-    name = user["name"]
-    email = user["email"]
-    password = user["password"]
-
-    user_create = logins.AddUser(username, name, email, password)
-
-    if user_create == "True":
-        msg = "Account created for user %s" % username
-        logger.Log(log.LogType.Logins, msg, user=username)
-
-        return "True"
-    else:
-        return "False"
 
 #old HTML-only login page
-@APP.route("/login2",methods=["GET","POST"])
+@app.route("/login2",methods=["GET","POST"])
 def loginpage():
     if request.method == "GET":
         return render_template("login.html")
@@ -167,14 +177,9 @@ def loginpage():
     else:
         return render_template("login.html",success=False)
 
-#new login page (with javascript and some jwt test functionalty)
-@APP.route("/login")
-def login():
-    return render_template("auth.html")
-
 
 #checks if a user is authorised, and if so, gives them a jwt
-@APP.route("/authenticate",methods=["POST"])
+@app.route("/authenticate",methods=["POST"])
 def auth():
     username = request.json.get('username', None)
     password = request.json.get('password', None)
@@ -185,7 +190,7 @@ def auth():
             user = Database.User.get(username=username)
             name = user.name
             token = jwt.create_access_token(identity=username)
-            print("JWT= %s"%token)
+            print("jwt= %s"%token)
             jti = jwt.get_jti(token)
             now=datetime.datetime.now()
             userToken = Database.Token(jti=jti,date_created=now,date_accessed=now,user=user)
@@ -196,8 +201,8 @@ def auth():
     else:
         return jsonify({"msg":"Error: Invalid user"})
 
-#removes the user's JWT from the authorised list (essentially logs the user out)
-@APP.route("/logout", methods=["DELETE"])
+#removes the user's jwt from the authorised list (essentially logs the user out)
+@app.route("/logout", methods=["DELETE"])
 @logins.login_required
 def logout():
     #get the jti
@@ -211,20 +216,16 @@ def logout():
     return jsonify(msg="User logged out")
 
 #tests if a user has a valid jwt
-@APP.route("/secret")
+@app.route("/secret")
 @logins.login_required
 def secret():
     return jsonify({"msg":"Token works!"})
 
 #tests if a user has authentication
-@APP.route("/supersecret")
+@app.route("/supersecret")
 @logins.admin_required
 def supersecret():
     return jsonify({"msg":"You are an admin"})
 
 if __name__ == '__main__':
-    if "VESTEC_MANAGER_URI" in os.environ:
-        TARGET_URI = os.environ["VESTEC_MANAGER_URI"]
-
-    print("Website using SimulationManager URI: %s"%TARGET_URI)
-    APP.run(host='0.0.0.0', port=8000)
+    app.run(host='0.0.0.0', port=8000)

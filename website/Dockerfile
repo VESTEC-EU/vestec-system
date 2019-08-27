@@ -5,4 +5,4 @@ EXPOSE $port
 COPY . /app
 WORKDIR /app/website
 RUN pip install -r /app/website/requirements.txt
-CMD gunicorn -b 0.0.0.0:$port app:APP
+CMD gunicorn -b 0.0.0.0:$port app:app

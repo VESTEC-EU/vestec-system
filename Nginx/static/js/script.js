@@ -1,6 +1,14 @@
 var current_job = {};
 var all_activities = {};
 
+function checkAuth() {
+    var jwt_token = sessionStorage.getItem("access_token");
+
+    if (typeof jwt_token === 'undefined' || jwt_token === null || jwt_token === '') {
+        window.location.href = "/login";
+    }
+}
+
 $("#checkJobStatus").hide();
 
 $(function() {
@@ -18,15 +26,22 @@ $("#signup").click(function() {
 });
 
 function userLogin() {
-    var username = $("#login-container #username").val();
-    var password = $("#login-container #password").val();
+    var user = {};
+    user["username"] = $("#username").val();
+    user["password"] = $("#password").val();
 
     $.ajax({
-        url: "/flask/auth",
-        type: "GET",
+        url: "/flask/login",
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify(user),
+        dataType: "json",
         success: function(response) {
-            if (response == "real") {
+            if (typeof response.access_token !== 'undefined' && response.access_token !== '') {
+                sessionStorage.setItem("access_token", response.access_token);
                 window.location.href = "/home";
+            } else {
+                $("#login-message").text("username or password incorrect. please try again.");
             }
         },
         error: function(xhr) {
