@@ -2,6 +2,7 @@ var current_job = {};
 var all_activities = {};
 
 function checkAuth() {
+    // need to add a check to flask to see if the token in the session is the same as the current user's
     var jwt_token = sessionStorage.getItem("access_token");
 
     if (typeof jwt_token === 'undefined' || jwt_token === null || jwt_token === '') {
@@ -57,7 +58,7 @@ function getJobWizard() {
 }
 
 function submitJob() {
-    job = {}
+    var job = {}
     job["job_name"] = $("#userInput").val();
 
     if (job["job_name"] == "") {
@@ -68,6 +69,7 @@ function submitJob() {
         $.ajax({
             url: "/flask/submit",
             type: "PUT",
+            headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
             contentType: "application/json",
             data: JSON.stringify(job),
             dataType: "text",
@@ -136,6 +138,7 @@ function getJobsDashboard() {
     $.ajax({
         url: "/flask/jobs",
         type: "GET",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
         success: function(response) {
             all_activities = JSON.parse(response)
             loadActivityCards("DESC");

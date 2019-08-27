@@ -35,11 +35,12 @@ def welcome_page():
 def create_activity(activity_id):    
     data = dict=flask.request.get_json()
     name = data["job_name"]
+    creator = data["creator"]
 
     activity_creation = ""
 
     try:        
-        user = User.get(name="Vestec")
+        user = User.get(name=creator)
         user.activities.create(activity_id=activity_id, activity_name=name,
                                date_submitted=datetime.datetime.now(), activity_type="to be developed",
                                location="to be developed")

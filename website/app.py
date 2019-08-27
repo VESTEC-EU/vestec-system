@@ -4,13 +4,13 @@
 import sys
 import os
 sys.path.append("../")
-import uuid
 import json
 import requests
 import pony.orm as pny
 import Utils.log as log
 import Database
 import datetime
+from uuid import uuid4
 from website import logins
 from Database.users import User
 from Database.job import Job
@@ -83,6 +83,7 @@ def login():
 
 
 @app.route('/flask/submit', methods=['PUT'])
+@jwt_required
 def submit_job():
     '''This function sends a PUT request to the SMI for a CURRENT_JOB
        to be created
@@ -101,6 +102,7 @@ def submit_job():
        - SMI response data: 'SUCCESS' or 'FAILURE'
     '''
     job = request.json
+    job["creator"] = get_jwt_identity() 
     job["job_id"] = str(uuid4())
 
     job_request = requests.put(TARGET_URI + '/' + job["job_id"], json=job)
@@ -113,10 +115,10 @@ def submit_job():
 
 @app.route('/flask/jobs', methods=['GET'])
 @pny.db_session
+@jwt_required
 def check_all_jobs_status():
     '''This function sends a GET request to the database for the details of all jobs'''
-    user = User.get(name="Vestec")
-    #activity_records = user.activities  # this returns user, activities and jobs
+    user = User.get(name = get_jwt_identity())
     activity_records = pny.select(a for a in Activity if a.user_id==user)[:]
     activities = {}
 
@@ -163,48 +165,6 @@ def showLogs():
     return logs
 
 
-
-#old HTML-only login page
-@app.route("/login2",methods=["GET","POST"])
-def loginpage():
-    if request.method == "GET":
-        return render_template("login.html")
-    else:
-        username=request.form["username"]
-        password=request.form["password"]
-
-    if logins.VerifyUser(username,password):
-        with pny.db_session:
-            user = Database.User.get(username=username)
-            name = user.name
-        return render_template("login.html",success=True,name=name)
-    else:
-        return render_template("login.html",success=False)
-
-
-#checks if a user is authorised, and if so, gives them a jwt
-@app.route("/authenticate",methods=["POST"])
-def auth():
-    username = request.json.get('username', None)
-    password = request.json.get('password', None)
-    print("user = %s"%username)
-
-    if logins.VerifyUser(username,password):
-        with pny.db_session:
-            user = Database.User.get(username=username)
-            name = user.name
-            token = jwt.create_access_token(identity=username)
-            print("jwt= %s"%token)
-            jti = jwt.get_jti(token)
-            now=datetime.datetime.now()
-            userToken = Database.Token(jti=jti,date_created=now,date_accessed=now,user=user)
-            msg = "User %s logged in"%username
-            logger.Log(log.LogType.Logins,msg,user=username)
-            return jsonify({"token":token})
-    
-    else:
-        return jsonify({"msg":"Error: Invalid user"})
-
 #removes the user's jwt from the authorised list (essentially logs the user out)
 @app.route("/logout", methods=["DELETE"])
 @logins.login_required
@@ -233,3 +193,4 @@ def supersecret():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000)
+
