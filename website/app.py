@@ -49,7 +49,7 @@ def signup():
     email = user.get("email", None)
     password = user.get("password", None)
 
-    user_create = logins.AddUser(username, name, email, password)
+    user_create = logins.add_user(username, name, email, password)
 
     if user_create == "True":
         msg = "Account created for user %s" % username
@@ -65,17 +65,21 @@ def login():
     logger.Log(log.LogType.Website,str(request))
 
     if not request.is_json:
-        return "nope"
+        return jsonify({"msg": "Required JSON not found in request"}), 400  
 
     login = request.json
     username = login.get("username", None)
     password = login.get("password", None)
+    authorise = False
 
-    if username != 'test' or password != 'test':
-        return jsonify({"msg": "Incorrect username or password"})  
-    else:
+    if username and password:
+        authorise = logins.verify_user(username, password)
+
+    if authorise:
         access_token = create_access_token(identity=username)
         return jsonify(access_token=access_token)
+    else:
+        return jsonify({"msg": "Incorrect username or password"})  
 
 
 @app.route('/flask/submit', methods=['PUT'])

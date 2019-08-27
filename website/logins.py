@@ -8,6 +8,47 @@ from functools import wraps
 import datetime
 
 
+@pny.db_session
+def add_user(username, name, email, password): 
+    #check if the user already exists
+    test_user = User.get(username=username)
+
+    if test_user is None:
+        user_id = str(uuid4())
+        #hash the password to be stored
+        password_hash = sha256.hash(password)
+
+        #create user
+        user = User(user_id=user_id, username=username, name=name, email=email, password_hash=password_hash, access_rights=1)
+
+        pny.commit()
+
+        print("User '%s' created" % username)
+        return "True"
+    else: 
+        print("User already exists")
+        return "False"
+
+
+@pny.db_session
+def verify_user(username, password):    
+    user = User.get(username=username)
+    verified = False
+
+    if user is None:
+        print("User does not exist!")
+        return False
+    else:
+        password_hash = user.password_hash
+        verified = sha256.verify(password, password_hash)
+    
+    if verified:
+        print("User '%s' is authenticated :)" % username)
+        return True
+    else:
+        print("User '%s' is not authenticated :(" % username)
+        return False
+
 
 #Custom function decorator for functions that require a login
 #Checks the JWT is a valid JWT, then checks if it is in the database as known JWT
@@ -44,47 +85,6 @@ def admin_required(fn):
 
 
 
-@pny.db_session
-def AddUser(username, name, email, password): 
-    #check if the user already exists
-    test_user = User.get(username=username)
-
-    if test_user is None:
-        user_id = str(uuid4())
-        #hash the password to be stored
-        password_hash = sha256.hash(password)
-
-        #create user
-        user = User(user_id=user_id, username=username, name=name, email=email, password_hash=password_hash, access_rights=1)
-
-        pny.commit()
-
-        print("User '%s' created" % username)
-        return "True"
-    else: 
-        print("User already exists")
-        return "False"
-
-
-@pny.db_session
-def VerifyUser(username,password):
-    
-    #get the user
-    user = Database.User.get(username=username)
-    if user==None:
-        print("User does not exist!")
-        return False
-    
-    pHash = user.passwordHash
-    
-    verified = sha256.verify(password,pHash)
-    
-    if verified:
-        print("User '%s' is authenticated :)"%username)
-        return True
-    else:
-        print("User '%s' is not authenticated :("%username)
-        return False
 
 @pny.db_session
 def IsAdmin(username):
