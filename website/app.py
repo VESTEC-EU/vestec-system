@@ -134,7 +134,7 @@ def get_activities_summary():
         activity_jobs = a.jobs
         activity_summary["machines"] = list(set([job.queue_id.machine_id.machine_name for job in activity_jobs]))
         
-        activity_summary["jobs"] = len(a.jobs)
+        activity_summary["jobs"] = str(len(a.jobs))
         activities["activity" + str(i)] = activity_summary
 
     logger.Log(log.LogType.Website, "User %s is trying to extract %s activities" % (user.username, len(activities)))
@@ -153,15 +153,19 @@ def get_activity_details(activity_id):
     jobs = []
 
     for job in activity_jobs:
-        job_dict = job.to_dict()
-        job_dict["machine"] = job.queue_id.machine_id.machine_name
-        job_dict["submit_time"] = job.submit_time.strftime("%d/%m/%Y, %H:%M:%S")
+        job_details = {}
+        job_details["machine"] = job.queue_id.machine_id.machine_name
+        job_details["queue"] = job.queue_id.queue_name
+        job_details["submit_time"] = job.submit_time.strftime("%d/%m/%Y, %H:%M:%S")
+        job_details["status"] = job.status
+        job_details["work_dir"] = job.work_directory
+        job_details["exec"] = job.executable
 
         if job.end_time is not None:
-            job_dict["run_time"] = str(job.run_time)
-            job_dict["end_time"] = job.end_time.strftime("%d/%m/%Y, %H:%M:%S")
+            job_details["run_time"] = str(job.run_time)
+            job_details["end_time"] = job.end_time.strftime("%d/%m/%Y, %H:%M:%S")
 
-        jobs.append(job_dict)
+        jobs.append(job_details)
 
     logger.Log(log.LogType.Website, "User %s is trying to extract %s jobs for activity %s" % (user.username, len(jobs), activity.activity_name))
 

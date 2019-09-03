@@ -96,7 +96,8 @@ a:link {
 }
 
 .self-center {
-  margin: auto;
+  margin-left: auto !important;
+  margin-right: auto !important;
 }
 
 .contents-right {

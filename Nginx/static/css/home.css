@@ -64,13 +64,6 @@
   margin: 20px;
 }
 
-.jobDetails {
-  display: flex;
-  justify-content: space-between;
-  width: 60%;
-  margin: 10px;
-}
-
 .card-end {
   height: 60px;
   text-align: right;
@@ -96,6 +89,29 @@ footer {
   border-radius: 20px;
 }
 
+#cardStatus {
+  font-size: 15px;
+}
+
+#viewDetails {
+  font-size: 15px;
+  margin: 8px;
+}
+
 .trash {
   margin: 0px 2px;
+}
+
+.jobDetails {
+  margin: 20px;
+  width: 90%;
+  border: 1px solid gray;
+  border-radius: 10px;
+  padding: 5px 15px;
+}
+
+.jobLine {
+  display: flex;
+  justify-content: space-between;
+  margin: 10px;
 }

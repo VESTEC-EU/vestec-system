@@ -1,4 +1,3 @@
-var current_job = {};
 var all_activities = {};
 
 function checkAuth() {
@@ -155,7 +154,7 @@ function createActivityCard(template, index) {
         machines = "PENDING..."
     }
 
-    $(card).find("#cardBody").html("<p>Machine: " + machines.join(", ") + "</p><p>Submitted on: " + activity.date_submitted + "</p>");
+    $(card).find("#cardBody").html("<p><b>Machines: </b>" + machines.join(", ") + "</p><p><b>Submitted on: </b>" + activity.date_submitted + "</p><p><b>No. Jobs: </b>" + activity.jobs + "</p>");
     $(card).find("#cardStatus").html(activity.status);
     $(card).find("#viewDetails").attr('onClick', "getJobDetails(" + index + ")")
     $("#dashboard").append(card);
@@ -169,9 +168,11 @@ function getJobDetails(index) {
         type: "GET",
         headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
         success: function(response) {
-            current_job = JSON.parse(response);
-            var job_details = loadJobDetails();
-            $("#body-container").html(job_details);
+            activity_jobs = JSON.parse(response);
+
+            for (job in activity_jobs) { 
+                $("#body-container").html(loadJobDetails(activity_jobs[job]));
+            }
 
             if (($("#nav-home").hasClass("blue")) && (current_job.status !== "COMPLETED")) {
                 setTimeout(getCurrentJobStatus, 5000);
@@ -186,16 +187,23 @@ function getJobDetails(index) {
     });
 }
 
-function loadJobDetails() {
-    var job_html = '<div class="jobDetails">Name: <div id="jobName">' + current_job.Name + '</div></div><div class="jobDetails">Date: <div id="jobDate">' + current_job.date + '</div></div>';
+function loadJobDetails(job) {
+    var job_html = '<div class="jobDetails self-center">';
+    job_html += '<div class="jobLine"><b>Machine: </b><div id="jobMachine">' + job.machine + '</div></div>';
+    job_html += '<div class="jobLine"><b>Queue: </b><div id="jobQueue">' + job.queue + '</div></div>';
+    job_html += '<div class="jobLine"><b>Date: </b><div id="jobSubmit">' + job.submit_time + '</div></div>';
 
-    if (current_job.status == "PENDING") {
-        job_html += '<div class="jobDetails">Status: <button id="jobStatus" class="button amber self-right">' + current_job.status + '</button></div>';
-    } else if (current_job.status == "ACTIVE") {  
-        job_html += '<div class="jobDetails">Status: <button id="jobStatus" class="button green self-right">' + current_job.status + '</button></div>';
+    if (job.status == "QUEUED") {
+        job_html += '<div class="jobLine"><b>Status: </b><button id="jobStatus" class="button amber self-right">' + job.status + '</button></div>';
+    } else if (job.status == "RUNNING") {  
+        job_html += '<div class="jobLine"><b>Status: </b><button id="jobStatus" class="button green self-right">' + job.status + '</button></div>';
+    } else if (job.status == "ERROR") {
+        job_html += '<div class="jobLine"><b>Status: </b><button id="jobStatus" class="button red self-right">' + job.status + '</button></div>';
     } else { 
-        job_html += '<div class="jobDetails">Status: <button id="jobStatus" class="button blue self-right">' + current_job.status + '</button></div>';
+        job_html += '<div class="jobLine"><b>Status: </b><button id="jobStatus" class="button blue self-right">' + job.status + '</button></div>';
     }
+
+    job_html += '</div>';
 
     return job_html;
 }
