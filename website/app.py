@@ -108,7 +108,7 @@ def submit_job():
     job_request = requests.put(TARGET_URI + '/' + job["job_id"], json=job)
     response = job_request.text
 
-    logger.Log(log.LogType.Website, "Creation of activity %s is %s" % (job["job_name"], response))
+    logger.Log(log.LogType.Website, "Creation of activity %s by %s is %s" % (job["job_name"], job["creator"], response))
 
     return response
 
@@ -118,7 +118,7 @@ def submit_job():
 @jwt_required
 def check_all_jobs_status():
     '''This function sends a GET request to the database for the details of all jobs'''
-    user = User.get(name = get_jwt_identity())
+    user = User.get(username = get_jwt_identity())
     activity_records = pny.select(a for a in Activity if a.user_id==user)[:]
     activities = {}
 

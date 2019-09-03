@@ -4,13 +4,14 @@
         <link rel="stylesheet" href="css/general.css" />
         <link rel="stylesheet" href="css/home.css" />
         <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css" />
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     </head>
     <body onload="checkAuth()">
         <div>
-            <ul class="navbar">
-                <li id="nav-home" class="blue" onClick="getJobWizard()">Home</li>
-                <li id="nav-dash" onClick="getJobsDashboard()">Dashboard</li>
-            </ul>
+            <div class="navbar">
+                <div id="nav-home" class="blue" onClick="getJobWizard()">Home</div>
+                <div id="nav-dash" onClick="getJobsDashboard()">Dashboard</div>
+            </div>
         </div>
         <div id="body-container"></div>
     </body>

@@ -40,7 +40,7 @@ def create_activity(activity_id):
     activity_creation = ""
 
     try:        
-        user = User.get(name=creator)
+        user = User.get(username=creator)
         user.activities.create(activity_id=activity_id, activity_name=name,
                                date_submitted=datetime.datetime.now(), activity_type="to be developed",
                                location="to be developed")
@@ -53,6 +53,7 @@ def create_activity(activity_id):
 
         activity_creation = "True"
     except Exception as e:
+        logger.Log(type=log.LogType.Activity, comment=str(e)[:200])
         activity_creation = "False"
 
     return activity_creation

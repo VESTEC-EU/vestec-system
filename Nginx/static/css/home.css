@@ -6,7 +6,7 @@
   background-color: #333;
 }
 
-.navbar li {
+.navbar div {
   float: left;
   display: block;
   color: white;
@@ -16,7 +16,7 @@
 }
 
 /* Change the link color to #111 (black) on hover */
-.navbar li:hover {
+.navbar div:hover {
   background-color: #111;
 }
 
@@ -71,6 +71,12 @@
   margin: 10px;
 }
 
+.card-end {
+  height: 60px;
+  text-align: right;
+  padding: 5px !important;
+}
+
 header {
   border-top-left-radius: 5px;
   border-top-right-radius: 5px;
@@ -79,4 +85,17 @@ header {
 footer {
   border-bottom-left-radius: 5px;
   border-bottom-right-radius: 5px;
+}
+
+.card-button {
+  color: #018cba;
+  background-color: white;
+  margin: 5px;
+  font-size: 18px;
+  padding: 10px;
+  border-radius: 20px;
+}
+
+.trash {
+  margin: 0px 2px;
 }

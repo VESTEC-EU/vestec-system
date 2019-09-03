@@ -22,16 +22,16 @@ function signUp() {
                 success: function(response) {
                     console.log(response);
                     if (response == "True") {
-                        $("#login-message").css("display", "block");
                         $("#login-message").html('<a href="/" class="blue-txt">User successfully created. Log in.</a>');
+                        $("#login-message").show();
                     } else {
-                        $("#login-message").css("display", "block");
                         $("#login-message").html("User creation failed. Please try again.");
+                        $("#login-message").show();
                     }
                 },
                 error: function(xhr) {
-                    $("#login-message").show();
                     $("#login-message").html("User creation failed. Please try again.");
+                    $("#login-message").show();
                 }
             });
         }

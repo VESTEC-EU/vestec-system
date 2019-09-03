@@ -87,7 +87,7 @@ a:link {
 /* POSITIONS */
 .self-right {
   margin-right: 0px;
-  float: right;
+  float: right !important;
 }
 
 .self-left {
