@@ -17,7 +17,7 @@ class LogType(Enum):
 
 class DBLog(db.Entity):
     timestamp = pny.Required(datetime.datetime)
-    user = pny.Required(str,default="unknown")
+    user = pny.Required(str,default="system")
     type = pny.Required(LogType)
     comment = pny.Required(str)
     originator = pny.Required(str)
@@ -30,7 +30,7 @@ class VestecLogger():
         self.originator = originator
 
     @pny.db_session
-    def Log(self,type,comment,user="Unknown"):
+    def Log(self,type,comment,user="system"):
         DBLog(timestamp=datetime.datetime.now(),type=type,comment=comment,originator=self.originator,user=user)
 
 

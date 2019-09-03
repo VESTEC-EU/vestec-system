@@ -58,7 +58,8 @@ function userLogin() {
 }
 
 function getJobWizard() {
-    $("#nav-dash").removeClass();
+    $("#nav-dash").removeClass("blue");
+    $("#nav-logs").removeClass("blue");
     $("#nav-home").addClass("blue");
     $("#body-container").load("../templates/createJobWizard.html");
 }
@@ -101,7 +102,8 @@ function submitJob() {
 }
 
 function getJobsDashboard() {
-    $("#nav-home").removeClass();
+    $("#nav-home").removeClass("blue");
+    $("#nav-logs").removeClass("blue");
     $("#nav-dash").addClass("blue");
     $("#body-container").html("");
 
@@ -122,7 +124,6 @@ function getJobsDashboard() {
 
 function loadActivityCards(order) {
     // order = string; if "ASC", the list of jobs is loaded in ascending order, if "DESC", in descending order
-    
     $.get("../templates/jobCard.html", function(template) {
         $('<div id="dashboard" class="w3-container">').appendTo("#body-container");
 
@@ -161,6 +162,7 @@ function createActivityCard(template, index) {
 }
 
 function getJobDetails(index) {
+    $("#nav-dash").removeClass("blue");
     activity = all_activities["activity" + index];
 
     $.ajax({
@@ -206,4 +208,37 @@ function loadJobDetails(job) {
     job_html += '</div>';
 
     return job_html;
+}
+
+function getLogs() {
+    $("#nav-home").removeClass("blue");
+    $("#nav-dash").removeClass("blue");
+    $("#nav-logs").addClass("blue");
+    $("#body-container").load("../templates/logs.html");
+
+    $.ajax({
+        url: "/flask/logs",
+        type: "GET",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        success: function(response) {
+            var logs = JSON.parse(response);
+            
+            for (log in logs) {
+                var log_entry = "<tr>";
+                log = logs[log];
+                log_entry += "<td>" + log.timestamp + "</td>";
+                log_entry += "<td>" + log.originator + "</td>";
+                log_entry += "<td>" + log.user + "</td>";
+                log_entry += "<td>" + log.type + "</td>";
+                log_entry += "<td>" + log.comment + "</td>";
+                log_entry += "</tr>";
+
+                $("#logsTable").append(log_entry);
+            }
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> Logs check failed");
+        }
+    });
 }

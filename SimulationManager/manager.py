@@ -24,12 +24,6 @@ import Utils.log as log
 app=flask.Flask("Simulation Manager")
 logger = log.VestecLogger("Simulation Manager")
 
-@app.route("/")
-def welcome_page():
-    logger.Log(type=log.LogType.Query, comment=str(request))
-    return("VESTEC simulation manager")
-
-
 @app.route("/jobs/<activity_id>", methods=["PUT"])
 @pny.db_session
 def create_activity(activity_id):    
@@ -53,7 +47,7 @@ def create_activity(activity_id):
 
         activity_creation = "True"
     except Exception as e:
-        logger.Log(type=log.LogType.Activity, comment=str(e)[:200])
+        logger.Log(type=log.LogType.Activity, comment=str(e)[:200], user=creator)
         activity_creation = "False"
 
     return activity_creation

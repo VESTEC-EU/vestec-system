@@ -62,8 +62,6 @@ def signup():
 
 @app.route('/flask/login', methods=['POST'])
 def login():
-    logger.Log(log.LogType.Website,str(request))
-
     if not request.is_json:
         return jsonify({"msg": "Required JSON not found in request"}), 400  
 
@@ -80,6 +78,8 @@ def login():
         return jsonify(access_token=access_token)
     else:
         return jsonify({"msg": "Incorrect username or password"})  
+
+    logger.Log(log.LogType.Website, str(request), user=username)
 
 
 @app.route('/flask/submit', methods=['PUT'])
@@ -108,7 +108,7 @@ def submit_job():
     job_request = requests.put(TARGET_URI + '/' + job["job_id"], json=job)
     response = job_request.text
 
-    logger.Log(log.LogType.Website, "Creation of activity %s by %s is %s" % (job["job_name"], job["creator"], response))
+    logger.Log(log.LogType.Website, "Creation of activity %s by %s is %s" % (job["job_name"], job["creator"], response), user=job["creator"])
 
     return response
 
@@ -137,7 +137,7 @@ def get_activities_summary():
         activity_summary["jobs"] = str(len(a.jobs))
         activities["activity" + str(i)] = activity_summary
 
-    logger.Log(log.LogType.Website, "User %s is trying to extract %s activities" % (user.username, len(activities)))
+    logger.Log(log.LogType.Website, "User %s is trying to extract %s activities" % (user.username, len(activities)), user=user.username)
 
     return json.dumps(activities)
 
@@ -167,25 +167,29 @@ def get_activity_details(activity_id):
 
         jobs.append(job_details)
 
-    logger.Log(log.LogType.Website, "User %s is trying to extract %s jobs for activity %s" % (user.username, len(jobs), activity.activity_name))
+    logger.Log(log.LogType.Website, "User %s is trying to extract %s jobs for activity %s" % (user.username, len(jobs), activity.activity_name), user.username)
 
     return json.dumps(jobs)
 
 
-@app.route("/flask/logs")
+@app.route('/flask/logs', methods=['GET'])
+@pny.db_session
+@jwt_required
 def showLogs():
-    logs=[]
-    with pny.db_session:
-        ls=pny.select(a for a in log.DBLog)[:]
-        for l in ls:
-            lg={}
-            lg["timestamp"]=str(l.timestamp)
-            lg["originator"]=l.originator
-            lg["user"]=l.user
-            lg["type"] = l.type.name
-            lg["comment"] = l.comment
-            logs.append(lg)
-    return logs
+    logs = []
+    log_records = pny.select(l for l in log.DBLog)[:]
+
+    for l in log_records:
+        lg = {}
+        lg["timestamp"] = str(l.timestamp)
+        lg["originator"] = l.originator
+        lg["user"] = l.user
+        lg["type"] = l.type.name
+        lg["comment"] = l.comment
+
+        logs.append(lg)
+
+    return json.dumps(logs)
 
 
 #removes the user's jwt from the authorised list (essentially logs the user out)
@@ -199,7 +203,7 @@ def logout():
         token = Database.Token.get(jti=jti)
         token.delete()
         msg = "User %s logged out"%username
-        logger.Log(log.LogType.Logins,msg,user=username)
+        logger.Log(log.LogType.Logins, msg, user=username)
     return jsonify(msg="User logged out")
 
 #tests if a user has a valid jwt
