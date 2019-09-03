@@ -150,12 +150,12 @@ function createActivityCard(template, index) {
     $(card).find("#cardTitle").html(activity.activity_name);
 
     try {
-        machine = activity.jobs[0].machine;
+        machines = activity.machines;
     } catch(error) {
-        machine = "PENDING..."
+        machines = "PENDING..."
     }
 
-    $(card).find("#cardBody").html("<p>Machine: " + machine + "</p><p>Submitted on: " + activity.date_submitted + "</p>");
+    $(card).find("#cardBody").html("<p>Machine: " + machines.join(", ") + "</p><p>Submitted on: " + activity.date_submitted + "</p>");
     $(card).find("#cardStatus").html(activity.status);
     $(card).find("#viewDetails").attr('onClick', "getJobDetails(" + index + ")")
     $("#dashboard").append(card);
@@ -165,10 +165,9 @@ function getJobDetails(index) {
     activity = all_activities["activity" + index];
 
     $.ajax({
-        url: "/flask/job/",
+        url: "/flask/job/" + activity["activity_id"],
         type: "GET",
         headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
-        data: {"activity_id": activity["activity_id"]},
         success: function(response) {
             current_job = JSON.parse(response);
             var job_details = loadJobDetails();

@@ -116,37 +116,56 @@ def submit_job():
 @app.route('/flask/jobs', methods=['GET'])
 @pny.db_session
 @jwt_required
-def check_all_jobs_status():
+def get_activities_summary():
     '''This function sends a GET request to the database for the details of all jobs'''
     user = User.get(username = get_jwt_identity())
     activity_records = pny.select(a for a in Activity if a.user_id==user)[:]
     activities = {}
 
     for i,a in enumerate(activity_records):
-        activity = a.to_dict()
-        activity.pop("user_id")
+        activity_summary = {}
+        activity_summary["activity_id"] = a.activity_id
+        activity_summary["activity_name"] = a.activity_name
+        activity_summary["status"] = a.status
+
         activity_date = a.date_submitted.strftime("%d/%m/%Y, %H:%M:%S")
-        activity["date_submitted"] = activity_date
+        activity_summary["date_submitted"] = activity_date
+
         activity_jobs = a.jobs
-        jobs = []
-
-        for job in activity_jobs:
-            job_dict = job.to_dict()
-            job_dict["machine"] = job.queue_id.machine_id.machine_name
-            job_dict["submit_time"] = job.submit_time.strftime("%d/%m/%Y, %H:%M:%S")
-
-            if job.end_time is not None:
-                job_dict["run_time"] = str(job.run_time)
-                job_dict["end_time"] = job.end_time.strftime("%d/%m/%Y, %H:%M:%S")
-
-            jobs.append(job_dict)
-
-        activity["jobs"] = jobs
-        activities["activity" + str(i)] = activity
+        activity_summary["machines"] = list(set([job.queue_id.machine_id.machine_name for job in activity_jobs]))
+        
+        activity_summary["jobs"] = len(a.jobs)
+        activities["activity" + str(i)] = activity_summary
 
     logger.Log(log.LogType.Website, "User %s is trying to extract %s activities" % (user.username, len(activities)))
 
     return json.dumps(activities)
+
+
+@app.route('/flask/job/<activity_id>', methods=['GET'])
+@pny.db_session
+@jwt_required
+def get_activity_details(activity_id):
+    '''This function sends a GET request to the database for the details of all jobs'''
+    user = User.get(username = get_jwt_identity())
+    activity = Activity.get(activity_id = activity_id)
+    activity_jobs = activity.jobs
+    jobs = []
+
+    for job in activity_jobs:
+        job_dict = job.to_dict()
+        job_dict["machine"] = job.queue_id.machine_id.machine_name
+        job_dict["submit_time"] = job.submit_time.strftime("%d/%m/%Y, %H:%M:%S")
+
+        if job.end_time is not None:
+            job_dict["run_time"] = str(job.run_time)
+            job_dict["end_time"] = job.end_time.strftime("%d/%m/%Y, %H:%M:%S")
+
+        jobs.append(job_dict)
+
+    logger.Log(log.LogType.Website, "User %s is trying to extract %s jobs for activity %s" % (user.username, len(jobs), activity.activity_name))
+
+    return json.dumps(jobs)
 
 
 @app.route("/flask/logs")
