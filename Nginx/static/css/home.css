@@ -34,7 +34,7 @@
   font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
   border-collapse: collapse;
   width: 90%;
-  margin: 20px;
+  margin: 10px;
 }
 
 #logsTable td, #logsTable th {
@@ -115,4 +115,11 @@ footer {
   display: flex;
   justify-content: space-between;
   margin: 10px;
+}
+
+#tableSearch {
+  width: 90%;
+  padding: 12px 20px;
+  display: block;
+  margin-top: 10px;
 }

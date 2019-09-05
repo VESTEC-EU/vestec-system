@@ -222,6 +222,7 @@ function getLogs() {
         headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
         success: function(response) {
             var logs = JSON.parse(response);
+            $("#logsTable").append("<tbody>");
             
             for (log in logs) {
                 var log_entry = "<tr>";
@@ -235,6 +236,8 @@ function getLogs() {
 
                 $("#logsTable").append(log_entry);
             }
+            $("#logsTable").append("</tbody>");
+            document.querySelector("#tableSearch").addEventListener('keyup', searchTable, false);
         },
         error: function(xhr) {
             $("#confirmation").removeClass().addClass("button red self-center");
@@ -242,3 +245,21 @@ function getLogs() {
         }
     });
 }
+
+function searchTable(event) {
+    var search = event.target.value.toUpperCase();
+    var rows = document.querySelector("#logsTable tbody").rows;
+
+    for (var i = 0; i < rows.length; i++) {
+        var origin_col = rows[i].cells[1].textContent.toUpperCase();
+        var type_col = rows[i].cells[3].textContent.toUpperCase();
+        var comment_col = rows[i].cells[4].textContent.toUpperCase();
+
+        if (origin_col.indexOf(search) > -1 || type_col.indexOf(search) > -1 || comment_col.indexOf(search) > -1) {
+            rows[i].style.display = "";
+        } else {
+            rows[i].style.display = "none";
+        }
+    }
+}
+
