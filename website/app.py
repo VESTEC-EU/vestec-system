@@ -19,7 +19,7 @@ from Database.machine import Machine
 from Database.activity import Activity
 from pony.orm.serialization import to_dict
 from flask import Flask, render_template, request, jsonify
-from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
+from flask_jwt_extended import JWTManager, create_access_token, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
 
 # Initialise database
 Database.initialiseDatabase()
@@ -35,6 +35,8 @@ else:
 
 # Initialise JWT
 app.config["JWT_SECRET_KEY"] = os.environ["JWT_PASSWD"]
+app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
+app.config["JWT_ACCESS_COOKIE_PATH"] = "/flask/"
 jwt = JWTManager(app)
 
 
@@ -73,16 +75,27 @@ def login():
         authorise = logins.verify_user(username, password)
 
     if authorise:
-        access_token = create_access_token(identity=username)
-        return jsonify(access_token=access_token)
+        access_token = create_access_token(identity=username, fresh=True)
+        response = jsonify({"status": 200, "access_token": access_token})
+        set_access_cookies(response, access_token)
+
+        return response
     else:
         return jsonify({"status": 400, "msg": "Incorrect username or password. Please try again."})  
 
     logger.Log(log.LogType.Website, str(request), user=username)
 
 
+@app.route("/flask/authorised", methods=["GET"])
+@fresh_jwt_required
+def authorised():
+    username = get_jwt_identity()
+    
+    return jsonify({"status": 200, "msg": "User authorised."})
+
+
 @app.route('/flask/submit', methods=['POST'])
-@jwt_required
+@fresh_jwt_required
 def submit_job():
     '''This function sends a PUT request to the SMI for a CURRENT_JOB
        to be created
@@ -114,36 +127,39 @@ def submit_job():
 
 @app.route('/flask/jobs', methods=['GET'])
 @pny.db_session
-@jwt_required
+@fresh_jwt_required
 def get_activities_summary():
     '''This function sends a GET request to the database for the details of all jobs'''
-    user = User.get(username = get_jwt_identity())
-    activity_records = pny.select(a for a in Activity if a.user_id==user)[:]
-    activities = {}
+    try:
+        user = User.get(username = get_jwt_identity())
+        activity_records = pny.select(a for a in Activity if a.user_id==user)[:]
+        activities = {}
 
-    for i,a in enumerate(activity_records):
-        activity_summary = {}
-        activity_summary["activity_id"] = a.activity_id
-        activity_summary["activity_name"] = a.activity_name
-        activity_summary["status"] = a.status
+        for i,a in enumerate(activity_records):
+            activity_summary = {}
+            activity_summary["activity_id"] = a.activity_id
+            activity_summary["activity_name"] = a.activity_name
+            activity_summary["status"] = a.status
 
-        activity_date = a.date_submitted.strftime("%d/%m/%Y, %H:%M:%S")
-        activity_summary["date_submitted"] = activity_date
+            activity_date = a.date_submitted.strftime("%d/%m/%Y, %H:%M:%S")
+            activity_summary["date_submitted"] = activity_date
 
-        activity_jobs = a.jobs
-        activity_summary["machines"] = list(set([job.queue_id.machine_id.machine_name for job in activity_jobs]))
+            activity_jobs = a.jobs
+            activity_summary["machines"] = list(set([job.queue_id.machine_id.machine_name for job in activity_jobs]))
         
-        activity_summary["jobs"] = str(len(a.jobs))
-        activities["activity" + str(i)] = activity_summary
+            activity_summary["jobs"] = str(len(a.jobs))
+            activities["activity" + str(i)] = activity_summary
 
-    logger.Log(log.LogType.Website, "User %s is trying to extract %s activities" % (user.username, len(activities)), user=user.username)
+        logger.Log(log.LogType.Website, "User %s is trying to extract %s activities" % (user.username, len(activities)), user=user.username)
 
-    return json.dumps(activities)
+        return jsonify({"status": 200, "activities": json.dumps(activities)})
+    except Exception as e:
+        return jsonify({"status": 401, "msg": "Sorry, there seems to be a problem with the extraction of activities."})
 
 
 @app.route('/flask/job/<activity_id>', methods=['GET'])
 @pny.db_session
-@jwt_required
+@fresh_jwt_required
 def get_activity_details(activity_id):
     '''This function sends a GET request to the database for the details of all jobs'''
     user = User.get(username = get_jwt_identity())
@@ -173,7 +189,7 @@ def get_activity_details(activity_id):
 
 @app.route('/flask/logs', methods=['GET'])
 @pny.db_session
-@jwt_required
+@fresh_jwt_required
 @logins.admin_required
 def showLogs():
     logs = []
@@ -192,15 +208,12 @@ def showLogs():
     return json.dumps(logs)
 
 
-@app.route("/logout", methods=["DELETE"])
-@jwt_required
+@app.route("/flask/logout", methods=["DELETE"])
 def logout():
-    username = get_jwt_identity()
-    
-    msg = "User %s logged out"%username
-    logger.Log(log.LogType.Logins, msg, user=username)
+    response = jsonify({"status": 200, "msg": "User logged out."})
+    unset_jwt_cookies(response)
 
-    return jsonify(msg="User logged out")
+    return response
 
 
 if __name__ == '__main__':

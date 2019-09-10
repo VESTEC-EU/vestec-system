@@ -6,6 +6,22 @@ function checkAuth() {
 
     if (typeof jwt_token === 'undefined' || jwt_token === null || jwt_token === '') {
         window.location.href = "/login";
+    } else {
+        $.ajax({
+            url: "/flask/authorised",
+            type: "GET",
+            headers: {'Authorization': 'Bearer ' + jwt_token},
+            success: function(response) {
+                if (response.status == 200) {
+                    return
+                } else {
+                    window.location.href = "/login";
+                }
+            },
+            error: function(xhr) {
+                window.location.href = "/login";
+            }
+        });
     }
 }
 
@@ -61,6 +77,7 @@ function userLogin() {
 function getJobWizard() {
     $("#nav-dash").removeClass("blue");
     $("#nav-logs").removeClass("blue");
+    $("#nav-logout").removeClass("blue");
     $("#nav-home").addClass("blue");
     $("#body-container").load("../templates/createJobWizard.html");
 }
@@ -70,8 +87,8 @@ function submitJob() {
     job["job_name"] = $("#userInput").val();
 
     if (job["job_name"] == "") {
-        $("#confirmation").removeClass().addClass("button amber self-center");
-        $("#confirmation").html("<span>&#9888</span> Please enter a job name");
+        $("#confirmation").html("<span>&#9888</span> Please enter a job name.");
+        $("#confirmation").removeClass().addClass("button white-btn amber-high-btn self-center");
         $("#confirmation").show();
     } else {
         $.ajax({
@@ -80,23 +97,23 @@ function submitJob() {
             headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
             contentType: "application/json",
             data: JSON.stringify(job),
-            dataType: "text",
+            dataType: "json",
             success: function(response) {
-                if (response == "True") {
+                if (response.status == "201") {
                     $("#userInput").val('');
+                    $("#confirmation").html("<span>&#10003</span>" + response.msg);
+                    $("#confirmation").removeClass().addClass("button white-btn green-high-btn self-center");
                     $("#confirmation").show();
-                    $("#confirmation").removeClass().addClass("button green self-center");
-                    $("#confirmation").html("<span>&#10003</span> Job successfully submitted");
                 } else {
+                    $("#confirmation").html("<span>&#10007</span>" + response.msg);
+                    $("#confirmation").removeClass().addClass("button white-btn amber-high-btn self-center");
                     $("#confirmation").show();
-                    $("#confirmation").removeClass().addClass("button red self-center");
-                    $("#confirmation").html("<span>&#10007</span> Job submission failed");
                 }
             },
-            error: function(xhr) {
+            error: function(response) {
+                $("#confirmation").html("<span>&#10007</span> Sorry, there seems to be a problem with our system.");
+                $("#confirmation").removeClass().addClass("button white-btn red-high-btn self-center");
                 $("#confirmation").show();
-                $("#confirmation").removeClass().addClass("button red self-center");
-                $("#confirmation").html("<span>&#10007</span> Job submission failed");
             }
         });
     }
@@ -105,6 +122,7 @@ function submitJob() {
 function getJobsDashboard() {
     $("#nav-home").removeClass("blue");
     $("#nav-logs").removeClass("blue");
+    $("#nav-logout").removeClass("blue");
     $("#nav-dash").addClass("blue");
     $("#body-container").html("");
 
@@ -113,12 +131,15 @@ function getJobsDashboard() {
         type: "GET",
         headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
         success: function(response) {
-            all_activities = JSON.parse(response)
-            loadActivityCards("DESC");
+            if (response.status == 200) {
+                all_activities = JSON.parse(response.activities);
+                loadActivityCards("DESC");
+            } else {
+                console.log({"status": 400, "msg": "Sorry, there seems to be a problem with the extraction of activities."});
+            }
         },
         error: function(xhr) {
-            $("#confirmation").removeClass().addClass("button fail");
-            $("#confirmation").html("<span>&#10007</span> Jobs status check failed");
+            console.log({"status": 500, "msg": "Sorry, there seems to be a problem with our system."});
         }
     });
 }
@@ -214,6 +235,7 @@ function loadJobDetails(job) {
 function getLogs() {
     $("#nav-home").removeClass("blue");
     $("#nav-dash").removeClass("blue");
+    $("#nav-logout").removeClass("blue");
     $("#nav-logs").addClass("blue");
     $("#body-container").load("../templates/logs.html");
 
@@ -262,5 +284,24 @@ function searchTable(event) {
             rows[i].style.display = "none";
         }
     }
+}
+
+function logOut() {
+    $("#nav-home").removeClass("blue");
+    $("#nav-dash").removeClass("blue");
+    $("#nav-logs").removeClass("blue");
+    $("#nav-logout").addClass("blue");
+    
+    $.ajax({
+        url: "/flask/logout",
+        type: "DELETE",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        success: function(response) {
+            if (response.status == 200) {
+                sessionStorage.removeItem("access_token");
+                window.location.href = "/login";
+            }
+        }
+    });
 }
 

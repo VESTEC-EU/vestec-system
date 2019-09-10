@@ -45,12 +45,10 @@ def create_activity(activity_id):
         thread = threading.Thread(target=task, args=(activity_id,), name=activity_id)
         thread.start()
 
-        activity_creation = "True"
+        return jsonify({"status": 201, "msg": "Activity successfully created."})
     except Exception as e:
         logger.Log(type=log.LogType.Activity, comment=str(e)[:200], user=creator)
-        activity_creation = "False"
-
-    return activity_creation
+        return jsonify({"status": 400, "msg": "Activity details incorrect."})
 
 
 # Displays a simple HTML page with the currently active threads
