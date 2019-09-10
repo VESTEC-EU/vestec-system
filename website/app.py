@@ -41,7 +41,7 @@ jwt = JWTManager(app)
 @app.route("/flask/signup", methods=["POST"])
 def signup():
     if not request.is_json:
-        return jsonify({"msg": "Required JSON not found in request"}), 400
+        return jsonify({"msg": "Required JSON not found in request."}), 400
 
     user = request.json
     username = user.get("username", None)
@@ -51,19 +51,18 @@ def signup():
 
     user_create = logins.add_user(username, name, email, password)
 
-    if user_create == "True":
+    if user_create == 1:
         msg = "Account created for user %s" % username
         logger.Log(log.LogType.Logins, msg, user=username)
 
-        return "True"
+        return jsonify({"status": 201, "msg": "User succesfully created. Log in."})
     else:
-        return "False"
-
+        return jsonify({"status": 409, "msg": "User already exists. Please try again."})
 
 @app.route('/flask/login', methods=['POST'])
 def login():
     if not request.is_json:
-        return jsonify({"msg": "Required JSON not found in request"}), 400  
+        return jsonify({"msg": "Incorrect username or password. Please try again."}) 
 
     login = request.json
     username = login.get("username", None)
@@ -77,12 +76,12 @@ def login():
         access_token = create_access_token(identity=username)
         return jsonify(access_token=access_token)
     else:
-        return jsonify({"msg": "Incorrect username or password"})  
+        return jsonify({"status": 400, "msg": "Incorrect username or password. Please try again."})  
 
     logger.Log(log.LogType.Website, str(request), user=username)
 
 
-@app.route('/flask/submit', methods=['PUT'])
+@app.route('/flask/submit', methods=['POST'])
 @jwt_required
 def submit_job():
     '''This function sends a PUT request to the SMI for a CURRENT_JOB
@@ -105,7 +104,7 @@ def submit_job():
     job["creator"] = get_jwt_identity() 
     job["job_id"] = str(uuid4())
 
-    job_request = requests.put(TARGET_URI + '/' + job["job_id"], json=job)
+    job_request = requests.post(TARGET_URI + '/' + job["job_id"], json=job)
     response = job_request.text
 
     logger.Log(log.LogType.Website, "Creation of activity %s by %s is %s" % (job["job_name"], job["creator"], response), user=job["creator"])
@@ -175,6 +174,7 @@ def get_activity_details(activity_id):
 @app.route('/flask/logs', methods=['GET'])
 @pny.db_session
 @jwt_required
+@logins.admin_required
 def showLogs():
     logs = []
     log_records = pny.select(l for l in log.DBLog)[:]
@@ -192,31 +192,16 @@ def showLogs():
     return json.dumps(logs)
 
 
-#removes the user's jwt from the authorised list (essentially logs the user out)
 @app.route("/logout", methods=["DELETE"])
-@logins.login_required
+@jwt_required
 def logout():
-    #get the jti
-    jti = jwt.get_raw_jwt()["jti"]
-    username=jwt.get_jwt_identity()
-    with pny.db_session:
-        token = Database.Token.get(jti=jti)
-        token.delete()
-        msg = "User %s logged out"%username
-        logger.Log(log.LogType.Logins, msg, user=username)
+    username = get_jwt_identity()
+    
+    msg = "User %s logged out"%username
+    logger.Log(log.LogType.Logins, msg, user=username)
+
     return jsonify(msg="User logged out")
 
-#tests if a user has a valid jwt
-@app.route("/secret")
-@logins.login_required
-def secret():
-    return jsonify({"msg":"Token works!"})
-
-#tests if a user has authentication
-@app.route("/supersecret")
-@logins.admin_required
-def supersecret():
-    return jsonify({"msg":"You are an admin"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000)

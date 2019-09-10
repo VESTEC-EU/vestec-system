@@ -24,7 +24,7 @@ import Utils.log as log
 app=flask.Flask("Simulation Manager")
 logger = log.VestecLogger("Simulation Manager")
 
-@app.route("/jobs/<activity_id>", methods=["PUT"])
+@app.route("/jobs/<activity_id>", methods=["POST"])
 @pny.db_session
 def create_activity(activity_id):    
     data = dict=flask.request.get_json()

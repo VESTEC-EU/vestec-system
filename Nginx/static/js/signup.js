@@ -6,36 +6,39 @@ function signUp() {
     user["password"] = $("#su-password").val();
     user["confirm_pass"] = $("#su-confirm-pass").val();
 
-    console.log(user);
-
     if (user["username"] && user["name"] && user["email"] && user["password"]) {
         if (user["password"] != user["confirm_pass"]) {
-            $("#signup-form #confirm-pass").setCustomValidity("Sorry, passwords do not match.");
-        }
-        else {
+            $("#login-message").html("Sorry, the passwords do not match.");
+            $("#login-message").removeClass().addClass("button white-btn amber-high-btn self-left");
+            $("#login-message").show();
+        } else {
             $.ajax({
                 url: "/flask/signup",
                 type: "POST",
                 contentType: "application/json",
                 data: JSON.stringify(user),
-                dataType: "text",
+                dataType: "json",
                 success: function(response) {
-                    console.log(response);
-                    if (response == "True") {
-                        $("#login-message").html('<a href="/" class="blue-txt">User successfully created. Log in.</a>');
+                    if (response.status == 200) {
+                        $("#login-message").html('<a href="/" style="color: #4c904f;">' + response.msg + '</a>');
+                        $("#login-message").removeClass().addClass("button white-btn green-high-btn self-left");
                         $("#login-message").show();
                     } else {
-                        $("#login-message").html("User creation failed. Please try again.");
+                        $("#login-message").html(response.msg);
+                        $("#login-message").removeClass().addClass("button white-btn amber-high-btn self-left");
                         $("#login-message").show();
                     }
                 },
-                error: function(xhr) {
-                    $("#login-message").html("User creation failed. Please try again.");
+                error: function(response) {
+                    $("#login-message").html("Sorry, there seems to be a problem with our system.");
+                    $("#login-message").removeClass().addClass("button white-btn red-high-btn self-left");
                     $("#login-message").show();
                 }
             });
         }
     } else {
-        console.log("The user details cannot be reached...");
+        $("#login-message").html("Please enter all details.");
+        $("#login-message").removeClass().addClass("button amber-high-btn white-btn self-left");
+        $("#login-message").show();
     }
 }

@@ -1,6 +1,7 @@
 from Database import db
 import pony.orm as pny
 
+
 class User(db.Entity):
     user_id = pny.Required(str)
     username = pny.Required(str)

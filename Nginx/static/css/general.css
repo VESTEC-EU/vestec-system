@@ -58,9 +58,27 @@ a:link {
 /* -- special buttons -- */
 .white-btn {
   background-color: white;
+  padding: 10px 18px;
+}
+
+.blue-high-btn {
   color: #018cba;
   border: 2px solid #018cba;
-  padding: 10px 18px;
+}
+
+.amber-high-btn {
+  color: #e4ad5c;
+  border: 2px solid #e4ad5c;
+}
+
+.red-high-btn {
+  color: #c15048;
+  border: 2px solid #c15048;
+}
+
+.green-high-btn {
+  color: #4c904f;
+  border: 2px solid #4c904f;
 }
 
 /* -- background colors -- */

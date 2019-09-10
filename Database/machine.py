@@ -2,6 +2,7 @@ from Database import db
 import pony.orm as pny
 from enum import Enum
 
+
 class Machine(db.Entity):
     machine_id = pny.PrimaryKey(str)
     machine_name = pny.Required(str)

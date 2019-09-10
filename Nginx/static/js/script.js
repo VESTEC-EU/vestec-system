@@ -31,7 +31,7 @@ function userLogin() {
     user["password"] = $("#password").val();
 
     if (user["username"] == '' && user["password"] == '') {
-        $("#login-message").text("Please enter a username and password.");
+        $("#login-message").html("Please enter a username and password.");
         $("#login-message").show();
     } else {
         $.ajax({
@@ -45,12 +45,13 @@ function userLogin() {
                     sessionStorage.setItem("access_token", response.access_token);
                     window.location.href = "/home";
                 } else {
-                    $("#login-message").text("Username or password incorrect. Please try again.");
+                    $("#login-message").html(response.msg);
                     $("#login-message").show();
                 }
             },
             error: function(xhr) {
-                $("#login-message").text("Username or password incorrect. Please try again.");
+                $("#login-message").html("Sorry, there seems to be a problem with our system");
+                $("#login-message").removeClass().addClass("button white-btn red-high-btn self-left");
                 $("#login-message").show();
             }
         });
@@ -75,7 +76,7 @@ function submitJob() {
     } else {
         $.ajax({
             url: "/flask/submit",
-            type: "PUT",
+            type: "POST",
             headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
             contentType: "application/json",
             data: JSON.stringify(job),
