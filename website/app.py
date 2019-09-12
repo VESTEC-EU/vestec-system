@@ -18,8 +18,8 @@ from Database.queues import Queue
 from Database.machine import Machine
 from Database.activity import Activity
 from pony.orm.serialization import to_dict
-from flask import Flask, render_template, request, jsonify
-from flask_jwt_extended import JWTManager, create_access_token, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
+from flask import Flask, request, jsonify
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
 
 # Initialise database
 Database.initialiseDatabase()
@@ -37,6 +37,7 @@ else:
 app.config["JWT_SECRET_KEY"] = os.environ["JWT_PASSWD"]
 app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
 app.config["JWT_ACCESS_COOKIE_PATH"] = "/flask/"
+app.config["JWT_COOKIE_CSRF_PROTECT"] = False
 jwt = JWTManager(app)
 
 
@@ -95,7 +96,7 @@ def authorised():
 
 
 @app.route('/flask/submit', methods=['POST'])
-@fresh_jwt_required
+@jwt_required
 def submit_job():
     '''This function sends a PUT request to the SMI for a CURRENT_JOB
        to be created
@@ -120,7 +121,7 @@ def submit_job():
     job_request = requests.post(TARGET_URI + '/' + job["job_id"], json=job)
     response = job_request.text
 
-    logger.Log(log.LogType.Website, "Creation of activity %s by %s is %s" % (job["job_name"], job["creator"], response), user=job["creator"])
+    logger.Log(log.LogType.Website, ("Creation of activity %s by %s is %s" % (job["job_name"], job["creator"], response))[:200], user=job["creator"])
 
     return response
 

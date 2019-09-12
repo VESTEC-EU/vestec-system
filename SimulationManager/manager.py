@@ -1,8 +1,7 @@
 from __future__ import print_function
 import sys
 sys.path.append("../")
-import flask
-from flask import request
+from flask import Flask, request, jsonify
 import threading
 import time
 import json
@@ -21,13 +20,13 @@ import Templating
 import Utils.log as log
 
 
-app=flask.Flask("Simulation Manager")
+app = Flask("Simulation Manager")
 logger = log.VestecLogger("Simulation Manager")
 
 @app.route("/jobs/<activity_id>", methods=["POST"])
 @pny.db_session
 def create_activity(activity_id):    
-    data = dict=flask.request.get_json()
+    data = dict = request.get_json()
     name = data["job_name"]
     creator = data["creator"]
 
@@ -54,7 +53,7 @@ def create_activity(activity_id):
 # Displays a simple HTML page with the currently active threads
 @app.route("/threads")
 def thread_info():
-    logger.Log(type=log.LogType.Query, comment=str(request))
+    logger.Log(type=log.LogType.Query, comment=str(request)[:200])
     string = "<h1> Active threads </h1>"
 
     for t in threading.enumerate():
@@ -86,7 +85,7 @@ def task(activity_id):
         logger.Log(type=log.LogType.Job, comment="Created job %s for activity %s on queue %s" % (job_id, activity.activity_name, queue.queue_id))
     except Exception as e:
         activity.setStatus("ERROR")
-        logger.Log(type=log.LogType.Job, comment="Job creation failed: " + str(e))
+        logger.Log(type=log.LogType.Job, comment=("Job creation failed: " + str(e))[:200])
 
     time.sleep(10)
     job.setStatus("RUNNING")
