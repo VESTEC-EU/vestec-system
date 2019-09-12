@@ -1,7 +1,7 @@
 from __future__ import print_function
 import fabric
 import os
-from machines import machines
+from . import machines
 import socket
 
 
