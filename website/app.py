@@ -19,7 +19,11 @@ from Database.machine import Machine
 from Database.activity import Activity
 from pony.orm.serialization import to_dict
 from flask import Flask, request, jsonify
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
+from flask_jwt_extended import (
+    JWTManager, create_access_token, create_refresh_token,
+    jwt_required, get_jwt_identity, set_access_cookies,
+    set_refresh_cookies, jwt_refresh_token_required, unset_jwt_cookies
+)
 
 # Initialise database
 Database.initialiseDatabase()
@@ -35,8 +39,10 @@ else:
 
 # Initialise JWT
 app.config["JWT_SECRET_KEY"] = os.environ["JWT_PASSWD"]
+# Cookies to be replaced with in-memory storage?
 app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
 app.config["JWT_ACCESS_COOKIE_PATH"] = "/flask/"
+app.config["JWT_REFRESH_COOKIE_PATH"] = "/flask/refresh"
 app.config["JWT_COOKIE_CSRF_PROTECT"] = False
 jwt = JWTManager(app)
 
@@ -76,9 +82,12 @@ def login():
         authorise = logins.verify_user(username, password)
 
     if authorise:
-        access_token = create_access_token(identity=username, fresh=True)
+        access_token = create_access_token(identity=username)
+        refresh_token = create_refresh_token(identity=username)
         response = jsonify({"status": 200, "access_token": access_token})
+
         set_access_cookies(response, access_token)
+        set_refresh_cookies(response, refresh_token)
 
         return response
     else:
@@ -87,8 +96,20 @@ def login():
     logger.Log(log.LogType.Website, str(request), user=username)
 
 
+@app.route("/flask/refresh", methods=["POST"])
+@jwt_refresh_token_required
+def refresh():
+    username = get_jwt_identity()
+    access_token = create_access_token(identity=username)
+    
+    response = jsonify({"status": 200, "msg": "User authorised."})
+    set_access_cookies(response, access_token)
+
+    return response
+
+
 @app.route("/flask/authorised", methods=["GET"])
-@fresh_jwt_required
+@jwt_required
 def authorised():
     username = get_jwt_identity()
     
@@ -128,7 +149,7 @@ def submit_job():
 
 @app.route('/flask/jobs', methods=['GET'])
 @pny.db_session
-@fresh_jwt_required
+@jwt_required
 def get_activities_summary():
     '''This function sends a GET request to the database for the details of all jobs'''
     try:
@@ -160,7 +181,7 @@ def get_activities_summary():
 
 @app.route('/flask/job/<activity_id>', methods=['GET'])
 @pny.db_session
-@fresh_jwt_required
+@jwt_required
 def get_activity_details(activity_id):
     '''This function sends a GET request to the database for the details of all jobs'''
     user = User.get(username = get_jwt_identity())
@@ -190,7 +211,7 @@ def get_activity_details(activity_id):
 
 @app.route('/flask/logs', methods=['GET'])
 @pny.db_session
-@fresh_jwt_required
+@jwt_required
 @logins.admin_required
 def showLogs():
     logs = []
@@ -214,8 +235,7 @@ def logout():
     response = jsonify({"status": 200, "msg": "User logged out."})
     unset_jwt_cookies(response)
 
-    return response
-
+    return response 
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000)

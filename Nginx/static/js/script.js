@@ -1,30 +1,5 @@
 var all_activities = {};
 
-function checkAuth() {
-    // need to add a check to flask to see if the token in the session is the same as the current user's
-    var jwt_token = sessionStorage.getItem("access_token");
-
-    if (typeof jwt_token === 'undefined' || jwt_token === null || jwt_token === '') {
-        window.location.href = "/login";
-    } else {
-        $.ajax({
-            url: "/flask/authorised",
-            type: "GET",
-            headers: {'Authorization': 'Bearer ' + jwt_token},
-            success: function(response) {
-                if (response.status == 200) {
-                    return
-                } else {
-                    window.location.href = "/login";
-                }
-            },
-            error: function(xhr) {
-                window.location.href = "/login";
-            }
-        });
-    }
-}
-
 $("#checkJobStatus").hide();
 
 $(function() {
@@ -40,6 +15,50 @@ $("#userInput").keyup(function(e) {
 $("#signup").click(function() {
     window.location.replace("/signup");
 });
+
+
+function checkAuth() {
+    var jwt_token = sessionStorage.getItem("access_token");
+
+    if (typeof jwt_token === 'undefined' || jwt_token === null || jwt_token === '') {
+        window.location.href = "/login";
+    } else {
+        $.ajax({
+            url: "/flask/authorised",
+            type: "GET",
+            headers: {'Authorization': 'Bearer ' + jwt_token},
+            success: function(response) {
+                if (response.status == 200) {
+                    return
+                }
+            },
+            error: function(xhr) {
+                refreshToken();
+            }
+        });
+    }
+}
+
+function refreshToken() {
+    var refresh_token = sessionStorage.getItem("refresh_token");
+
+    $.ajax({
+        url: "/flask/refresh",
+        type: "POST",
+        grant_type: refresh_token,
+        success: function(response) {
+            if (response.status == 200) {
+                sessionStorage.setItem("access_token", response.access_token);
+            } else {
+                window.location.href = "/login";
+            }
+        },
+        error: function(xhr) {
+            window.location.href = "/login";
+        }
+    });
+}
+
 
 function userLogin() {
     var user = {};
@@ -59,6 +78,7 @@ function userLogin() {
             success: function(response) {
                 if (typeof response.access_token !== 'undefined' && response.access_token !== '') {
                     sessionStorage.setItem("access_token", response.access_token);
+                    sessionStorage.setItem("refresh_token", response.refresh_token);
                     window.location.href = "/home";
                 } else {
                     $("#login-message").html(response.msg);
@@ -91,6 +111,8 @@ function submitJob() {
         $("#confirmation").removeClass().addClass("button white-btn amber-high-btn self-center");
         $("#confirmation").show();
     } else {
+        checkAuth();
+
         $.ajax({
             url: "/flask/submit",
             type: "POST",
@@ -101,7 +123,7 @@ function submitJob() {
             success: function(response) {
                 if (response.status == "201") {
                     $("#userInput").val('');
-                    $("#confirmation").html("<span>&#10003</span>" + response.msg);
+                    $("#confirmation").html('<span>&#10003</span><a href="/" style="color: #4c904f;">' + response.msg + '</a>');
                     $("#confirmation").removeClass().addClass("button white-btn green-high-btn self-center");
                     $("#confirmation").show();
                 } else {
@@ -120,6 +142,8 @@ function submitJob() {
 }
 
 function getJobsDashboard() {
+    checkAuth();
+
     $("#nav-home").removeClass("blue");
     $("#nav-logs").removeClass("blue");
     $("#nav-logout").removeClass("blue");
@@ -184,6 +208,8 @@ function createActivityCard(template, index) {
 }
 
 function getJobDetails(index) {
+    checkAuth();
+
     $("#nav-dash").removeClass("blue");
     activity = all_activities["activity" + index];
 
@@ -233,6 +259,8 @@ function loadJobDetails(job) {
 }
 
 function getLogs() {
+    checkAuth();
+
     $("#nav-home").removeClass("blue");
     $("#nav-dash").removeClass("blue");
     $("#nav-logout").removeClass("blue");
@@ -299,6 +327,7 @@ function logOut() {
         success: function(response) {
             if (response.status == 200) {
                 sessionStorage.removeItem("access_token");
+                sessionStorage.removeItem("refresh_token");
                 window.location.href = "/login";
             }
         }
