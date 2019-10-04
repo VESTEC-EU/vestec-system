@@ -6,7 +6,7 @@
   background-color: #333;
 }
 
-.navbar div {
+.navbar .menu_item {
   float: left;
   display: block;
   color: white;
@@ -16,13 +16,57 @@
 }
 
 /* Change the link color to #111 (black) on hover */
-.navbar div:hover {
+.navbar .menu_item:hover {
   background-color: #111;
   cursor: pointer;
 }
 
 .navbar-active {
   background-color: #008CBA;
+}
+
+.admin_dropdown {
+  float: right;
+  overflow: hidden;
+}
+
+.admin_dropdown .dropbtn {
+  font-size: 16px;
+  border: none;
+  outline: none;
+  color: white;
+  padding: 14px 16px;
+  background-color: inherit;
+  font-family: inherit; /* Important for vertical align on mobile phones */
+  margin: 0; /* Important for vertical align on mobile phones */
+}
+
+.admin_dropdown_content {
+  display: none;
+  position: absolute;
+  background-color: #f9f9f9;
+  min-width: 160px;
+  box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+  z-index: 1;
+}
+
+.admin_dropdown:hover .admin_dropdown_content{
+  display: block;
+  cursor: pointer;
+}
+
+.admin_dropdown_content .admin_item {
+  float: none;
+  color: black;
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+  text-align: left;
+}
+
+.admin_dropdown_content .admin_item:hover {
+  background-color: #ddd;
+  cursor: pointer;
 }
 
 .job-wizard {

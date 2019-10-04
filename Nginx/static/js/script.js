@@ -77,7 +77,6 @@ function userLogin() {
 
 function getJobWizard() {
     $("#nav-dash").removeClass("blue");
-    $("#nav-logs").removeClass("blue");
     $("#nav-logout").removeClass("blue");
     $("#nav-home").addClass("blue");
     $("#body-container").load("../templates/createJobWizard.html");
@@ -121,7 +120,10 @@ function submitJob() {
 }
 
 function generateNavigationBar() {
-  var html_code="<div id=\"nav-home\" class=\"blue\" onClick=\"getJobWizard()\">Home</div>\<div id=\"nav-dash\" onClick=\"getJobsDashboard()\">Dashboard</div>"
+  var html_code="<div id=\"nav-home\" class=\"blue menu_item\" onClick=\"getJobWizard()\">Home</div>\<div id=\"nav-dash\" class=\"menu_item\" onClick=\"getJobsDashboard()\">Dashboard</div>"
+  html_code+="<div id=\"nav-logout\" class=\"self-right menu_item\" onClick=\"logOut()\">Log Out</div>"
+  // We store the user type to avoid hitting the server, as the activities are also protected on the server then at worst a user could
+  // force the menu to display but couldn't action any of the activities under it
   if (user_type == -1) {
     $.ajax({
       url: "/flask/user_type",
@@ -141,15 +143,22 @@ function generateNavigationBar() {
     });
     user_type
   } else if (user_type > 0) {
-    html_code+="<div id=\"nav-logs\" class=\"self-left\" onClick=\"getLogs()\">Logs</div>";
+    html_code+=generateAdminDropdown();
   }
-  html_code+="<div id=\"nav-logout\" class=\"self-right\" onClick=\"logOut()\">Log Out</div>"
   $("#navigation_bar").html(html_code);
+}
+
+function generateAdminDropdown() {
+  var admin_html="<div class=\"admin_dropdown\">";
+  admin_html+="<button class=\"dropbtn\">Admin<i class=\"fa fa-caret-down\"></i></button>";
+  admin_html+="<div class=\"admin_dropdown_content\">";
+  admin_html+="<div class=\"admin_item\" onClick=\"getLogs()\">Logs</div>";
+  admin_html+="</div></div>";
+  return admin_html;
 }
 
 function getJobsDashboard() {
     $("#nav-home").removeClass("blue");
-    $("#nav-logs").removeClass("blue");
     $("#nav-logout").removeClass("blue");
     $("#nav-dash").addClass("blue");
     $("#body-container").html("");
@@ -264,7 +273,6 @@ function getLogs() {
     $("#nav-home").removeClass("blue");
     $("#nav-dash").removeClass("blue");
     $("#nav-logout").removeClass("blue");
-    $("#nav-logs").addClass("blue");
     $("#body-container").load("../templates/logs.html");
 
     $.ajax({
@@ -317,7 +325,6 @@ function searchTable(event) {
 function logOut() {
     $("#nav-home").removeClass("blue");
     $("#nav-dash").removeClass("blue");
-    $("#nav-logs").removeClass("blue");
     $("#nav-logout").addClass("blue");
 
     $.ajax({
