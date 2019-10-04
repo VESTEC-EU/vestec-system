@@ -62,10 +62,17 @@ def signup():
     else:
         return jsonify({"status": 409, "msg": "User already exists. Please try again."})
 
+@app.route('/flask/user_type', methods=["GET"])
+@fresh_jwt_required
+def getUserType():
+  username = get_jwt_identity()
+  print(username)
+  return jsonify({"status": 200, "access_level": logins.get_user_access_level(username)})
+
 @app.route('/flask/login', methods=['POST'])
 def login():
     if not request.is_json:
-        return jsonify({"msg": "Incorrect username or password. Please try again."}) 
+        return jsonify({"msg": "Incorrect username or password. Please try again."})
 
     login = request.json
     username = login.get("username", None)
@@ -82,7 +89,7 @@ def login():
 
         return response
     else:
-        return jsonify({"status": 400, "msg": "Incorrect username or password. Please try again."})  
+        return jsonify({"status": 400, "msg": "Incorrect username or password. Please try again."})
 
     logger.Log(log.LogType.Website, str(request), user=username)
 
@@ -91,7 +98,7 @@ def login():
 @fresh_jwt_required
 def authorised():
     username = get_jwt_identity()
-    
+
     return jsonify({"status": 200, "msg": "User authorised."})
 
 
@@ -115,7 +122,7 @@ def submit_job():
        - SMI response data: 'SUCCESS' or 'FAILURE'
     '''
     job = request.json
-    job["creator"] = get_jwt_identity() 
+    job["creator"] = get_jwt_identity()
     job["job_id"] = str(uuid4())
 
     job_request = requests.post(TARGET_URI + '/' + job["job_id"], json=job)
@@ -147,7 +154,7 @@ def get_activities_summary():
 
             activity_jobs = a.jobs
             activity_summary["machines"] = list(set([job.queue_id.machine_id.machine_name for job in activity_jobs]))
-        
+
             activity_summary["jobs"] = str(len(a.jobs))
             activities["activity" + str(i)] = activity_summary
 

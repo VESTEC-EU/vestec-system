@@ -7,6 +7,13 @@ from flask_jwt_extended import get_jwt_identity
 from functools import wraps
 import datetime
 
+@pny.db_session
+def get_user_access_level(username):
+  user = User.get(username=username)
+  if user is None:
+    return 0
+  else:
+    return user.access_rights
 
 @pny.db_session
 def add_user(username, name, email, password):
@@ -28,7 +35,6 @@ def add_user(username, name, email, password):
     else:
         print("User already exists")
         return 0
-
 
 @pny.db_session
 def verify_user(username, password):

@@ -1,4 +1,5 @@
 var all_activities = {};
+var user_type=-1;
 
 function checkAuth() {
     // need to add a check to flask to see if the token in the session is the same as the current user's
@@ -119,6 +120,33 @@ function submitJob() {
     }
 }
 
+function generateNavigationBar() {
+  var html_code="<div id=\"nav-home\" class=\"blue\" onClick=\"getJobWizard()\">Home</div>\<div id=\"nav-dash\" onClick=\"getJobsDashboard()\">Dashboard</div>"
+  if (user_type == -1) {
+    $.ajax({
+      url: "/flask/user_type",
+      type: "GET",
+      headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+      success: function(response) {
+        if (response.status == 200) {
+          user_type = JSON.parse(response.access_level);
+          generateNavigationBar();
+        } else {
+          console.log({"status": 400, "msg": "Sorry, there seems to be a problem with the look up of user authorisation level"});
+        }
+      },
+      error: function(xhr) {
+        console.log({"status": 500, "msg": "Sorry, there seems to be a problem with our system."});
+      }
+    });
+    user_type
+  } else if (user_type > 0) {
+    html_code+="<div id=\"nav-logs\" class=\"self-left\" onClick=\"getLogs()\">Logs</div>";
+  }
+  html_code+="<div id=\"nav-logout\" class=\"self-right\" onClick=\"logOut()\">Log Out</div>"
+  $("#navigation_bar").html(html_code);
+}
+
 function getJobsDashboard() {
     $("#nav-home").removeClass("blue");
     $("#nav-logs").removeClass("blue");
@@ -194,7 +222,7 @@ function getJobDetails(index) {
         success: function(response) {
             activity_jobs = JSON.parse(response);
 
-            for (job in activity_jobs) { 
+            for (job in activity_jobs) {
                 $("#body-container").html(loadJobDetails(activity_jobs[job]));
             }
 
@@ -219,11 +247,11 @@ function loadJobDetails(job) {
 
     if (job.status == "QUEUED") {
         job_html += '<div class="jobLine"><b>Status: </b><button id="jobStatus" class="button amber self-right">' + job.status + '</button></div>';
-    } else if (job.status == "RUNNING") {  
+    } else if (job.status == "RUNNING") {
         job_html += '<div class="jobLine"><b>Status: </b><button id="jobStatus" class="button green self-right">' + job.status + '</button></div>';
     } else if (job.status == "ERROR") {
         job_html += '<div class="jobLine"><b>Status: </b><button id="jobStatus" class="button red self-right">' + job.status + '</button></div>';
-    } else { 
+    } else {
         job_html += '<div class="jobLine"><b>Status: </b><button id="jobStatus" class="button blue self-right">' + job.status + '</button></div>';
     }
 
@@ -246,7 +274,7 @@ function getLogs() {
         success: function(response) {
             var logs = JSON.parse(response);
             $("#logsTable").append("<tbody>");
-            
+
             for (log in logs) {
                 var log_entry = "<tr>";
                 log = logs[log];
@@ -291,7 +319,7 @@ function logOut() {
     $("#nav-dash").removeClass("blue");
     $("#nav-logs").removeClass("blue");
     $("#nav-logout").addClass("blue");
-    
+
     $.ajax({
         url: "/flask/logout",
         type: "DELETE",
