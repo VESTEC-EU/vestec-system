@@ -18,6 +18,7 @@
 /* Change the link color to #111 (black) on hover */
 .navbar div:hover {
   background-color: #111;
+  cursor: pointer;
 }
 
 .navbar-active {
