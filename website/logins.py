@@ -7,9 +7,16 @@ from flask_jwt_extended import get_jwt_identity
 from functools import wraps
 import datetime
 
+@pny.db_session
+def get_user_access_level(username):
+  user = User.get(username=username)
+  if user is None:
+    return 0
+  else:
+    return user.access_rights
 
 @pny.db_session
-def add_user(username, name, email, password): 
+def add_user(username, name, email, password):
     #check if the user already exists
     test_user = User.get(username=username)
 
@@ -19,20 +26,20 @@ def add_user(username, name, email, password):
         password_hash = sha256.hash(password)
 
         #create user
-        user = User(user_id=user_id, username=username, name=name, email=email, password_hash=password_hash, access_rights=1)
+        user = User(user_id=user_id, username=username, name=name, email=email, password_hash=password_hash, access_rights=0)
 
         pny.commit()
 
         print("User '%s' created" % username)
         return 1
-    else: 
+    else:
         print("User already exists")
         return 0
 
-
 @pny.db_session
-def verify_user(username, password):    
+def verify_user(username, password):
     user = User.get(username=username)
+    if not user.enabled: return False
     verified = False
 
     if user is None:
@@ -41,7 +48,7 @@ def verify_user(username, password):
     else:
         password_hash = user.password_hash
         verified = sha256.verify(password, password_hash)
-    
+
     if verified:
         print("User '%s' is authenticated :)" % username)
         return True

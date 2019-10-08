@@ -8,7 +8,8 @@ class User(db.Entity):
     name = pny.Required(str)
     password_hash = pny.Required(str)
     email = pny.Required(str)
-    access_rights = pny.Required(int)
+    access_rights = pny.Required(int, default=0)
+    enabled = pny.Required(bool, default=False, sql_default='0')
 
     activities = pny.Set("Activity", cascade_delete=True)
 

@@ -8,15 +8,11 @@
     </head>
     <body onload="checkAuth()">
         <div>
-            <div class="navbar">
-                <div id="nav-home" class="blue" onClick="getJobWizard()">Home</div>
-                <div id="nav-dash" onClick="getJobsDashboard()">Dashboard</div>
-                <div id="nav-logs" class="self-left" onClick="getLogs()">Logs</div>
-                <div id="nav-logout" class="self-right" onClick="logOut()">Log Out</div>
-            </div>
+            <div id="navigation_bar" class="navbar"></div>
         </div>
         <div id="body-container"></div>
     </body>
     <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
     <script type="text/javascript" src="js/script.js"></script>
+    <script type="text/javascript">generateNavigationBar();</script>
 </html>
