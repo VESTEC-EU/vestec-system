@@ -30,3 +30,6 @@ class Machine(db.Entity):
   jobs = pny.Set("SubmittedJob")
   name = pny.Required(str)
   node_description = pny.Set("NodeDescription")
+  execution_measurements = pny.Set("ExecutionMeasurement")
+  data_transfer_source = pny.Set("DataTransferMeasurement")
+  data_transfer_target = pny.Set("DataTransferMeasurement")

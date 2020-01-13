@@ -1,7 +1,8 @@
-FROM python:3-onbuild
-EXPOSE 5000
+FROM python:3-slim
+ARG port=5000
+ENV port $port
+EXPOSE $port
 COPY . /app
-WORKDIR /app
-RUN pip install -r requirements.txt
-ENTRYPOINT ["python"]
-CMD ["app.py"]
+WORKDIR /app/website
+RUN pip install -r /app/website/requirements.txt
+CMD gunicorn -b 0.0.0.0:$port app:APP

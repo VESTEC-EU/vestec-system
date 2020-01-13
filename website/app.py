@@ -1,14 +1,27 @@
 #!/usr/local/bin/flask
 '''render_template loads html pages of the application
 '''
+import sys
+sys.path.append("../")
 import os
 import uuid
 import requests
 from flask import Flask, render_template, request
+import Utils.log as log
+import Database
+
+import pony.orm as pny
+
+Database.initialiseDatabase()
+logger=log.VestecLogger("Website")
 
 APP = Flask(__name__)  # create an instance if the imported Flask class
 
-TARGET_URI = 'http://127.0.0.1:5500/jobs'
+if "VESTEC_MANAGER_URI" in os.environ:
+    TARGET_URI = os.environ["VESTEC_MANAGER_URI"]
+else:
+    TARGET_URI = 'http://127.0.0.1:5500/jobs'
+
 CURRENT_JOB = {'uuid': '', 'name': ''}
 
 def generate_id():
@@ -19,6 +32,8 @@ def generate_id():
 @APP.route('/')  # used to bind the following function to the specified URL
 def welcome_page():
     '''Render a static welcome template'''
+    print("TARGET_URI = %s"%TARGET_URI)
+    logger.Log(log.LogType.Website,str(request))
     return render_template('index.html')
 
 
@@ -45,6 +60,7 @@ def submit_job():
 
     job_request = requests.put(TARGET_URI + '/' + CURRENT_JOB.get('uuid'), json=CURRENT_JOB)
     response_data = job_request.text
+    logger.Log(log.LogType.Website,str(request))
 
     return response_data
 
@@ -71,6 +87,7 @@ def check_job_status():
     '''
     current_stat_req = requests.get(TARGET_URI + '/' + str(CURRENT_JOB.get('uuid')))
     response_data = [current_stat_req.json()]
+    logger.Log(log.LogType.Website,str(request))
 
     return render_template('jobstatustable.html', jobs=response_data)
 
@@ -97,19 +114,38 @@ def check_all_jobs_status():
     '''
     all_stat_req = requests.get(TARGET_URI)
     response_data = all_stat_req.json()
+    logger.Log(log.LogType.Website,str(request))
 
     return render_template('jobstatustable.html', jobs=response_data)
+
+@APP.route("/logs")
+def showLogs():
+    logs=[]
+    with pny.db_session:
+        ls=pny.select(a for a in log.DBLog)[:]
+        for l in ls:
+            lg={}
+            lg["timestamp"]=str(l.timestamp)
+            lg["originator"]=l.originator
+            lg["user"]=l.user
+            lg["type"] = l.type.name
+            lg["comment"] = l.comment
+            logs.append(lg)
+    return render_template("logs.html",logs=logs)
+
 
 
 @APP.errorhandler(404)
 def page_not_found(e):
     '''Handling 404 errors by showing template'''
+    logger.Log(log.LogType.Website,"404 Not Found: "+str(request))
     return render_template('404.html'), 404
 
 
 @APP.errorhandler(500)
 def page_not_found(e):
     '''Handling 500 errors by showing template'''
+    logger.Log(log.LogType.Website,"500 Internal server error: "+str(request)+str(e))
     return render_template('500.html'), 500
 
 

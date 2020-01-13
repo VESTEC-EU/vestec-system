@@ -1,17 +1,47 @@
-version: '3.1'
+version: '3'
 services:
-  website:
-    image: vestec-server/website
+  nginx:
+    container_name: nginx
+    build:
+      context: ../Nginx
+      dockerfile: Dockerfile
     ports:
-     - "5000:5000"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/vestec/certs:/var/vestec/certs"
+
+  website:
+    container_name: website
+    build:
+      context: ../
+      dockerfile: website/Dockerfile
     environment:
       VESTEC_MANAGER_URI: "http://manager:5500/jobs"
+    env_file:
+      - environment_variables.env
+
   manager:
-    image: vestec-server/manager
+    container_name: manager
+    depends_on:
+      - "maria"
+    build:
+      context: ../
+      dockerfile: SimulationManager/Dockerfile
+    #WE ONLY NEED THIS IF WE ARE USING SQLITE
+    # volumes:
+    #   - "../Database:/database"
+    env_file:
+      - environment_variables.env
+
+  maria:
+    container_name: mariadb
+    image: mariadb
     environment:
-      VESTEC_DATABASE_PATH: "/database/vestec.sqlite"
+      MYSQL_ROOT_PASSWORD: "changeme"
     volumes:
-      - "../Database:/database"
+      - "/var/vestec/db:/var/lib/mysql"
+
   rabbit:
     hostname: rabbit
     image: "rabbitmq:3.7-management-alpine"
@@ -28,10 +58,3 @@ services:
        mode: 0600
        uid: '100'
        gid: '101'
-
-secrets:
-  rabbit_erlang_cookie:
-    external: true
-  rabbit_admin_password:
-    external: true
-
