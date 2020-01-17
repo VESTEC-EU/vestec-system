@@ -1,4 +1,8 @@
 import workflow
+import pony.orm as pny
+from db import Incident
+import datetime
+import time
 
 #we only need to import MesoNH because we use a persistence variable for this demo. 
 import MesoNH
@@ -13,21 +17,23 @@ hotspot_done=False
 @workflow.handler
 def fire_terrain_handler(message):
     print("In Fire terrain handler")
-
+    time.sleep(1)
     global terrain_done
     terrain_done=True
+    
 
-    workflow.send(message="",queue="fire_simulation")
+    workflow.send(message=message,queue="fire_simulation")
    
 
 @workflow.handler
 def fire_hotspot_handler(message):
     print("In Fire hotspot handler")
+    time.sleep(1)
 
     global hotspot_done
     hotspot_done=True
 
-    workflow.send(message="",queue="fire_simulation")
+    workflow.send(message=message,queue="fire_simulation")
 
 
 @workflow.handler
@@ -41,10 +47,18 @@ def fire_simulation_handler(message):
 
     if terrain_done and hotspot_done and MesoNH.weather_done:
         print("Running Fire Simulation")
+        time.sleep(1)
 
         terrain_done=False
         hotspot_done=False
         MesoNH.weather_done=False
+
+        with pny.db_session:
+            id = message["IncidentID"]
+            fire = Incident[id]
+            fire.status = "COMPLETE"
+            fire.date_completed = datetime.datetime.now()
+        print("Done!")
     else:
         print("Will do nothing - waiting for data")
 

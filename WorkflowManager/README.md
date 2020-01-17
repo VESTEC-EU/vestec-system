@@ -58,7 +58,7 @@ In order for the fire simulation to be run it requires three dependencies: terra
 
 ## Running the example workflow
 The example contained in `example.py` runs the fire workflow (see above). To run this we first need
-* A running RabbitMQ server
+* A running RabbitMQ server (e.g. use a rabbitmq docker container exposing port 5672)
 * `manager.py` to be running (this is the "workflow engine" that listens for messages and executes the handlers)
 
 If we then run `example.py` it will send messages to the terrain, hotspot and weather data handlers to kickstart the workflow. The output from `example.py` should be:
