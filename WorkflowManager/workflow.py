@@ -14,6 +14,46 @@ channel = connection.channel()
 initialise_database()
 
 
+#### Code for a n in-memory database to be used to store local data
+
+#internal class
+class _Logger():
+    localDB = pny.Database()
+
+    class DBlog(localDB.Entity):
+            incident = pny.Required(str)
+            originator = pny.Required(str)
+            data = pny.Required(str)
+    
+    
+    def __init__(self):
+        #self.localDB.bind(provider='sqlite', filename='local.sqlite',create_db=True) #filename=":memory:"
+        self.localDB.bind(provider='sqlite', filename=":memory:")
+        self.localDB.generate_mapping(create_tables=True)
+    
+    #Called by handler... logs information to be persisted between calls
+    def Log(self,incident,dict):
+        originator = sys._getframe(1).f_code.co_name
+        data = json.dumps(dict)
+        with pny.db_session:
+            self.DBlog(incident=incident,originator=originator,data=data)
+    
+    #called by handler - retrieives all the logs belonging to this incident and handler
+    def GetLogs(self,incident):
+        originator = sys._getframe(1).f_code.co_name
+        with pny.db_session:
+            logs = self.DBlog.select( lambda p: p.incident == incident and p.originator == originator)
+            l = []
+            for log in logs:
+                dict = json.loads(log.data)
+                l.append(dict)
+        return l
+
+#object exposed to handlers
+Logger=_Logger()
+
+
+
 #callback to register a handler with a queue, and also declare that queue to the RMQ system
 def RegisterHandler(handler, queue):
     print(" [*] '%s' registered to queue '%s'"%(handler.__name__,queue))
@@ -30,6 +70,8 @@ def handler(f):
 
         #convert json message back to dictionary
         msg = json.loads(body)
+        incident = msg["IncidentID"]
+        print(" [*] Incident ID: %s"%incident)
 
         # Log receipt of message
         mssgid = msg["MessageID"]
@@ -65,6 +107,7 @@ def send(message,queue):
     #create uuid for this message and add it to the message payload
     id = str(uuid.uuid4())
     message["MessageID"] = id
+    message["originator"] = caller
     
     #unpack the incident ID from the message too as we need this for the message log
     incident = message["IncidentID"]
@@ -78,7 +121,7 @@ def send(message,queue):
 
     channel.basic_publish(exchange='', routing_key=queue, body=msg)
     #stuff to do after message is sent
-    print(" [*] Sent message '%s' to queue '%s'"%(message,queue))
+    print(" [*] Sent message to queue '%s'"%(queue))
 
 
 # Closes a connection

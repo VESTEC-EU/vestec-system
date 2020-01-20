@@ -1,9 +1,7 @@
 import workflow
 import time
 
-#dummy variable to persist state of weather simulation
-weather_done=False
-
+logger=workflow.Logger
 
 #define some handlers for each stage in the workflow
 @workflow.handler
@@ -24,9 +22,8 @@ def weather_simulation_handler(message):
 def weather_results_handler(message):
     print("In weather results handler")
     time.sleep(1)
-    
-    global weather_done
-    weather_done=True
+
+    logger.Log("test",{"stuff":"stuff"})
 
     workflow.send(queue='fire_simulation', message=message)
 
