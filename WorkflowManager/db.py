@@ -17,6 +17,7 @@ class MessageLog(db.Entity):
     incident_id = pny.Required(str)
     message = pny.Required(str)
     comment = pny.Optional(str)
+    consumer = pny.Optional(str)
 
 class Incident(db.Entity):
     uuid = pny.PrimaryKey(str)

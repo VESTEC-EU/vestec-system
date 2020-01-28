@@ -13,6 +13,8 @@ channel = connection.channel()
 
 initialise_database()
 
+ConsumerID=str(uuid.uuid4())
+
 
 #### Code for a n in-memory database to be used to store local data
 
@@ -27,8 +29,8 @@ class _Logger():
     
     
     def __init__(self):
-        #self.localDB.bind(provider='sqlite', filename='local.sqlite',create_db=True) #filename=":memory:"
-        self.localDB.bind(provider='sqlite', filename=":memory:")
+        self.localDB.bind(provider='sqlite', filename='local.sqlite',create_db=True) 
+        #self.localDB.bind(provider='sqlite', filename=":memory:")
         self.localDB.generate_mapping(create_tables=True)
     
     #Called by handler... logs information to be persisted between calls
@@ -103,6 +105,7 @@ def handler(f):
                 log = MessageLog[mssgid]
                 log.date_received=datetime.datetime.now()
                 log.status="PROCESSING"
+                log.consumer = ConsumerID
 
             #call message handler
             print(" [*] Executing task")
@@ -115,6 +118,7 @@ def handler(f):
                     log = MessageLog[mssgid]
                     log.status="ERROR"
                     log.comment=e.message
+                Cancel(incident,reason="%s encountered an error"%f.__name__,status="ERROR")
             else:            
             #######stuff to do after handler is successfully called
                 #log completion of task
@@ -182,7 +186,7 @@ def finalise():
 
 
 # Starts the workflow manaeger (starts waiting for messages to consume)
-def execute(nprocs=1):
+def execute():
     print("")
     print(' [*] Workflow Manager ready to accept messages. To exit press CTRL+C \n')
     try:
