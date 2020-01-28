@@ -16,9 +16,9 @@ initialise_database()
 ConsumerID=str(uuid.uuid4())
 
 
-#### Code for a n in-memory database to be used to store local data
+#### Code for a database to be used to store state information for the handlers
 
-#Class that allows handlers to log some things to an in memory database
+#Class that allows handlers to log some data
 class _Logger():
     localDB = pny.Database()
 
@@ -29,8 +29,8 @@ class _Logger():
     
     
     def __init__(self):
-        self.localDB.bind(provider='sqlite', filename='local.sqlite',create_db=True) 
-        #self.localDB.bind(provider='sqlite', filename=":memory:")
+        self.localDB.bind(provider='sqlite', filename='handlers.sqlite',create_db=True) 
+        #self.localDB.bind(provider='sqlite', filename=":memory:") #cannot have an in-memory db if used between many processes
         self.localDB.generate_mapping(create_tables=True)
     
     #Called by handler... logs information to be persisted between calls
