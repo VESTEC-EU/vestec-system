@@ -16,12 +16,14 @@ class MessageLog(db.Entity):
     destination = pny.Required(str)
     incident_id = pny.Required(str)
     message = pny.Required(str)
+    comment = pny.Optional(str)
 
 class Incident(db.Entity):
     uuid = pny.PrimaryKey(str)
     kind = pny.Required(str)
     name = pny.Required(str)
     status = pny.Required(str,default="ACTIVE")
+    comment = pny.Optional(str)
 
     date_started=pny.Required(datetime.datetime)
     date_completed=pny.Optional(datetime.datetime)

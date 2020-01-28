@@ -57,11 +57,9 @@ def fire_simulation_handler(message):
     if test == terrain|hotspot|weather:
         print("Running Fire Simulation")
         time.sleep(1)
-        with pny.db_session:
-            id = message["IncidentID"]
-            fire = Incident[id]
-            fire.status = "COMPLETE"
-            fire.date_completed = datetime.datetime.now()
+        
+        id = message["IncidentID"]
+        workflow.Complete(id)
         print("Done!")
     else:
         print("Will do nothing - waiting for data")

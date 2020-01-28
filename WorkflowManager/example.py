@@ -3,6 +3,7 @@ import uuid
 from db import Incident
 import pony.orm as pny
 import datetime
+import time
 
 
 def submit_fire(id):
@@ -34,6 +35,9 @@ def create_fire_incident():
         Incident(uuid=id,kind=kind,name=name,date_started=date_started,incident_date=incident_date)
 
     submit_fire(id)
+
+    # time.sleep(1.5)
+    # workflow.Cancel(id,reason="Test cancellation")
 
 
 

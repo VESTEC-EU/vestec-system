@@ -16,8 +16,13 @@
 The workflow manager works via RabbitMQ. Every node of the workflow is represented by a AMQP queue whose entries are consumed by a 'handler' callback function. When a message is put into a node's queue, the handler function is called, inspects the message, then carries out some task appropriate for the message. The handler may then (based on the information it has processed) decide to send messages to one or more (or no) queues to trigger other nodes of the workflow. As such we can have a complicated workflow with conditional branching, parallel execution of nodes (assuming we have multiple worker processes) and loops if necessary.
 
 ## Writing handlers and constructing your workflow
-Handler functions (which take the message as their input) are decorated with `@workflow.handler` and registered with RabbitMQ using `workflow.RegisterHandler(handler,queue)`. Messages are sent with `workflow.send(queue,message)`. To register as a consumer `workflow.execute()` is called. This puts the consumer into an infinite loop waiting for messages, so it is best to run this as a dedicated process. 
+Handler functions (which take the message as their input) are decorated with `@workflow.handler` and registered with RabbitMQ using `workflow.RegisterHandler(handler,queue)`. Messages are sent with `workflow.send(queue,message)`. The messages _must_ be sent as python dictionaries as these are converted to json when sent through RabbitMQ. 
 
+## Workflow execution
+We need to have a process (or group of processes/threads) running that act as consumers for the messages. These are the processes that execute the workflow. To register as a consumer `workflow.execute()` is called. This puts the consumer into an infinite loop waiting for messages. 
+
+
+## Example Workflow
 Consider we have two nodes connected together called A and B, whose workflow is `Start -> A -> B -> End`. An example code to define and execute the workflow is:
 ```python
 import workflow
