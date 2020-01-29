@@ -10,6 +10,7 @@ logger=workflow.Logger
 
 #we now want to define some handlers
 @workflow.handler
+@workflow.atomic
 def fire_terrain_handler(message):
     print("In Fire terrain handler")
     time.sleep(1)
@@ -27,6 +28,8 @@ def fire_hotspot_handler(message):
 
 @workflow.handler
 def fire_simulation_handler(message):
+
+    workflow.GetLock()
    
     print("In fire simulation handler")
     
@@ -63,6 +66,8 @@ def fire_simulation_handler(message):
         print("Done!")
     else:
         print("Will do nothing - waiting for data")
+
+    workflow.ReleaseLock()
 
 
 

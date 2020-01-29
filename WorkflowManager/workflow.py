@@ -6,6 +6,7 @@ import json
 import pony.orm as pny
 import uuid
 import datetime
+import time
 
 print(" [*] Opening connection to RabbitMQ server")
 connection = pika.BlockingConnection(pika.ConnectionParameters(host='localhost'))
@@ -23,10 +24,9 @@ class _Logger():
     localDB = pny.Database()
 
     class DBlog(localDB.Entity):
-            incident = pny.Required(str)
-            originator = pny.Required(str)
-            data = pny.Required(str)
-    
+        incident = pny.Required(str)
+        originator = pny.Required(str)
+        data = pny.Required(str)
     
     def __init__(self):
         self.localDB.bind(provider='sqlite', filename='handlers.sqlite',create_db=True) 
@@ -79,12 +79,15 @@ def Complete(IncidentID):
 def RegisterHandler(handler, queue):
     print(" [*] '%s' registered to queue '%s'"%(handler.__name__,queue))
     channel.queue_declare(queue=queue)
-    channel.basic_consume(queue=queue, on_message_callback=handler, auto_ack=True)
+    channel.basic_consume(queue=queue, on_message_callback=handler, auto_ack=False)
 
 #decorator to use for handlers. Handler function is to take one argument (the message)
 def handler(f):
     @functools.wraps(f)
     def wrapper(ch,method,wrapper,body,**kwargs):
+        #acknowledge delivery of message
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        
         print("")
         print("--------------------------------------------------------------------------------")
         print(" [*] Handler: %s"%f.__name__)
@@ -113,12 +116,12 @@ def handler(f):
                 f(msg)
             except Exception as e:
                 #If the handler throws an error, log this in the message log
-                print(" [*] Error occurred: %s"%e.message)
+                print(" [*] Error occurred: %s"%str(e))
                 with pny.db_session:
                     log = MessageLog[mssgid]
                     log.status="ERROR"
-                    log.comment=e.message
-                Cancel(incident,reason="%s encountered an error"%f.__name__,status="ERROR")
+                    log.comment="%s: %s"%(f.__name__,str(e))
+                Cancel(incident,reason="%s error: %s"%(f.__name__,str(e)),status="ERROR")
             else:            
             #######stuff to do after handler is successfully called
                 #log completion of task
@@ -185,11 +188,85 @@ def finalise():
     connection.close()
 
 
+
+
+
+#####A semaphore lock for if a handler needs to ensure it is the only version of it running at once
+
+lockDB=pny.Database()
+
+class Lock(lockDB.Entity):
+        handler = pny.PrimaryKey(str)
+        date = pny.Optional(datetime.datetime)
+        locked = pny.Required(bool,default=False)
+
+lockDB.bind(provider='sqlite', filename='locks.sqlite',create_db=True)
+lockDB.generate_mapping(create_tables=True)
+
+#check that an entry for this handler exists in the lock database
+def _EnsureLockHandlerExists(handlerName):
+    with pny.db_session:
+        if Lock.exists(handler=handlerName):
+            return
+        else:
+            print("Creating LockDB entry for %s"%handlerName)
+            l = Lock(handler=handlerName)
+            return
+
+def GetLock(name=None):
+    if name==None:
+        handlerName = sys._getframe(1).f_code.co_name
+    else:
+        handlerName=name
+    
+    #make sure there is an entry for this handler in the db
+    _EnsureLockHandlerExists(handlerName)
+
+    #loop until we get a lock
+    while True:
+        with pny.db_session:
+            l=Lock[handlerName]
+            if l.locked == False:
+                l.locked=True
+                l.date = datetime.datetime.now()
+                print("Aquired Lock")
+                return
+            else:
+                print("Lock not aquired. Will try again in 1 second")
+        time.sleep(1)
+
+def ReleaseLock(name=None):
+    if name==None:
+        handlerName = sys._getframe(1).f_code.co_name
+    else:
+        handlerName=name
+
+    with pny.db_session:
+        l=Lock[handlerName]
+        l.locked=False
+        l.date=datetime.datetime.now()
+    print("Lock released")
+
+
+
+def atomic(f):
+    @functools.wraps(f)
+    def wrapper(message,**kwargs):
+        GetLock(f.__name__)
+        f(message)
+        ReleaseLock(f.__name__)
+
+    return wrapper
+
+######### END OF LOCK FUNCTIONALITY ###########################
+
 # Starts the workflow manaeger (starts waiting for messages to consume)
 def execute():
     print("")
     print(' [*] Workflow Manager ready to accept messages. To exit press CTRL+C \n')
     try:
+        #Specify how many messages we want to prefetch... (may be important for load balancing)
+        #channel.qos(prefetch_count=1)
         channel.start_consuming()
     except KeyboardInterrupt:
         print(" [*] Keyboard Interrupt detected")
