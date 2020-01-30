@@ -14,7 +14,7 @@ MarkupSafe==1.1.1
 post==2018.11.20
 public==2018.11.20
 pytz==2018.9
-pony==0.7.10
+pony==0.7.11
 pymysql==0.9.3
 passlib==1.7.1
 query-string==2018.11.20
