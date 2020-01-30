@@ -14,6 +14,7 @@ channel = connection.channel()
 
 initialise_database()
 
+#UUID for this running instance of the consumer (used for debugging when using multiple consumer processes)
 ConsumerID=str(uuid.uuid4())
 
 
@@ -54,10 +55,15 @@ class _Logger():
 #logger object exposed to handlers
 Logger=_Logger()
 
+###### END of state information database code
+
 #Test if a given Incident is active (returns True/False)
 @pny.db_session
 def _IsActive(IncidentID):
-    return Incident[IncidentID].status == "ACTIVE"
+    try:
+        return Incident[IncidentID].status == "ACTIVE"
+    except:
+        raise Exception("Unknown IncidentID")
 
 #Cancel an Incident giving optional reasons and a named "status" (default CANCELLED)
 @pny.db_session
@@ -85,15 +91,13 @@ def RegisterHandler(handler, queue):
 def handler(f):
     @functools.wraps(f)
     def wrapper(ch,method,wrapper,body,**kwargs):
-        #acknowledge delivery of message
-        ch.basic_ack(delivery_tag=method.delivery_tag)
+        
         
         print("")
         print("--------------------------------------------------------------------------------")
         print(" [*] Handler: %s"%f.__name__)
-        ######stuff to do before handler is called
-
-         #convert json message back to dictionary
+        
+        #convert json message back to dictionary
         msg = json.loads(body)
         incident = msg["IncidentID"]
         mssgid = msg["MessageID"]
@@ -102,8 +106,16 @@ def handler(f):
         print(" [*] Incident ID: %s"%incident)
         
         #Check if parent incident is active. If so, do some book keeping and execute handler
-        if _IsActive(incident):
-            # Log receipt of message
+        try:
+            active=_IsActive(incident)
+        except:
+            #we handle the lack of a valid IncidentID at the bottom of this function
+            #so no need to dupicate code here
+            active=False
+            pass
+
+        if active:
+            # Log that we are processing the message
             with pny.db_session:
                 log = MessageLog[mssgid]
                 log.date_received=datetime.datetime.now()
@@ -116,50 +128,62 @@ def handler(f):
                 f(msg)
             except Exception as e:
                 #If the handler throws an error, log this in the message log
-                print(" [*] Error occurred: %s"%str(e))
+                print(" [#] Error occurred: %s"%str(e))
                 with pny.db_session:
                     log = MessageLog[mssgid]
                     log.status="ERROR"
                     log.comment="%s: %s"%(f.__name__,str(e))
                 Cancel(incident,reason="%s error: %s"%(f.__name__,str(e)),status="ERROR")
             else:            
-            #######stuff to do after handler is successfully called
                 #log completion of task
                 print(" [*] Task complete")
                 with pny.db_session:
                     log = MessageLog[mssgid]
                     log.date_completed=datetime.datetime.now()
                     log.status="COMPLETE"
-
-        #Incident is not active: log that we have not executed the handler
+            
+        #Incident is not active (or not in database): log that we have not executed the handler
         else:
             #log non-completion of task
             with pny.db_session:
-                print(" [*] Task not started: Incident stopped")
+                
                 log = MessageLog[mssgid]
                 log.date_received=datetime.datetime.now()
                 log.status="NOT PROCESSED"
-                istatus = Incident[incident].status
-                log.comment="Incident is no longer active with status %s"%istatus
+                try:
+                    istatus = Incident[incident].status
+                    log.comment="Incident is no longer active with status %s"%istatus
+                    print(" [*] Task not started: Incident stopped")
+                except:
+                    log.comment="Incident ID not recognised"
+                    print(" [*] Task not started: Incident ID not recognised")
+                
 
         print("--------------------------------------------------------------------------------")
         print("")
+
+        #finally acknowledge completion of message to rabbitmq
+        ch.basic_ack(delivery_tag=method.delivery_tag)
 
     
     return wrapper
 
 #routine to call when we want to send a message to a queue. Takes the message (in dict form) and the queue to send the message to as arguments
 def send(message,queue):
-    ####stuff to do before message is sent
+    
+    #Get the incident ID from the message
+    try:
+        incident = message["IncidentID"]
+    except:
+        raise Exception("Incident ID not included in the message")
 
     # check if the incident is still active. If not, don't send message
-    incident = message["IncidentID"]
     if not _IsActive(incident):
-        print(" [*] Incident stopped. Aborting message send")
+        print(" [#] Incident stopped. Aborting message send")
         return
 
 
-    #get name of caller function
+    #get name of caller function - this will be logger as the sender of the message
     caller = sys._getframe(1).f_code.co_name
     
     #create uuid for this message and add it to the message payload
@@ -168,7 +192,10 @@ def send(message,queue):
     message["originator"] = caller
     
     #convert the message to a json
-    msg = json.dumps(message)
+    try:
+        msg = json.dumps(message)
+    except:
+        raise Exception("Unable to jsonify message")
 
     #log the message
     with pny.db_session:
@@ -189,14 +216,13 @@ def finalise():
 
 
 
-
-
 #####A semaphore lock for if a handler needs to ensure it is the only version of it running at once
 
+#database for the locks
 lockDB=pny.Database()
 
 class Lock(lockDB.Entity):
-        handler = pny.PrimaryKey(str)
+        name = pny.PrimaryKey(str)
         date = pny.Optional(datetime.datetime)
         locked = pny.Required(bool,default=False)
 
@@ -204,57 +230,66 @@ lockDB.bind(provider='sqlite', filename='locks.sqlite',create_db=True)
 lockDB.generate_mapping(create_tables=True)
 
 #check that an entry for this handler exists in the lock database
-def _EnsureLockHandlerExists(handlerName):
+def _EnsureLockHandlerExists(name):
     with pny.db_session:
-        if Lock.exists(handler=handlerName):
+        if Lock.exists(name=name):
             return
         else:
-            print("Creating LockDB entry for %s"%handlerName)
-            l = Lock(handler=handlerName)
+            print(" [*] Creating LockDB entry for %s"%name)
+            l = Lock(name=name)
             return
 
-def GetLock(name=None):
-    if name==None:
-        handlerName = sys._getframe(1).f_code.co_name
+#This function gets a lock and returns once it has it
+#Takes a name/label for the lock, and the incident this belongs to. Combines these to create a 
+# unique ID for the name
+def GetLock(name,incident):
+    if name == None or incident == None:
+        raise Exception("Unable to lock: Lock requires a name and incident")
     else:
-        handlerName=name
+        name=name+incident
     
     #make sure there is an entry for this handler in the db
-    _EnsureLockHandlerExists(handlerName)
+    _EnsureLockHandlerExists(name)
 
     #loop until we get a lock
     while True:
         with pny.db_session:
-            l=Lock[handlerName]
+            l=Lock[name]
             if l.locked == False:
                 l.locked=True
                 l.date = datetime.datetime.now()
-                print("Aquired Lock")
+                print(" [*] Aquired Lock")
                 return
             else:
-                print("Lock not aquired. Will try again in 1 second")
+                print(" [*] Lock not aquired. Will try again in 1 second")
         time.sleep(1)
 
-def ReleaseLock(name=None):
-    if name==None:
-        handlerName = sys._getframe(1).f_code.co_name
+#this function releases a lock
+#Takes a name/label for the lock, and the incident this belongs to. Combines these to create a 
+# unique ID for the name
+def ReleaseLock(name,incident):
+    if name==None or incident == None:
+        raise Exception("Lock requires a name and an incident")
     else:
-        handlerName=name
+        name = name+incident
 
-    with pny.db_session:
-        l=Lock[handlerName]
-        l.locked=False
-        l.date=datetime.datetime.now()
-    print("Lock released")
+    try:
+        with pny.db_session:
+            l=Lock[name]
+            l.locked=False
+            l.date=datetime.datetime.now()
+            print(" [*] Lock released")
+    except:
+            raise Exception("Unable to unlock: unknown lock")
+    
 
-
-
+#a wrapper version of the above two functions for handlers so you can wrap a function/handler 
 def atomic(f):
     @functools.wraps(f)
     def wrapper(message,**kwargs):
-        GetLock(f.__name__)
+        GetLock(f.__name__,message["IncidentID"])
         f(message)
-        ReleaseLock(f.__name__)
+        ReleaseLock(f.__name__,message["IncidentID"])
 
     return wrapper
 

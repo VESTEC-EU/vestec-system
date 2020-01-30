@@ -28,13 +28,12 @@ def fire_hotspot_handler(message):
 
 @workflow.handler
 def fire_simulation_handler(message):
+    incident=message["IncidentID"]
 
-    workflow.GetLock()
+    workflow.GetLock("some_label",incident)
    
     print("In fire simulation handler")
     
-    incident=message["IncidentID"]
-
     logger.Log(incident=incident,dict={"originator":message["originator"]})
 
     logs=logger.GetLogs(incident)
@@ -67,7 +66,7 @@ def fire_simulation_handler(message):
     else:
         print("Will do nothing - waiting for data")
 
-    workflow.ReleaseLock()
+    workflow.ReleaseLock("some_label",incident)
 
 
 
