@@ -60,6 +60,28 @@ Logger = _Logger()
 
 ###### END of state information database code
 
+
+def CreateIncident(name, kind, incident_date=None):
+
+    # get uuid for this event and set up some basic (dummy) parameters
+    id = str(uuid.uuid4())
+    date_started = datetime.datetime.now()
+    if incident_date == None:
+        incident_date = datetime.datetime.now()
+
+    # create database entry
+    with pny.db_session:
+        Incident(
+            uuid=id,
+            kind=kind,
+            name=name,
+            date_started=date_started,
+            incident_date=incident_date,
+        )
+
+    return id
+
+
 # Test if a given Incident is active (returns True/False)
 @pny.db_session
 def _IsActive(IncidentID):
