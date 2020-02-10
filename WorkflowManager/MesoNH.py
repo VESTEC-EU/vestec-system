@@ -1,7 +1,6 @@
 import workflow
 import time
 
-logger = workflow.Logger
 
 # define some handlers for each stage in the workflow
 @workflow.handler
@@ -25,7 +24,6 @@ def weather_results_handler(message):
 
     # raise Exception("Test error")
 
-    logger.Log("test", {"stuff": "stuff"})
 
     workflow.send(queue="fire_simulation", message=message)
 

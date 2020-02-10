@@ -5,7 +5,6 @@ import datetime
 import time
 
 
-logger = workflow.Logger
 
 
 # we now want to define some handlers
@@ -34,9 +33,9 @@ def fire_simulation_handler(message):
 
     print("In fire simulation handler")
 
-    logger.Log(incident=incident, dict={"originator": message["originator"]})
+    workflow.Persist.Put(incident=incident, dict={"originator": message["originator"]})
 
-    logs = logger.GetLogs(incident)
+    logs = workflow.Persist.Get(incident)
     # print("Logs =",logs)
 
     test = 0

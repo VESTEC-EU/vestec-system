@@ -20,8 +20,8 @@ ConsumerID = str(uuid.uuid4())
 
 #### Code for a database to be used to store state information for the handlers
 
-# Class that allows handlers to log some data
-class _Logger:
+# Class that allows handlers to log some data that persists after that handler has exited
+class _Persist:
     localDB = pny.Database()
 
     class DBlog(localDB.Entity):
@@ -35,14 +35,14 @@ class _Logger:
         self.localDB.generate_mapping(create_tables=True)
 
     # Called by handler... logs information to be persisted between calls
-    def Log(self, incident, dict):
+    def Put(self, incident, dict):
         originator = sys._getframe(1).f_code.co_name
         data = json.dumps(dict)
         with pny.db_session:
             self.DBlog(incident=incident, originator=originator, data=data)
 
     # called by handler - retrieives all the logs belonging to this incident and handler
-    def GetLogs(self, incident):
+    def Get(self, incident):
         originator = sys._getframe(1).f_code.co_name
         with pny.db_session:
             logs = self.DBlog.select(
@@ -54,9 +54,15 @@ class _Logger:
                 l.append(dict)
         return l
 
+    #Cleans up any logs associated with an incident
+    def _Cleanup(self,incident):
+        with pny.db_session:
+            pny.delete(l for l in self.DBlog if l.incident == incident)
+        print(" [*] Cleaned up persistance for incident %s"%incident)
+
 
 # logger object exposed to handlers
-Logger = _Logger()
+Persist = _Persist()
 
 ###### END of state information database code
 
@@ -79,6 +85,8 @@ def CreateIncident(name, kind, incident_date=None):
             incident_date=incident_date,
         )
 
+    print(" [*] Created incident %s"%id)
+
     return id
 
 
@@ -93,19 +101,101 @@ def _IsActive(IncidentID):
 
 # Cancel an Incident giving optional reasons and a named "status" (default CANCELLED)
 @pny.db_session
-def Cancel(IncidentID, reason="", status="CANCELLED"):
+def Cancel(IncidentID, reason="", status="CANCELLED",CleanLocks=True,CleanPersist=True,CleanMessages=False,force=False):
+    #send a cleanup message to the message queue
+    _RequestCleanup(IncidentID,CleanLocks=CleanLocks,CleanPersist=CleanPersist,CleanMessages=CleanMessages,force=force)
+
     incident = Incident[IncidentID]
     incident.status = status
     incident.comment = reason
+
     print(" [*] Cancelled incident %s" % IncidentID)
 
 
 # Complete an Incident
 @pny.db_session
-def Complete(IncidentID):
+def Complete(IncidentID,CleanLocks=True,CleanPersist=True,CleanMessages=False,force=False):
+    #Send a cleanup message to the queue
+    _RequestCleanup(IncidentID,CleanLocks=CleanLocks,CleanPersist=CleanPersist,CleanMessages=CleanMessages,force=force)
+    
     incident = Incident[IncidentID]
     incident.status = "COMPLETE"
     incident.date_completed = datetime.datetime.now()
+    print(" [*] Completed incident %s" % IncidentID)
+
+    
+
+
+# Requests to clean up the incident. This sends a message to the cleanup handler (see below)
+def _RequestCleanup(IncidentID,CleanLocks=True,CleanPersist=True,CleanMessages=False,force=False):
+    message={}
+    message["IncidentID"]=IncidentID
+    message["CleanLocks"]=CleanLocks
+    message["CleanPersist"]=CleanPersist
+    message["CleanMessages"]=CleanMessages
+    message["Force"]=force
+    
+    #send message to instruct a cleanup of this incident
+    send(message,"_Cleanup")
+
+
+    
+# Handler for a cleanup message to clean up a given incident. 
+@pny.db_session
+def _Cleanup(ch,method,properties,body):
+    msg=json.loads(body)
+    IncidentID = msg["IncidentID"]
+
+
+    print("")
+    print(
+        "--------------------------------------------------------------------------------")
+
+    messages = pny.select(m for m in MessageLog if (m.incident_id == IncidentID and m.status == "PROCESSING"))[:]
+    #for message in messages:
+    #    print(message.originator, message.status)
+
+    if len(messages) >0 and not msg['Force']:
+        # If some parts of the incident are still running we wait until they are finished
+        # so we reject the message (send it back to the queue)
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+        print(" [*] Cannot clean up incident yet... messages still being processed")
+        print(
+        "--------------------------------------------------------------------------------"
+        )
+        print("")
+        return
+    
+    #Log this message as being processed
+    msgid = msg["MessageID"]
+    log = MessageLog[msgid]
+    log.date_received = datetime.datetime.now()
+    log.status = "PROCESSING"
+    log.consumer = ConsumerID
+
+    
+    print(" [*] Cleaning up Incident %s"%IncidentID)
+
+    if msg["CleanLocks"]:
+        _CleanLock(IncidentID)
+    
+    if msg["CleanPersist"]:
+        Persist._Cleanup(IncidentID)
+
+    print(" [*] Done!")
+
+    print(
+        "--------------------------------------------------------------------------------"
+    )
+    print("")
+
+  
+    log.date_completed = datetime.datetime.now()
+    log.status = "COMPLETE"
+
+    # finally acknowledge completion of message to rabbitmq
+    ch.basic_ack(delivery_tag=method.delivery_tag)
+
 
 
 # callback to register a handler with a queue, and also declare that queue to the RMQ system
@@ -118,7 +208,7 @@ def RegisterHandler(handler, queue):
 # decorator to use for handlers. Handler function is to take one argument (the message)
 def handler(f):
     @functools.wraps(f)
-    def wrapper(ch, method, wrapper, body, **kwargs):
+    def wrapper(ch, method, properties, body, **kwargs):
 
         print("")
         print(
@@ -147,6 +237,10 @@ def handler(f):
             # Log that we are processing the message
             with pny.db_session:
                 log = MessageLog[mssgid]
+                # This should only happen if a consumer process has died midway through processing
+                # The re-process of the message should go ok but this warning will be printed
+                if log.status != "SENT":
+                    print(" [*] ####### WARNING message is in processing state #########")
                 log.date_received = datetime.datetime.now()
                 log.status = "PROCESSING"
                 log.consumer = ConsumerID
@@ -339,11 +433,17 @@ def atomic(f):
 
     return wrapper
 
+def _CleanLock(incident):
+    with pny.db_session:
+        pny.delete(l for l in Lock if incident in l.name)
+    print(" [*] Cleaned up locks for incident %s"%incident)
+
 
 ######### END OF LOCK FUNCTIONALITY ###########################
 
 # Starts the workflow manaeger (starts waiting for messages to consume)
 def execute():
+    RegisterHandler(_Cleanup,"_Cleanup")
     print("")
     print(" [*] Workflow Manager ready to accept messages. To exit press CTRL+C \n")
     try:
