@@ -2,6 +2,8 @@
 
 ## Files
 * `workflow.py` -  Contains the machinery of the workflow. Should be imported by anything that wants to use the workflow functionality
+* `lock.py` - Contains code around making specific handlers atomic. This is automatically imported by workflow.py
+* `persist.py` - Contains code for handlers to persist data. This is automatically imported by workflow.py
 * `manager.py` - This is a process that executes the workflow
 * `fire.py` - Contains example handlers for the forest fire workflow
 * `MesoNH.py` - Contains example handlers for MesoNH workflows
@@ -13,12 +15,14 @@
 
 
 ## How it works
-The workflow manager works via RabbitMQ. Every node of the workflow is represented by a AMQP queue whose entries are consumed by a 'handler' callback function. When a message is put into a node's queue, the handler function is called, inspects the message, then carries out some task appropriate for the message. The handler may then (based on the information it has processed) decide to send messages to one or more (or no) queues to trigger other nodes of the workflow. As such we can have a complicated workflow with conditional branching, parallel execution of nodes (assuming we have multiple worker processes) and loops if necessary.
+The workflow manager works via RabbitMQ. Every node of the workflow is represented by a AMQP queue whose entries are consumed by a 'handler' callback function. When a message is put into a node's queue, the handler function is called, inspects the message, then carries out some task appropriate for the message. The handler may then (based on the information it has processed) decide to send messages to one or more (or no) queues to trigger other nodes of the workflow. As such we can have a complicated workflow with conditional branching, parallel execution of nodes (assuming we have multiple worker processes) and loops if necessary. This is a push-based approach, where the workflow reacts to messages being pushed into it. 
 
 ## Writing handlers and constructing your workflow
 Handler functions (which take the message as their input) are decorated with `@workflow.handler` and registered with RabbitMQ using `workflow.RegisterHandler(handler,queue)`. 
 
 Messages are enqueued to be sent with `workflow.send(queue,message)`. The messages _must_ be sent as python dictionaries as these are converted to json when sent through RabbitMQ. The message _must_ contain a key `IncidentID` which is the UUID of the incident. This is to identify which incident the message belongs to so it may be approproately processed. Not including this key will throw and error when invoking `workflow.send`. As a handler exits, the enqueued messages are automatially sent. If sending a message from outside a handler (e.g. to start a workflow) use `workflow.FlushMessages()` to send the message(s).
+
+Handlers are by default stateless, as the only information they have is that contained in the message that triggered them. Sometimes we need a handler to be able to persist some data so it can appropriately handle a new message based on something it has done previously. To this end the `workflow.Persist.Put(IncidentID,dict)` and `workflow.Persist.Get(IncidentID)` functions can be used. The first puts user-specified data in the form of a python dictionary into a database, labelled with the `IncidentID` and the name of the handler. The `Get` function returns the dictionarys from the previous calls to `Put` from that handler for the current incident. _This data is stored in json format, so any perisisted data must be jsonifyable._
 
 To run a workflow, an incident (a specific incidence of a workflow) must first be declared, using the `workflow.CreateIncident(name,kind,incident_date)` function, where `name` is a name for the incident, `kind` is the kind of incident, and `incident_date` is the date the incident started at (defaults to `datetime.datetime.now()`). If an incident isn't declared (or an invalid IncidentID is passed to `workflow.send`) then an error will be thrown.
 
@@ -36,7 +40,7 @@ It is possible to run several consumer processes. The messages are distributed b
 def atomic_handler(msg):
     ...
 ```
-This checks to see if the handler can be run. If not, the message is re-queued to rabbitMQ.
+This checks to see if the handler can be run. If not, the message is re-queued to rabbitMQ and will be scheduled to be processed again.
 
 <!-- Or if we only wish to protect a certain part of the handler's execution, we can use the `GetLock` and `ReleaseLock` functions within the function:
 

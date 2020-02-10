@@ -1,4 +1,3 @@
-from db import db, MessageLog, Incident, initialise_database
 import json
 import pony.orm as pny
 import sys
