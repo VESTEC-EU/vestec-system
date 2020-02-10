@@ -17,6 +17,8 @@ def submit_fire(id):
     workflow.send(message=msg, queue="fire_hotspot")
     workflow.send(message=msg, queue="weather_data")
 
+    workflow.FlushMessages()
+
 
 if __name__ == "__main__":
     id = workflow.CreateIncident(name="test fire", kind="FIRE")

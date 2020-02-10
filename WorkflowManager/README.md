@@ -18,9 +18,11 @@ The workflow manager works via RabbitMQ. Every node of the workflow is represent
 ## Writing handlers and constructing your workflow
 Handler functions (which take the message as their input) are decorated with `@workflow.handler` and registered with RabbitMQ using `workflow.RegisterHandler(handler,queue)`. 
 
-Messages are sent with `workflow.send(queue,message)`. The messages _must_ be sent as python dictionaries as these are converted to json when sent through RabbitMQ. The message _must_ contain a key `IncidentID` which is the UUID of the incident. This is to identify which incident the message belongs to so it may be approproately processed. Not including this key will throw and error when invoking `workflow.send`. 
+Messages are enqueued to be sent with `workflow.send(queue,message)`. The messages _must_ be sent as python dictionaries as these are converted to json when sent through RabbitMQ. The message _must_ contain a key `IncidentID` which is the UUID of the incident. This is to identify which incident the message belongs to so it may be approproately processed. Not including this key will throw and error when invoking `workflow.send`. As a handler exits, the enqueued messages are automatially sent. If sending a message from outside a handler (e.g. to start a workflow) use `workflow.FlushMessages()` to send the message(s).
 
 To run a workflow, an incident (a specific incidence of a workflow) must first be declared, using the `workflow.CreateIncident(name,kind,incident_date)` function, where `name` is a name for the incident, `kind` is the kind of incident, and `incident_date` is the date the incident started at (defaults to `datetime.datetime.now()`). If an incident isn't declared (or an invalid IncidentID is passed to `workflow.send`) then an error will be thrown.
+
+When a incident is finished, `workflow.Complete(IncidentID)` can be called to signal to the workflow engine that this workflow is finished. This sends a message to a special internal cleanup handler that marks the workflow as completed and removes temporary logs etc. There is a similar `workflow.Cancel(IncidentID)` function that is similar to complete but logs the workflow as cancelled.
 
 ## Workflow execution
 We need to have a process running that act a consumer for the messages. This is the process that collects messages from the RabbitMQ server and handles them, thereby executing the workflow. To register as a consumer, `workflow.execute()` is called. This puts the consumer into an infinite loop waiting for messages. `manager.py` is the default consumer.
@@ -56,14 +58,19 @@ import workflow
 def A_handler(message):
     #do something with message
     print("Hello from A")
-    #send message to queue associated with B
+    #enqueue message to queue associated with B. 
+    #This is automatically sent as this handler exits
     workflow.send(message=message,queue="B_queue")
 
 @workflow.handler
 def B_handler(message):
     #do something with message
     print("Hello from B")
-    #nothing else to do because the workflow is finished
+    
+    #Tell the workflow system that this incident is finished
+    workflow.Complete(message["IncidentID"])
+    
+    
 
 #register these handlers to the queues
 workflow.RegisterHandler(handler=A_handler,queue="A_queue")
@@ -78,8 +85,11 @@ if __name__ == "__main__":
     #create a dictionary for the message and include the IncidentID
     message={ "IncidentID" : IncidentID}
 
-    #send message to A to start workflow
+    #enqueue message to A to start workflow
     workflow.send(queue="A_queue",message=message)
+
+    #send the enqueued message
+    workflow.FlushMessages()
 
     #execute the workflow (this starts up an infinite loop)
     workflow.execute()

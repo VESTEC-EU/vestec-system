@@ -209,6 +209,7 @@ def RegisterHandler(handler, queue):
 def handler(f):
     @functools.wraps(f)
     def wrapper(ch, method, properties, body, **kwargs):
+        global _sendqueue
 
         print("")
         print(
@@ -261,13 +262,20 @@ def handler(f):
                     reason="%s error: %s" % (f.__name__, str(e)),
                     status="ERROR",
                 )
+                #clear the send queue (throw away messages that were to be sent from the failed handler)
+                _sendqueue = []
             else:
+                #send the messages queued up by the handler
+                FlushMessages()
+
                 # log completion of task
                 print(" [*] Task complete")
                 with pny.db_session:
                     log = MessageLog[mssgid]
                     log.date_completed = datetime.datetime.now()
                     log.status = "COMPLETE"
+                
+                
 
         # Incident is not active (or not in database): log that we have not executed the handler
         else:
@@ -294,11 +302,18 @@ def handler(f):
 
         # finally acknowledge completion of message to rabbitmq
         ch.basic_ack(delivery_tag=method.delivery_tag)
+        
+
+
 
     return wrapper
 
 
+_sendqueue=[]
+
+
 # routine to call when we want to send a message to a queue. Takes the message (in dict form) and the queue to send the message to as arguments
+#This does not actually send the message, but enqueues it to be sent
 def send(message, queue):
 
     # Get the incident ID from the message
@@ -308,7 +323,7 @@ def send(message, queue):
         raise Exception("Incident ID not included in the message")
 
     # check if the incident is still active. If not, don't send message
-    if not _IsActive(incident):
+    if (not _IsActive(incident)) and queue != "_Cleanup":
         print(" [#] Incident stopped. Aborting message send")
         return
 
@@ -326,23 +341,47 @@ def send(message, queue):
     except:
         raise Exception("Unable to jsonify message")
 
-    # log the message
-    with pny.db_session:
-        MessageLog(
-            uuid=id,
-            status="SENT",
-            date_submitted=datetime.datetime.now(),
-            originator=caller,
-            destination=queue,
-            incident_id=incident,
-            message=msg,
-        )
+    _sendqueue.append({"queue":queue,"message":msg,"incident":incident,"caller":caller,"id":id})
 
-    # send the message
-    channel.basic_publish(exchange="", routing_key=queue, body=msg)
+    return
 
-    # stuff to do after message is sent
-    print(" [*] Sent message to queue '%s'" % (queue))
+#Loops through enqueued messages and sends them
+def FlushMessages():
+    global _sendqueue
+    for item in _sendqueue:
+        msg=item["message"]
+        queue = item["queue"]
+
+        # check if the incident is still active. If not, don't send message
+        incident=item["incident"]
+        caller=item["caller"]
+        id=item["id"]
+        if (not _IsActive(incident)) and queue != "_Cleanup":
+            print(" [#] Incident stopped. Aborting message send")
+            return
+
+        # log the message
+        with pny.db_session:
+            MessageLog(
+                uuid=id,
+                status="SENT",
+                date_submitted=datetime.datetime.now(),
+                originator=caller,
+                destination=queue,
+                incident_id=incident,
+                message=msg,
+            )
+
+        # send the message
+        channel.basic_publish(exchange="", routing_key=queue, body=msg)
+
+        # stuff to do after message is sent
+        print(" [*] Sent message to queue '%s'" % (queue))
+
+    #clear the queue
+    _sendqueue=[]
+
+    
 
 
 # Closes a connection
