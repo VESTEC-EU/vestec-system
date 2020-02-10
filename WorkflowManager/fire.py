@@ -9,7 +9,6 @@ import time
 
 # we now want to define some handlers
 @workflow.handler
-@workflow.atomic
 def fire_terrain_handler(message):
     print("In Fire terrain handler")
     time.sleep(1)
@@ -24,12 +23,10 @@ def fire_hotspot_handler(message):
 
     workflow.send(message=message, queue="fire_simulation")
 
-
+@workflow.atomic
 @workflow.handler
 def fire_simulation_handler(message):
     incident = message["IncidentID"]
-
-    workflow.GetLock("some_label", incident)
 
     print("In fire simulation handler")
 
@@ -65,7 +62,6 @@ def fire_simulation_handler(message):
     else:
         print("Will do nothing - waiting for data")
 
-    workflow.ReleaseLock("some_label", incident)
 
 
 # we have to register them with the workflow system

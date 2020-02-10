@@ -31,8 +31,8 @@ We need to have a process running that act a consumer for the messages. This is 
 It is possible to run several consumer processes. The messages are distributed between the different consumers and so they can be processed concurrently. To do this, simply run multiple incidences of `manager.py`. In some cases we may wish to ensure that only a single incidence of handler is run at one time to prevent race conditions. To do this we can either decorate the handler with the `atomic` decorator:
 
 ```python
-@workflow.handler
 @workflow.atomic
+@workflow.handler
 def atomic_handler(msg)"
     ...
 ```

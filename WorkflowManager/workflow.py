@@ -17,6 +17,9 @@ initialise_database()
 # UUID for this running instance of the consumer (used for debugging when using multiple consumer processes)
 ConsumerID = str(uuid.uuid4())
 
+#stores messages that are to be sent
+_sendqueue=[]
+
 
 #### Code for a database to be used to store state information for the handlers
 
@@ -309,7 +312,7 @@ def handler(f):
     return wrapper
 
 
-_sendqueue=[]
+
 
 
 # routine to call when we want to send a message to a queue. Takes the message (in dict form) and the queue to send the message to as arguments
@@ -413,7 +416,7 @@ def _EnsureLockHandlerExists(name):
             return
         else:
             print(" [*] Creating LockDB entry for %s" % name)
-            l = Lock(name=name)
+            Lock(name=name)
             return
 
 
@@ -442,6 +445,26 @@ def GetLock(name, incident):
                 print(" [*] Lock not aquired. Will try again in 1 second")
         time.sleep(1)
 
+#Checks if we can get a lock. If so, we get one and returns true, otherqise returns false
+def CheckLock(name,incident):
+    if name == None or incident == None:
+        raise Exception("Unable to lock: Lock requires a name and incident")
+    else:
+        name = name + incident
+
+    # make sure there is an entry for this handler in the db
+    _EnsureLockHandlerExists(name)
+
+    with pny.db_session:
+        l = Lock[name]
+        if l.locked == False:
+            l.locked = True
+            l.date = datetime.datetime.now()
+            print(" [*] Aquired Lock")
+            return True
+        else:
+            return False
+       
 
 # this function releases a lock
 # Takes a name/label for the lock, and the incident this belongs to. Combines these to create a
@@ -463,13 +486,19 @@ def ReleaseLock(name, incident):
 
 
 # a wrapper version of the above two functions for handlers so you can wrap a function/handler
+# If we cannot get a lock we reject the message (re-queueing it)
 def atomic(f):
     @functools.wraps(f)
-    def wrapper(message, **kwargs):
-        GetLock(f.__name__, message["IncidentID"])
-        f(message)
-        ReleaseLock(f.__name__, message["IncidentID"])
-
+    def wrapper(ch, method, properties, body, **kwargs):
+        msg=json.loads(body)
+        #If we get the lock, run the handler
+        if CheckLock(f.__name__, msg["IncidentID"]):
+            f(ch, method, properties, body, **kwargs)
+            ReleaseLock(f.__name__, msg["IncidentID"])
+        else:
+            #reject the message
+            print(" [*] Lock for %s not acquired. Requeueing"%f.__name__)
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
     return wrapper
 
 def _CleanLock(incident):
@@ -480,7 +509,7 @@ def _CleanLock(incident):
 
 ######### END OF LOCK FUNCTIONALITY ###########################
 
-# Starts the workflow manaeger (starts waiting for messages to consume)
+# Starts the workflow manager (starts waiting for messages to consume)
 def execute():
     RegisterHandler(_Cleanup,"_Cleanup")
     print("")
