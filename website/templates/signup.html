@@ -1,0 +1,31 @@
+<html>
+    <h1> Signup Page </h1>
+
+    {% if success == True %}
+        User '{{username}}' has been successfully registered. Go to the <a href="/login"> login </a> page to sign in.
+    {% else %}    
+       {% if success == False %}
+            Username already taken. Please choose another username.
+        {% endif %}
+        <form action="/signup" method="post">
+            Full name: <br>
+            <input type="text" name="name"> 
+            <br>
+            email: <br>
+            <input type="text" name="email"> 
+            <br>
+            Username: <br>
+            <input type="text" name="username">
+            <br>
+            Password: <br>
+            <input type="password" name="password">
+            <br>
+            <input type="submit" value="submit">
+        </form>
+        <br><a href="/login"> Login</a>
+        
+
+
+    {%endif%}
+
+</html>

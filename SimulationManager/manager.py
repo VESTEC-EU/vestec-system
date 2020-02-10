@@ -1,15 +1,18 @@
 from __future__ import print_function
 import sys
 sys.path.append("../")
-import flask
-from flask import request
+from flask import Flask, request, jsonify
 import threading
 import time
 import json
-import Database
 import pony.orm as pny
-from pony.orm.serialization import to_dict
-from Database.job import SubmittedJobStatus, SubmittedActivityStatus
+from Database import initialiseDatabase
+from Database.generate_db import initialiseStaticInformation
+from Database.machine import Machine
+from Database.queues import Queue
+from Database.users import User
+from Database.job import Job, JobStatus
+from Database.activity import Activity, ActivityStatus
 import datetime
 from uuid import uuid4
 import ConnectionManager
@@ -17,174 +20,99 @@ import Templating
 import Utils.log as log
 
 
-app=flask.Flask("Simulation Manager")
-
+app = Flask("Simulation Manager")
 logger = log.VestecLogger("Simulation Manager")
 
-
-@app.route("/")
-def WelcomePage():
-    logger.Log(type=log.LogType.Query,comment=str(request))
-    return("VESTEC simulation manager")
-
-
-
-#Return a json of the properties of all jobs
-@app.route("/jobs")
-def JobSummary():
-    logger.Log(type=log.LogType.Query,comment=str(request))
-    Tasks=[]
-    #get all activities, loop through them and create dictionaries to store the information
-    with pny.db_session:
-        activities = pny.select(a for a in Database.job.Activity)[:]
-        for a in activities:
-            name = a.getName()
-            uuid=a.getUUID()
-            sjbs = a.getSubmittedJobs()
-
-            #get all jobs for activity and construct dictionary for each job
-            jobs=[]
-            jbs = pny.select(j for j in sjbs)[:]
-            for jb in jbs:
-                machine = jb.getMachine().name
-                status=jb.getStatus().name
-                exe=jb.getExecutable()
-                qid=jb.getQueueId()
-                juuid=jb.getUUID()
-
-                job={}
-                job["machine"] = machine
-                job["status"] = status
-                job["executable"] = exe
-                job["QueueID"] = qid
-                job["UUID"] = juuid
-
-                jobs.append(job)
-
-            act={}
-            act["Name"] = name
-            act["UUID"] = uuid
-            act["jobs"] = jobs
-            act["date"] = str(a.getDate())
-            act["status"] = a.getStatus().name
-
-            Tasks.append(act)
-
-    print(json.dumps(Tasks,indent=4))
-
-
-    return json.dumps(Tasks,indent=4)
-
-
-
-#submit (PUT) or view info on a submitted job (GET)
-
-@app.route("/jobs/<jobID>",methods=["GET","PUT"])
+@app.route("/jobs/<activity_id>", methods=["POST"])
 @pny.db_session
-def RunJob(jobID):
-    logger.Log(type=log.LogType.Activity,comment=str(request))
+def create_activity(activity_id):    
+    data = dict = request.get_json()
+    name = data["job_name"]
+    creator = data["creator"]
 
-    if flask.request.method == "GET":
-        a = Database.job.Activity.get(uuid=jobID)
-        if a== None:
-            return json.dumps({})
-        else:
-            name = a.getName()
-            sjbs = a.getSubmittedJobs()
-            juuid = a.getUUID()
-            jobs=[]
-            #print("JOB=",sjbs)
-            jbs = pny.select(j for j in sjbs)[:]
-            for jb in jbs:
-                machine = jb.getMachine().name
-                status=jb.getStatus().name
-                exe=jb.getExecutable()
-                qid=jb.getQueueId()
+    activity_creation = ""
 
-                job={}
-                job["machine"] = machine
-                job["status"] = status
-                job["executable"] = exe
-                job["QueueID"] = qid
-
-                jobs.append(job)
-
-            act={}
-            act["Name"] = name
-            act["jobs"] = jobs
-            act["date"] = str(a.getDate())
-            act["status"] = a.getStatus().name
-            act["UUID"] = juuid
-
-            return(json.dumps(act))
-
-
-    elif flask.request.method == "PUT":
-        print("jobID = %s"%jobID)
-        data = dict=flask.request.get_json()
-
-        name=data["name"]
-
-        newActivity = Database.job.Activity(name=name,uuid=jobID,date=datetime.datetime.now())
+    try:        
+        user = User.get(username=creator)
+        user.activities.create(activity_id=activity_id, activity_name=name,
+                               date_submitted=datetime.datetime.now(), activity_type="to be developed",
+                               location="to be developed")
 
         pny.commit()
 
-        #put some code in here to determine machine to run the job on, job parameters etc
-
         #kick off a thread to "manage" this job. In reality it just changes the status a few times and exits
-        t=threading.Thread(target=task,args=(jobID,),name=jobID)
-        t.start()
+        thread = threading.Thread(target=task, args=(activity_id,), name=activity_id)
+        thread.start()
 
-        return jobID
+        return jsonify({"status": 201, "msg": "Activity successfully created."})
+    except Exception as e:
+        logger.Log(type=log.LogType.Activity, comment=str(e)[:200], user=creator)
+        return jsonify({"status": 400, "msg": "Activity details incorrect."})
 
 
-
-
-
-
-#Displays a simple HTML page with the currently active threads
+# Displays a simple HTML page with the currently active threads
 @app.route("/threads")
-def ThreadInfo():
-    logger.Log(type=log.LogType.Query,comment=str(request))
-    string="<h1> Active threads </h1>"
-    for t in threading.enumerate():
-        string+="\n <p> %s </p>"%t.name
-    return string
+def thread_info():
+    logger.Log(type=log.LogType.Query, comment=str(request)[:200])
+    string = "<h1> Active threads </h1>"
 
+    for t in threading.enumerate():
+        string += "\n <p> %s </p>" % t.name
+
+    return string
 
 
 # task to be run in a thread for each job. Currently just changes the job status then exits
 @pny.db_session
-def task(JobID):
-    act = Database.job.Activity.get(uuid=JobID)
-    machine = Database.machine.Machine.get(name="ARCHER")
-    logger.Log(type=log.LogType.Activity,comment="Selected machine %s for activity %s"%(machine.name,JobID))
+def task(activity_id):
+    activity = Activity.get(activity_id=activity_id)
+    logger.Log(type=log.LogType.Activity, comment="Creating job for activity %s with id %s" % (activity.activity_name, activity_id))
+
+    queue = Queue.get(queue_name="standard")
+    logger.Log(type=log.LogType.Activity, comment="Selected queue %s for activity %s" % (queue.queue_id, activity.activity_name))
+
     time.sleep(3)
+    job_id = str(uuid4()) 
 
-    act.setStatus(SubmittedActivityStatus.ACTIVE)
-    ID = str(uuid4())
-    job=act.addSubmittedJob(uuid=ID,machine=machine,executable="test.exe",queue_id="Q341592",wkdir="/work/files")
-    logger.Log(type=log.LogType.Job,comment="Submitted job %s for activity %s"%(ID,JobID))
-    pny.commit()
+    try:
+        job = Job(job_id=job_id, activity_id=activity, queue_id=queue, no_nodes=1, walltime=300, submit_time=datetime.datetime.now(), executable="test.exe", work_directory="/work/files")
+        activity.jobs.add(job)
+        queue.jobs.add(job)
+        activity.setStatus("ACTIVE")
+        pny.commit()
+
+        start_time = time.time()
+        logger.Log(type=log.LogType.Job, comment="Created job %s for activity %s on queue %s" % (job_id, activity.activity_name, queue.queue_id))
+    except Exception as e:
+        activity.setStatus("ERROR")
+        logger.Log(type=log.LogType.Job, comment=("Job creation failed: " + str(e))[:200])
+
     time.sleep(10)
-
-    job.updateStatus(SubmittedJobStatus.RUNNING)
-    logger.Log(type=log.LogType.Job,comment="Job %s running for activity %s"%(ID,JobID))
+    job.setStatus("RUNNING")
+    logger.Log(type=log.LogType.Job, comment="Job %s running for activity %s" % (job_id, activity_id))
     pny.commit()
-    time.sleep(10)
 
-    act.setStatus(SubmittedActivityStatus.COMPLETED)
-    logger.Log(type=log.LogType.Job,comment="Job %s completed for activity %s"%(ID,JobID))
-    job.updateStatus(SubmittedJobStatus.COMPLETED)
-    logger.Log(type=log.LogType.Activity,comment="Activity %s completed"%(JobID))
+    time.sleep(10)
+    job.setStatus("COMPLETED")
+    job.setRunTime(datetime.timedelta(seconds=start_time - time.time()))
+    job.setEndTime(datetime.datetime.now())
+    logger.Log(type=log.LogType.Job, comment="Job %s completed for activity %s" % (job_id, activity_id))
+    activity.setStatus("COMPLETED")
+    logger.Log(type=log.LogType.Activity, comment="Activity %s completed" % (activity_id))
+
     return
 
 
+@pny.db_session
+def generate_database():
+    machine = pny.count(m for m in Machine)
+    queues = pny.count(q for q in Queue)
 
-
-
+    if (machine == 0) or (queues == 0):
+        initialiseStaticInformation()
 
 
 if __name__ == "__main__":
-    Database.initialiseDatabase()
-    app.run(host="0.0.0.0",port=5500)
+    initialiseDatabase()
+    generate_database()
+    app.run(host="0.0.0.0", port=5500)

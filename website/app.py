@@ -2,42 +2,108 @@
 '''render_template loads html pages of the application
 '''
 import sys
-sys.path.append("../")
 import os
-import uuid
+sys.path.append("../")
+import json
 import requests
-from flask import Flask, render_template, request
+import pony.orm as pny
 import Utils.log as log
 import Database
+import datetime
+from uuid import uuid4
+from website import logins
+from Database.users import User
+from Database.job import Job
+from Database.queues import Queue
+from Database.machine import Machine
+from Database.activity import Activity
+from pony.orm.serialization import to_dict
+from flask import Flask, request, jsonify
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
 
-import pony.orm as pny
-
+# Initialise database
 Database.initialiseDatabase()
-logger=log.VestecLogger("Website")
 
-APP = Flask(__name__)  # create an instance if the imported Flask class
+# Initialise services
+app = Flask(__name__)  # create an instance if the imported Flask class
+logger = log.VestecLogger("Website")
 
 if "VESTEC_MANAGER_URI" in os.environ:
     TARGET_URI = os.environ["VESTEC_MANAGER_URI"]
 else:
     TARGET_URI = 'http://127.0.0.1:5500/jobs'
 
-CURRENT_JOB = {'uuid': '', 'name': ''}
-
-def generate_id():
-    '''auto-generates a uuid'''
-    return str(uuid.uuid1())
-
-
-@APP.route('/')  # used to bind the following function to the specified URL
-def welcome_page():
-    '''Render a static welcome template'''
-    print("TARGET_URI = %s"%TARGET_URI)
-    logger.Log(log.LogType.Website,str(request))
-    return render_template('index.html')
+# Initialise JWT
+app.config["JWT_SECRET_KEY"] = os.environ["JWT_PASSWD"]
+app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
+app.config["JWT_ACCESS_COOKIE_PATH"] = "/flask/"
+app.config["JWT_COOKIE_CSRF_PROTECT"] = False
+jwt = JWTManager(app)
 
 
-@APP.route('/submit', methods=['PUT'])
+@app.route("/flask/signup", methods=["POST"])
+def signup():
+    if not request.is_json:
+        return jsonify({"msg": "Required JSON not found in request."}), 400
+
+    user = request.json
+    username = user.get("username", None)
+    name = user.get("name", None)
+    email = user.get("email", None)
+    password = user.get("password", None)
+
+    user_create = logins.add_user(username, name, email, password)
+
+    if user_create == 1:
+        msg = "Account created for user %s" % username
+        logger.Log(log.LogType.Logins, msg, user=username)
+
+        return jsonify({"status": 201, "msg": "User succesfully created. Log in."})
+    else:
+        return jsonify({"status": 409, "msg": "User already exists. Please try again."})
+
+@app.route('/flask/user_type', methods=["GET"])
+@fresh_jwt_required
+def getUserType():
+  username = get_jwt_identity()
+  print(username)
+  return jsonify({"status": 200, "access_level": logins.get_user_access_level(username)})
+
+@app.route('/flask/login', methods=['POST'])
+def login():
+    if not request.is_json:
+        return jsonify({"msg": "Incorrect username or password. Please try again."})
+
+    login = request.json
+    username = login.get("username", None)
+    password = login.get("password", None)
+    authorise = False
+
+    if username and password:
+        authorise = logins.verify_user(username, password)
+
+    if authorise:
+        access_token = create_access_token(identity=username, fresh=True)
+        response = jsonify({"status": 200, "access_token": access_token})
+        set_access_cookies(response, access_token)
+
+        return response
+    else:
+        return jsonify({"status": 400, "msg": "Incorrect username or password. Please try again."})
+
+    logger.Log(log.LogType.Website, str(request), user=username)
+
+
+@app.route("/flask/authorised", methods=["GET"])
+@fresh_jwt_required
+def authorised():
+    username = get_jwt_identity()
+
+    return jsonify({"status": 200, "msg": "User authorised."})
+
+
+@app.route('/flask/submit', methods=['POST'])
+@jwt_required
 def submit_job():
     '''This function sends a PUT request to the SMI for a CURRENT_JOB
        to be created
@@ -55,102 +121,109 @@ def submit_job():
        - CURRENT_JOB object: {'uuid': <id>, 'name': <title>}
        - SMI response data: 'SUCCESS' or 'FAILURE'
     '''
-    CURRENT_JOB['uuid'] = generate_id()
-    CURRENT_JOB['name'] = request.form.get('jsdata')
+    job = request.json
+    job["creator"] = get_jwt_identity()
+    job["job_id"] = str(uuid4())
 
-    job_request = requests.put(TARGET_URI + '/' + CURRENT_JOB.get('uuid'), json=CURRENT_JOB)
-    response_data = job_request.text
-    logger.Log(log.LogType.Website,str(request))
+    job_request = requests.post(TARGET_URI + '/' + job["job_id"], json=job)
+    response = job_request.text
 
-    return response_data
+    logger.Log(log.LogType.Website, ("Creation of activity %s by %s is %s" % (job["job_name"], job["creator"], response))[:200], user=job["creator"])
 
-
-@APP.route('/jobs/current', methods=['GET'])
-def check_job_status():
-    '''This function sends a GET request to the SMI for the details of the current job
-
-       Process:
-       - send get request to the SMI passing the current job as parameter
-       - get SMI response job dictionary
-       - render SMI response on table template
-
-       Input Params: none
-       Output Params: response_data - SMI response dictionary
-
-       Data Structures:
-       - SMI URI: /jobs/uuid
-       - SMI response data: {"uuid": <jobuuid>, "name": <jobname>,
-                             "jobs": [{"machine": <machinename>,
-                                       "status": <jobstatus>, "executable": <exec>,
-                                       "QueueID": <queueid>}, {}],
-                             "date": <jobsubmitdate>, "status": <jobstatus>}
-    '''
-    current_stat_req = requests.get(TARGET_URI + '/' + str(CURRENT_JOB.get('uuid')))
-    response_data = [current_stat_req.json()]
-    logger.Log(log.LogType.Website,str(request))
-
-    return render_template('jobstatustable.html', jobs=response_data)
+    return response
 
 
-@APP.route('/jobs', methods=['GET'])
-def check_all_jobs_status():
-    '''This function sends a GET request to the SMI for the details of all jobs
+@app.route('/flask/jobs', methods=['GET'])
+@pny.db_session
+@fresh_jwt_required
+def get_activities_summary():
+    '''This function sends a GET request to the database for the details of all jobs'''
+    try:
+        user = User.get(username = get_jwt_identity())
+        activity_records = pny.select(a for a in Activity if a.user_id==user)[:]
+        activities = {}
 
-       Process:
-       - send get request to the SMI for all jobs
-       - get SMI response jobs dictionary of dictionaries
-       - render SMI response on table template
+        for i,a in enumerate(activity_records):
+            activity_summary = {}
+            activity_summary["activity_id"] = a.activity_id
+            activity_summary["activity_name"] = a.activity_name
+            activity_summary["status"] = a.status
 
-       Input Params: none
-       Output Params: response_data - SMI response dictionary
+            activity_date = a.date_submitted.strftime("%d/%m/%Y, %H:%M:%S")
+            activity_summary["date_submitted"] = activity_date
 
-       Data Structures:
-       - SMI URI: /jobs
-       - SMI response data: [{"uuid": <jobuuid>, "name": <jobname>,
-                              "jobs": [{"machine": <machinename>,
-                                        "status": <jobstatus>, "executable": <exec>,
-                                        "QueueID": <queueid>}, {}
-                              ], "date": <jobsubmitdate>, "status": <jobstatus>}, {}]
-    '''
-    all_stat_req = requests.get(TARGET_URI)
-    response_data = all_stat_req.json()
-    logger.Log(log.LogType.Website,str(request))
+            activity_jobs = a.jobs
+            activity_summary["machines"] = list(set([job.queue_id.machine_id.machine_name for job in activity_jobs]))
 
-    return render_template('jobstatustable.html', jobs=response_data)
+            activity_summary["jobs"] = str(len(a.jobs))
+            activities["activity" + str(i)] = activity_summary
 
-@APP.route("/logs")
+        logger.Log(log.LogType.Website, "User %s is trying to extract %s activities" % (user.username, len(activities)), user=user.username)
+
+        return jsonify({"status": 200, "activities": json.dumps(activities)})
+    except Exception as e:
+        return jsonify({"status": 401, "msg": "Sorry, there seems to be a problem with the extraction of activities."})
+
+
+@app.route('/flask/job/<activity_id>', methods=['GET'])
+@pny.db_session
+@fresh_jwt_required
+def get_activity_details(activity_id):
+    '''This function sends a GET request to the database for the details of all jobs'''
+    user = User.get(username = get_jwt_identity())
+    activity = Activity.get(activity_id = activity_id)
+    activity_jobs = activity.jobs
+    jobs = []
+
+    for job in activity_jobs:
+        job_details = {}
+        job_details["machine"] = job.queue_id.machine_id.machine_name
+        job_details["queue"] = job.queue_id.queue_name
+        job_details["submit_time"] = job.submit_time.strftime("%d/%m/%Y, %H:%M:%S")
+        job_details["status"] = job.status
+        job_details["work_dir"] = job.work_directory
+        job_details["exec"] = job.executable
+
+        if job.end_time is not None:
+            job_details["run_time"] = str(job.run_time)
+            job_details["end_time"] = job.end_time.strftime("%d/%m/%Y, %H:%M:%S")
+
+        jobs.append(job_details)
+
+    logger.Log(log.LogType.Website, "User %s is trying to extract %s jobs for activity %s" % (user.username, len(jobs), activity.activity_name), user.username)
+
+    return json.dumps(jobs)
+
+
+@app.route('/flask/logs', methods=['GET'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
 def showLogs():
-    logs=[]
-    with pny.db_session:
-        ls=pny.select(a for a in log.DBLog)[:]
-        for l in ls:
-            lg={}
-            lg["timestamp"]=str(l.timestamp)
-            lg["originator"]=l.originator
-            lg["user"]=l.user
-            lg["type"] = l.type.name
-            lg["comment"] = l.comment
-            logs.append(lg)
-    return render_template("logs.html",logs=logs)
+    logs = []
+    log_records = pny.select(l for l in log.DBLog)[:]
+
+    for l in log_records:
+        lg = {}
+        lg["timestamp"] = str(l.timestamp)
+        lg["originator"] = l.originator
+        lg["user"] = l.user
+        lg["type"] = l.type.name
+        lg["comment"] = l.comment
+
+        logs.append(lg)
+
+    return json.dumps(logs)
 
 
+@app.route("/flask/logout", methods=["DELETE"])
+def logout():
+    response = jsonify({"status": 200, "msg": "User logged out."})
+    unset_jwt_cookies(response)
 
-@APP.errorhandler(404)
-def page_not_found(e):
-    '''Handling 404 errors by showing template'''
-    logger.Log(log.LogType.Website,"404 Not Found: "+str(request))
-    return render_template('404.html'), 404
-
-
-@APP.errorhandler(500)
-def page_not_found(e):
-    '''Handling 500 errors by showing template'''
-    logger.Log(log.LogType.Website,"500 Internal server error: "+str(request)+str(e))
-    return render_template('500.html'), 500
+    return response
 
 
 if __name__ == '__main__':
-    if "VESTEC_MANAGER_URI" in os.environ:
-        TARGET_URI = os.environ["VESTEC_MANAGER_URI"]
-    print("Website using SimulationManager URI: %s"%TARGET_URI)
-    APP.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=8000)
+

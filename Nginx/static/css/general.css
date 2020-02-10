@@ -1,0 +1,145 @@
+body {
+  margin: 0px;
+  height: 100vh;
+}
+
+input[type=text], input[type=password], input[type=email] {
+  display: inline-flex;
+  padding: 12px 20px;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 5px 0;
+  border: 1px solid #d3d3d3;
+  border-radius: 5px;
+}
+  
+input[type=text]:focus, input[type=password]:focus, input[type=email] {
+  outline: none;
+}
+  
+.button {
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  text-align: center;
+  text-decoration: none;
+  display: inline-flex;
+  font-size: 14px;
+  border-radius: 3px;
+  margin: 5px;
+}
+
+a:link {
+  text-decoration: none;
+}
+
+.button a:link {
+  color: white;
+} 
+
+.button:focus {
+  outline: none;
+}
+
+.navbar .blue:hover {
+  background-color: #018cba;
+}
+
+/* COLORS */
+/* -- text -- */
+.white-txt {
+  color: white !important;
+}
+
+.blue-txt {
+  color: #018cba !important;
+}
+
+/* -- special buttons -- */
+.white-btn {
+  background-color: white;
+  padding: 10px 18px;
+}
+
+.blue-high-btn {
+  color: #018cba;
+  border: 2px solid #018cba;
+}
+
+.amber-high-btn {
+  color: #e4ad5c;
+  border: 2px solid #e4ad5c;
+}
+
+.red-high-btn {
+  color: #c15048;
+  border: 2px solid #c15048;
+}
+
+.green-high-btn {
+  color: #4c904f;
+  border: 2px solid #4c904f;
+}
+
+/* -- background colors -- */
+.blue {
+  background-color: #018cba;
+}
+
+.red {
+  background-color: #c15048;
+}
+
+.amber {
+  background-color: #e4ad5c;
+}
+
+.green {
+  background-color: #4c904f;
+}
+
+.light-grey {
+  background-color: #f1f1f1;
+}
+
+/* POSITIONS */
+.self-right {
+  margin-right: 0px;
+  float: right !important;
+}
+
+.self-left {
+  margin-left: 0px;
+  float: left;
+}
+
+.self-center {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.contents-right {
+  margin: auto;
+  padding: 10px;
+  text-align: right;
+}
+
+.contents-center { 
+  margin: auto;
+  padding: 10px;
+  text-align: center;
+  display: inline-grid;
+}
+
+/* LAYOUTS */
+.inline {
+  display: inline;
+}
+
+.block {
+  display: block;
+}
+
+.flex {
+  display: flex;
+}

@@ -4,7 +4,9 @@ chardet==3.0.4
 Click==7.0
 Flask==1.0.2
 Flask-RESTful==0.3.7
+flask_jwt_extended==3.20.0
 get==2018.11.19
+gunicorn==19.9.0
 idna==2.8
 itsdangerous==1.1.0
 Jinja2==2.10
@@ -12,13 +14,13 @@ MarkupSafe==1.1.1
 post==2018.11.20
 public==2018.11.20
 pytz==2018.9
+pony==0.7.11
+pymysql==0.9.3
+passlib==1.7.1
 query-string==2018.11.20
 request==2018.11.20
 requests==2.21.0
 six==1.12.0
 urllib3==1.24.1
 uuid==1.30
-Werkzeug==0.15.0
-gunicorn==19.9.0
-pony==0.7.10
-pymysql==0.9.3
+Werkzeug==0.16.0

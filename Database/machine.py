@@ -2,34 +2,14 @@ from Database import db
 import pony.orm as pny
 from enum import Enum
 
-class MachineComponent(Enum):
-  CPU=1
-  GPU=2
-  OTHER=3
-
-class TechnologyArchitecture(db.Entity):
-  facet=pny.Optional("NodeTechnology")
-  microarchitecture=pny.Required(str)
-  manufacturer=pny.Required(str)
-  clockrate_mhz=pny.Required(int)
-  type=pny.Required(MachineComponent)
-  generation=pny.Required(int)
-
-class NodeTechnology(db.Entity):
-  node_description = pny.Optional("NodeDescription")
-  technology = pny.Required(TechnologyArchitecture)
-  cores_per_node = pny.Required(int)
-
-class NodeDescription(db.Entity):
-  machine = pny.Optional("Machine")
-  node_count=pny.Required(int)
-  memory_GB_per_node = pny.Required(int)
-  technologies=pny.Set("NodeTechnology")
 
 class Machine(db.Entity):
-  jobs = pny.Set("SubmittedJob")
-  name = pny.Required(str)
-  node_description = pny.Set("NodeDescription")
-  execution_measurements = pny.Set("ExecutionMeasurement")
-  data_transfer_source = pny.Set("DataTransferMeasurement")
-  data_transfer_target = pny.Set("DataTransferMeasurement")
+    machine_id = pny.PrimaryKey(str)
+    machine_name = pny.Required(str)
+    host_name = pny.Required(str)
+    scheduler = pny.Required(str)
+    num_nodes = pny.Required(int)
+    cores_per_node = pny.Required(int)
+    base_work_dir = pny.Required(str)
+
+    queues = pny.Set("Queue")

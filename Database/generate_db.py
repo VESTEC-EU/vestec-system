@@ -1,40 +1,47 @@
-from Database import machine
-from Database import job
-from Database import measurement_result
+from Database.machine import Machine
+from Database.queues import Queue
 import pony.orm as pny
-from Database import db, initialiseDatabase
+from uuid import uuid4
 
 @pny.db_session
 def initialiseStaticInformation():
-  pny.delete(m for m in machine.Machine)
-  pny.delete(m for m in machine.NodeDescription)
-  pny.delete(mf for mf in machine.NodeTechnology)
-  pny.delete(m for m in machine.TechnologyArchitecture)
-  pny.delete(m for m in job.SubmittedJob)
-  pny.delete(m for m in job.Activity)
+    pny.delete(m for m in Machine)
+    pny.delete(q for q in Queue)
 
-  archer_cpu_tech=machine.TechnologyArchitecture(microarchitecture="Ivy Bridge", manufacturer="Intel",
-                                                 clockrate_mhz=2700, type=machine.MachineComponent.CPU, generation=6)
-  archer_node_cpu=machine.NodeTechnology(technology=archer_cpu_tech, cores_per_node=24)
-  archer_node_standard_mem=machine.NodeDescription(node_count=4544, memory_GB_per_node=64,
-                                                   technologies=[archer_node_cpu])
-  archer_node_high_mem = machine.NodeDescription(node_count=376, memory_GB_per_node=128,
-                                                 technologies=[archer_node_cpu])
+    archer = Machine(machine_id=str(uuid4()), machine_name="ARCHER", host_name="login.archer.ac.uk", 
+                     scheduler="PBS", num_nodes=4920, cores_per_node=24, base_work_dir="/work/d170/d170")
 
-  cirrus_cpu_tech= machine.TechnologyArchitecture(microarchitecture="Broadwell", manufacturer="Intel",
-                                                  clockrate_mhz=2100, type=machine.MachineComponent.CPU, generation=8)
-  cirrus_node_cpu=machine.NodeTechnology(technology=cirrus_cpu_tech, cores_per_node=36)
-  cirrus_node=machine.NodeDescription(node_count=280, memory_GB_per_node=256,
-                                                   technologies=[cirrus_node_cpu])
+    cirrus = Machine(machine_id=str(uuid4()), machine_name="CIRRUS", host_name="cirrus.epcc.ed.ac.uk", 
+                     scheduler="PBS", num_nodes=280, cores_per_node=36, base_work_dir="/lustre/home/????")
 
-  machine.Machine(name="ARCHER", node_description=[archer_node_standard_mem,
-                                                   archer_node_high_mem])
-  machine.Machine(name="Cirrus", node_description=[cirrus_node])
+    pny.commit()
 
-def generate():
-    initialiseDatabase()
-    #db.drop_all_tables(with_all_data=True)
-    initialiseStaticInformation()
+    archer.queues.create(queue_id=str(uuid4()), queue_name="standard", max_nodes=4920, min_walltime=60,
+                         max_walltime=86400, default=1)
 
-if __name__ == "__main__":
-    generate()
+    archer.queues.create(queue_id=str(uuid4()), queue_name="long", max_nodes=256, min_walltime=86400,
+                         max_walltime=172800, default=0)
+
+    archer.queues.create(queue_id=str(uuid4()), queue_name="short", max_nodes=8, min_walltime=60,
+                         max_walltime=1200, default=0)
+
+    archer.queues.create(queue_id=str(uuid4()), queue_name="low", max_nodes=512, min_walltime=60,
+                         max_walltime=10800, default=0)
+
+    archer.queues.create(queue_id=str(uuid4()), queue_name="largemem", max_nodes=376, min_walltime=60,
+                         max_walltime=172800, default=0)
+
+    archer.queues.create(queue_id=str(uuid4()), queue_name="serial", max_nodes=1, min_walltime=60,
+                         max_walltime=86400, default=0)
+
+    cirrus.queues.create(queue_id=str(uuid4()), queue_name="workq", max_nodes=70, min_walltime=60,
+                         max_walltime=345600, default= 1)
+
+    cirrus.queues.create(queue_id=str(uuid4()), queue_name="indy", max_nodes=15, min_walltime=60,
+                         max_walltime=1209600, default=0)
+
+    cirrus.queues.create(queue_id=str(uuid4()), queue_name="large", max_nodes=280, min_walltime=60,
+                         max_walltime=172800, default=0)
+
+    pny.commit()
+

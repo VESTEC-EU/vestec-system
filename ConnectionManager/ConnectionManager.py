@@ -5,17 +5,17 @@ import fabric
 from . import machines
 
 
-KEYDIR = os.path.join(os.path.expanduser("~"), ".ssh")
+keydir = os.path.join(os.path.expanduser("~"),".ssh")
 
 class RemoteConnection:
-    def __init__(self, machine_name):
-        if machine_name not in machines.machines:
-            # Raise?
-            print("Error: Unknown machine '%s'" % machine_name)
-            return
+    def __init__(self,machine_name):
+        if machine_name not in machines:
+            print("Error: Unknown machine '%s'"%machine_name)
+            return None
 
-        machine = machines.machines[machine_name]
-        keyfile = os.path.join(KEYDIR, machine["SSHkey"])
+        machine = machines[machine_name]
+        keyfile = os.path.join(keydir,machine["SSHkey"])
+        #print("Key= %s"%keyfile)
 
         kwargs = {"key_filename": [keyfile],}
 
