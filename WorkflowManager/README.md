@@ -28,16 +28,17 @@ When a incident is finished, `workflow.Complete(IncidentID)` can be called to si
 We need to have a process running that act a consumer for the messages. This is the process that collects messages from the RabbitMQ server and handles them, thereby executing the workflow. To register as a consumer, `workflow.execute()` is called. This puts the consumer into an infinite loop waiting for messages. `manager.py` is the default consumer.
 
 ### Parallel workflow execution
-It is possible to run several consumer processes. The messages are distributed between the different consumers and so they can be processed concurrently. To do this, simply run multiple incidences of `manager.py`. In some cases we may wish to ensure that only a single incidence of handler is run at one time to prevent race conditions. To do this we can either decorate the handler with the `atomic` decorator:
+It is possible to run several consumer processes. The messages are distributed between the different consumers and so they can be processed concurrently. To do this, simply run multiple incidences of `manager.py`. In some cases we may wish to ensure that only a single incidence of a handler (for a given incident) is run at one time to prevent race conditions. To do this we can decorate the handler with the `atomic` decorator:
 
 ```python
 @workflow.atomic
 @workflow.handler
-def atomic_handler(msg)"
+def atomic_handler(msg):
     ...
 ```
+This checks to see if the handler can be run. If not, the message is re-queued to rabbitMQ.
 
-Or if we only wish to protect a certain part of the handler's execution, we can use the `GetLock` and `ReleaseLock` functions within the function:
+<!-- Or if we only wish to protect a certain part of the handler's execution, we can use the `GetLock` and `ReleaseLock` functions within the function:
 
 ```python
     label = "some label for this lock so it can be identified"
@@ -46,7 +47,7 @@ Or if we only wish to protect a certain part of the handler's execution, we can 
     workflow.ReleaseLock(label,IncidentID)
 ```
 
-If one consumer is executing code inside this region, another consumer will wait until the lock has been released before executing its code.
+If one consumer is executing code inside this region, another consumer will wait until the lock has been released before executing its code. -->
 
 ## Example Workflow
 Consider we have two nodes connected together called A and B, whose workflow is `Start -> A -> B -> End`. An example code to define and execute the workflow is:
