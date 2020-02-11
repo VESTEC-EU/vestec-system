@@ -1,4 +1,0 @@
-poetry
-black
-pytest
-docker
