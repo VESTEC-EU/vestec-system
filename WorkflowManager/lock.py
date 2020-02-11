@@ -55,7 +55,7 @@ def GetLock(name, incident):
         time.sleep(1)
 
 
-# Checks if we can get a lock. If so, we get one and returns true, otherqise returns false
+# Checks if we can get a lock. If so, we get one and returns true, otherwise returns false
 def CheckLock(name, incident):
     if name == None or incident == None:
         raise Exception("Unable to lock: Lock requires a name and incident")
@@ -103,8 +103,11 @@ def atomic(f):
         msg = json.loads(body)
         # If we get the lock, run the handler
         if CheckLock(f.__name__, msg["IncidentID"]):
-            f(ch, method, properties, body, **kwargs)
-            ReleaseLock(f.__name__, msg["IncidentID"])
+            try:
+                f(ch, method, properties, body, **kwargs)
+            finally:
+                #we want to make sure that if the handler (or its @workflow.handler boilerplate) dies that the lock is still released
+                ReleaseLock(f.__name__, msg["IncidentID"])
         else:
             # reject the message
             print(" [*] Lock for %s not acquired. Requeueing" % f.__name__)

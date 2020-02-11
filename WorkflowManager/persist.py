@@ -21,7 +21,10 @@ class _Persist:
     # Called by handler... logs information to be persisted between calls
     def Put(self, incident, dict):
         originator = sys._getframe(1).f_code.co_name
-        data = json.dumps(dict)
+        try:
+            data = json.dumps(dict)
+        except:
+            raise Exception("workflow.Persist.Put: Cannot jsonify data")
         with pny.db_session:
             self.DBlog(incident=incident, originator=originator, data=data)
 

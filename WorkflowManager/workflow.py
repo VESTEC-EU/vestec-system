@@ -56,7 +56,7 @@ def _IsActive(IncidentID):
     try:
         return Incident[IncidentID].status == "ACTIVE"
     except:
-        raise Exception("Unknown IncidentID")
+        raise Exception("workflow._IsActive: Unknown IncidentID")
 
 
 # Cancel an Incident giving optional reasons and a named "status" (default CANCELLED)
@@ -70,10 +70,17 @@ def Cancel(
     CleanMessages=False,
     force=False,
 ):
-
-    incident = Incident[IncidentID]
+    try:
+        incident = Incident[IncidentID]
+    except:
+        raise Exception("workflow.Cancel: Unknown IncidentID")
+    if incident.status != 'ACTIVE':
+        #incident is already not active, don't need to do anything here besides print message
+        print(" [#] Tried to cancel %s but it is inactive with status %s"%(IncidentID,incident.status))
+        return
     incident.status = status
     incident.comment = reason
+    
 
     print(" [*] Cancelled incident %s" % IncidentID)
 
@@ -92,8 +99,16 @@ def Cancel(
 def Complete(
     IncidentID, CleanLocks=True, CleanPersist=True, CleanMessages=False, force=False
 ):
+    try:
+        incident = Incident[IncidentID]
+    except:
+        raise Exception("workflow.Complete: Unknown IncidentID")
 
-    incident = Incident[IncidentID]
+    if incident.status != 'ACTIVE':
+        #incident is already not active, don't need to do anything here besides print message
+        print(" [#] Tried to complete %s but it is inactive with status %s"%(IncidentID,incident.status))
+        return
+
     incident.status = "COMPLETE"
     incident.date_completed = datetime.datetime.now()
     print(" [*] Completed incident %s" % IncidentID)
@@ -119,8 +134,6 @@ def RegisterHandler(handler, queue):
 def handler(f):
     @functools.wraps(f)
     def wrapper(ch, method, properties, body, **kwargs):
-        global _sendqueue
-
         print("")
         print(
             "--------------------------------------------------------------------------------"
@@ -129,6 +142,7 @@ def handler(f):
 
         # convert json message back to dictionary
         msg = json.loads(body)
+
         incident = msg["IncidentID"]
         mssgid = msg["MessageID"]
 
@@ -152,7 +166,7 @@ def handler(f):
                 # The re-process of the message should go ok but this warning will be printed
                 if log.status != "SENT":
                     print(
-                        " [*] ####### WARNING message is in processing state #########"
+                        " [*] #### WARNING: message appears to have been handled previously ####"
                     )
                 log.date_received = datetime.datetime.now()
                 log.status = "PROCESSING"
@@ -169,13 +183,20 @@ def handler(f):
                     log = MessageLog[mssgid]
                     log.status = "ERROR"
                     log.comment = "%s: %s" % (f.__name__, str(e))
+
+                # clear the send queue (throw away messages that were to be sent from the failed handler)
+                _sendqueue.clear()
+                
+                #Cancel this incident as we do not know what to do from here if a handler fails
                 Cancel(
                     incident,
                     reason="%s error: %s" % (f.__name__, str(e)),
                     status="ERROR",
                 )
-                # clear the send queue (throw away messages that were to be sent from the failed handler)
-                _sendqueue = []
+                
+                #make sure we send the cleanup message
+                FlushMessages()
+                
             else:
                 # send the messages queued up by the handler
                 FlushMessages()
@@ -224,7 +245,7 @@ def send(message, queue):
     try:
         incident = message["IncidentID"]
     except:
-        raise Exception("Incident ID not included in the message")
+        raise Exception("workflow.send: Incident ID not included in the message")
 
     # check if the incident is still active. If not, don't send message
     if (not _IsActive(incident)) and queue != "_Cleanup":
@@ -243,7 +264,7 @@ def send(message, queue):
     try:
         msg = json.dumps(message)
     except:
-        raise Exception("Unable to jsonify message")
+        raise Exception("workflow.send: Unable to jsonify message")
 
     _sendqueue.append(
         {
@@ -260,15 +281,19 @@ def send(message, queue):
 
 # Loops through enqueued messages and sends them
 def FlushMessages():
-    global _sendqueue
-    for item in _sendqueue:
-        msg = item["message"]
-        queue = item["queue"]
+    
+    #loop over all messages in the send queue
+    while (_sendqueue):
+
+        message=_sendqueue.pop()
+
+        msg = message["message"]
+        queue = message["queue"]
+        incident = message["incident"]
+        caller = message["caller"]
+        id = message["id"]
 
         # check if the incident is still active. If not, don't send message
-        incident = item["incident"]
-        caller = item["caller"]
-        id = item["id"]
         if (not _IsActive(incident)) and queue != "_Cleanup":
             print(" [#] Incident stopped. Aborting message send")
             return
@@ -291,8 +316,7 @@ def FlushMessages():
         # stuff to do after message is sent
         print(" [*] Sent message to queue '%s'" % (queue))
 
-    # clear the queue
-    _sendqueue = []
+   
 
 
 # Requests to clean up the incident. This sends a message to the cleanup handler (see below)
@@ -307,6 +331,7 @@ def _RequestCleanup(
     message["Force"] = force
 
     # send message to instruct a cleanup of this incident
+    # THIS WILL ONLY BE SENT IF _RequestCleanup is called within a handler else we need to FlushMessages()
     send(message, "_Cleanup")
 
 
