@@ -16,7 +16,7 @@ python = "^3.7"
 "mproxy.server" = { path = "src/mproxy-server" }
 
 [tool.poetry.dev-dependencies]
-pytest = "^4.0"
+pytest = "^5.0"
 pytest-asyncio = "^0.10"
 docker = "^4.0"
 requests = "^2.0"

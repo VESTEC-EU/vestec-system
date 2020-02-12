@@ -18,5 +18,5 @@ aio-pika = "^6.0"
 "mproxy.core" = { path = "../mproxy-core" }
 
 [tool.poetry.dev-dependencies]
-pytest = "^4.0"
+pytest = "^5.0"
 

@@ -5,6 +5,11 @@ from mproxy.server.runner import ServerRunner
 from mproxy.client import Client
 from mproxy.core import ConfDict
 
+# invoke (a dependency of paramiko) supports py2.7 and hence uses the
+# deprecated imp module instead of importlib
+pytestmark = pytest.mark.filterwarnings("ignore:the imp module is deprecated")
+
+
 @pytest.fixture
 def conf_for_dummy_machine(rabbit_temp_vhost):
     names = ("test",)
