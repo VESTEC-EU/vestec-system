@@ -4,7 +4,7 @@ build-backend = "poetry.masonry.api"
 
 [tool.poetry]
 name = "mproxy.core"
-version = "0.1.0"
+version = "0.1.1"
 description = "Machine Proxy core: config, serialisation, model objects, API"
 authors = ["Rupert Nash <r.nash@epcc.ed.ac.uk>"]
 packages = [

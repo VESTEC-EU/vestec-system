@@ -4,10 +4,10 @@ description = "Wrapper for the aiormq for asyncio and humans."
 name = "aio-pika"
 optional = false
 python-versions = ">3.5.*, <4"
-version = "5.6.3"
+version = "6.4.1"
 
 [package.dependencies]
-aiormq = ">=2.3,<3.0"
+aiormq = ">=3.2.0,<4"
 yarl = "*"
 
 [package.extras]
@@ -19,7 +19,7 @@ description = "Pure python AMQP asynchronous client library"
 name = "aiormq"
 optional = false
 python-versions = ">3.5.*"
-version = "2.9.1"
+version = "3.2.0"
 
 [package.dependencies]
 pamqp = "2.3.0"
@@ -205,10 +205,10 @@ develop = true
 name = "mproxy.client"
 optional = false
 python-versions = "^3.7"
-version = "0.1.0"
+version = "0.1.1"
 
 [package.dependencies]
-aio-pika = "^5.0"
+aio-pika = "^6.0"
 "mproxy.core" = "*"
 pyyaml = "^5.1"
 
@@ -224,7 +224,7 @@ develop = true
 name = "mproxy.core"
 optional = false
 python-versions = "^3.7"
-version = "0.1.0"
+version = "0.1.1"
 
 [package.dependencies]
 pyyaml = "^5.1"
@@ -241,10 +241,10 @@ develop = true
 name = "mproxy.server"
 optional = false
 python-versions = "^3.7"
-version = "0.1.0"
+version = "0.1.1"
 
 [package.dependencies]
-aio-pika = "^5.0"
+aio-pika = "^6.0"
 fabric = "^2.4"
 "mproxy.core" = "*"
 pyyaml = "^5.1"
@@ -524,12 +524,12 @@ python-versions = "^3.7"
 
 [metadata.files]
 aio-pika = [
-    {file = "aio-pika-5.6.3.tar.gz", hash = "sha256:6a018e10886f35e7e5c72c53bede3d6bca6bb83e780a1efeebfdaf13c0e6e1b9"},
-    {file = "aio_pika-5.6.3-py3-none-any.whl", hash = "sha256:96f1238f46629239a0d752fb5e6b3ad9b80a1bdb18414020ecc10a210d644af6"},
+    {file = "aio-pika-6.4.1.tar.gz", hash = "sha256:fa32e33b4b7d0804dcf439ae6ff24d2f0a83d1ba280ee9f555e647d71d394ff5"},
+    {file = "aio_pika-6.4.1-py3-none-any.whl", hash = "sha256:a5837277e53755078db3a9e8c45bbca605c8ba9ecba7a02d74a7a1779f444723"},
 ]
 aiormq = [
-    {file = "aiormq-2.9.1-py3-none-any.whl", hash = "sha256:afc0d46837b121585e4faec0a7646706429b4e2f5110ae8d0b5cdc3708b4b0e5"},
-    {file = "aiormq-2.9.1.tar.gz", hash = "sha256:dc0fbbc7f8ad5af6a2cc18e00ccc5f925984cde3db6e8fe952c07b7ef157b5f2"},
+    {file = "aiormq-3.2.0-py3-none-any.whl", hash = "sha256:9210f3389200aee7d8067f6435f4a9eff2d3a30b88beb5eaae406ccc11c0fc01"},
+    {file = "aiormq-3.2.0.tar.gz", hash = "sha256:8c215a970133ab5ee7c478decac55b209af7731050f52d11439fe910fa0f9e9d"},
 ]
 atomicwrites = [
     {file = "atomicwrites-1.3.0-py2.py3-none-any.whl", hash = "sha256:03472c30eb2c5d1ba9227e4c2ca66ab8287fbfbbda3888aa93dc2e28fc6811b4"},
