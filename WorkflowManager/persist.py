@@ -2,6 +2,10 @@ import json
 import pony.orm as pny
 import sys
 
+import utils
+
+logger = utils.GetLogger(__name__)
+
 #### Code for a database to be used to store state information for the handlers
 
 # Class that allows handlers to log some data that persists after that handler has exited
@@ -15,22 +19,30 @@ class _Persist:
 
     def __init__(self):
         self.localDB.bind(provider="sqlite", filename="handlers.sqlite", create_db=True)
-        # self.localDB.bind(provider='sqlite', filename=":memory:") #cannot have an in-memory db if used between many processes
         self.localDB.generate_mapping(create_tables=True)
 
     # Called by handler... logs information to be persisted between calls
-    def Put(self, incident, dict):
+    def Put(self, incident, data):
         originator = sys._getframe(1).f_code.co_name
+
         try:
-            data = json.dumps(dict)
-        except:
-            raise Exception("workflow.Persist.Put: Cannot jsonify data")
+            data = json.dumps(data)
+        except TypeError:
+            logger.error("workflow.Persist.Put: Cannot jsonify data")
+            raise Exception("workflow.Persist.Put: Cannot jsonify data") from None
+
         with pny.db_session:
             self.DBlog(incident=incident, originator=originator, data=data)
+        logger.debug(
+            "Handler %s persisted some data for incident %s" % (originator, incident)
+        )
 
     # called by handler - retrieives all the logs belonging to this incident and handler
     def Get(self, incident):
         originator = sys._getframe(1).f_code.co_name
+        logger.debug(
+            "Handler %s requesting data from incident %s" % (originator, incident)
+        )
         with pny.db_session:
             logs = self.DBlog.select(
                 lambda p: p.incident == incident and p.originator == originator
@@ -45,4 +57,4 @@ class _Persist:
     def _Cleanup(self, incident):
         with pny.db_session:
             pny.delete(l for l in self.DBlog if l.incident == incident)
-        print(" [*] Cleaned up persistance for incident %s" % incident)
+        logger.info("Cleaned up persistance data for incident %s" % incident)

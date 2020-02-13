@@ -2,8 +2,13 @@ import pony.orm as pny
 import datetime
 import functools
 import json
+import utils
 
-#####A semaphore lock for if a handler needs to ensure it is the only version of it running at once
+
+logger = utils.GetLogger(__name__)
+
+
+##### A lock for if a handler needs to ensure it is the only version of it running at once
 
 # database for the locks
 lockDB = pny.Database()
@@ -24,7 +29,7 @@ def _EnsureLockHandlerExists(name):
         if Lock.exists(name=name):
             return
         else:
-            print(" [*] Creating LockDB entry for %s" % name)
+            logger.debug("Creating LockDB entry for %s" % name)
             Lock(name=name)
             return
 
@@ -34,6 +39,7 @@ def _EnsureLockHandlerExists(name):
 # unique ID for the name
 def GetLock(name, incident):
     if name == None or incident == None:
+        logger.error("Unable to lock: Lock requires a name and incident")
         raise Exception("Unable to lock: Lock requires a name and incident")
     else:
         name = name + incident
@@ -48,16 +54,19 @@ def GetLock(name, incident):
             if l.locked == False:
                 l.locked = True
                 l.date = datetime.datetime.now()
-                print(" [*] Aquired Lock")
+                logger.debug("Lock acquired for %s" % name)
                 return
             else:
-                print(" [*] Lock not aquired. Will try again in 1 second")
+                logger.debug(
+                    "Lock not acquired for %s. Will try gain in 1 second" % name
+                )
         time.sleep(1)
 
 
 # Checks if we can get a lock. If so, we get one and returns true, otherwise returns false
 def CheckLock(name, incident):
     if name == None or incident == None:
+        logger.error("Unable to lock: Lock requires a name and incident")
         raise Exception("Unable to lock: Lock requires a name and incident")
     else:
         name = name + incident
@@ -70,7 +79,7 @@ def CheckLock(name, incident):
         if l.locked == False:
             l.locked = True
             l.date = datetime.datetime.now()
-            print(" [*] Aquired Lock")
+            logger.debug("Lock acquired for %s" % name)
             return True
         else:
             return False
@@ -81,6 +90,7 @@ def CheckLock(name, incident):
 # unique ID for the name
 def ReleaseLock(name, incident):
     if name == None or incident == None:
+        logger.error("Unable to lock: Lock requires a name and incident")
         raise Exception("Lock requires a name and an incident")
     else:
         name = name + incident
@@ -90,9 +100,10 @@ def ReleaseLock(name, incident):
             l = Lock[name]
             l.locked = False
             l.date = datetime.datetime.now()
-            print(" [*] Lock released")
-    except:
-        raise Exception("Unable to unlock: unknown lock")
+            logger.debug("lock relased for %s" % name)
+    except pny.core.ObjectNotFound as e:
+        logger.error("Unable to unlock: unknown lock %s" % name)
+        raise Exception("Unable to unlock: unknown lock") from None
 
 
 # a wrapper version of the above two functions for handlers so you can wrap a function/handler
@@ -106,11 +117,14 @@ def atomic(f):
             try:
                 f(ch, method, properties, body, **kwargs)
             finally:
-                #we want to make sure that if the handler (or its @workflow.handler boilerplate) dies that the lock is still released
+                # we want to make sure that if the handler (or its @workflow.handler boilerplate) dies that the lock is still released
                 ReleaseLock(f.__name__, msg["IncidentID"])
         else:
             # reject the message
-            print(" [*] Lock for %s not acquired. Requeueing" % f.__name__)
+            logger.debug(
+                "Lock for %s not acquired. Requeueing"
+                % (f.__name__ + msg["IncidentID"])
+            )
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
     return wrapper
@@ -119,4 +133,4 @@ def atomic(f):
 def _CleanLock(incident):
     with pny.db_session:
         pny.delete(l for l in Lock if incident in l.name)
-    print(" [*] Cleaned up locks for incident %s" % incident)
+    logger.info("Cleaned up locks for incident %s" % incident)

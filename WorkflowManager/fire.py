@@ -5,8 +5,6 @@ import datetime
 import time
 
 
-
-
 # we now want to define some handlers
 @workflow.handler
 def fire_terrain_handler(message):
@@ -23,6 +21,7 @@ def fire_hotspot_handler(message):
 
     workflow.send(message=message, queue="fire_simulation")
 
+
 @workflow.atomic
 @workflow.handler
 def fire_simulation_handler(message):
@@ -30,27 +29,25 @@ def fire_simulation_handler(message):
 
     print("In fire simulation handler")
 
-    workflow.Persist.Put(incident=incident, dict={"originator": message["originator"]})
+    workflow.Persist.Put(incident=incident, data={"originator": message["originator"]})
 
-    logs = workflow.Persist.Get(incident)
-    # print("Logs =",logs)
+    records = workflow.Persist.Get(incident)
 
     test = 0
     terrain = 1
     hotspot = 2
     weather = 4
 
-    for log in logs:
-        if log["originator"] == "weather_results_handler":
+    for record in records:
+        if record["originator"] == "weather_results_handler":
             test = test | weather
             print("   Weather data available")
-        elif log["originator"] == "fire_terrain_handler":
+        elif record["originator"] == "fire_terrain_handler":
             test = test | terrain
             print("   Terrain data available")
-        elif log["originator"] == "fire_hotspot_handler":
+        elif record["originator"] == "fire_hotspot_handler":
             test = test | hotspot
             print("   Hotspot data available")
-    # print(test)
 
     if test == terrain | hotspot | weather:
         print("Running Fire Simulation")
@@ -61,7 +58,6 @@ def fire_simulation_handler(message):
         print("Done!")
     else:
         print("Will do nothing - waiting for data")
-
 
 
 # we have to register them with the workflow system
