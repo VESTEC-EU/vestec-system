@@ -383,7 +383,7 @@ def _Cleanup(ch, method, properties, body):
     messages = pny.select(
         m
         for m in MessageLog
-        if (m.incident_id == IncidentID and m.status == "PROCESSING")
+        if (m.incident_id == IncidentID and (m.status == "PROCESSING" or m.status == "SENT") and m.originator != "_RequestCleanup")
     )[:]
 
     if len(messages) > 0 and not msg["Force"]:
@@ -435,7 +435,7 @@ def execute():
     print(" [*] Workflow Manager ready to accept messages. To exit press CTRL+C \n")
     try:
         # Specify how many messages we want to prefetch... (may be important for load balancing)
-        # channel.qos(prefetch_count=1)
+        channel.basic_qos(prefetch_count=10)
         channel.start_consuming()
     except KeyboardInterrupt:
         print(" [*] Keyboard Interrupt detected")

@@ -74,7 +74,7 @@ def CheckLock(name, incident):
     # make sure there is an entry for this handler in the db
     _EnsureLockHandlerExists(name)
 
-    with pny.db_session:
+    with pny.db_session(serializable=True):
         l = Lock[name]
         if l.locked == False:
             l.locked = True
@@ -96,7 +96,7 @@ def ReleaseLock(name, incident):
         name = name + incident
 
     try:
-        with pny.db_session:
+        with pny.db_session(serializable=True):
             l = Lock[name]
             l.locked = False
             l.date = datetime.datetime.now()
