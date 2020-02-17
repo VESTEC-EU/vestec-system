@@ -52,12 +52,22 @@ def fire_simulation_handler(message):
     if test == terrain | hotspot | weather:
         print("Running Fire Simulation")
         time.sleep(1)
-
-        id = message["IncidentID"]
-        workflow.Complete(id)
-        print("Done!")
+        workflow.send(message=message, queue="fire_results")
     else:
         print("Will do nothing - waiting for data")
+
+@workflow.handler
+def fire_results_handler(msg):
+    incident=msg["IncidentID"]
+
+    print("Fire simulation results available")
+    time.sleep(1)
+    
+    workflow.Complete(incident)
+
+workflow.RegisterHandler(fire_results_handler,"fire_results")
+
+
 
 
 # we have to register them with the workflow system
