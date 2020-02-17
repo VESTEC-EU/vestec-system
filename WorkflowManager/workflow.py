@@ -271,7 +271,7 @@ def handler(f):
 
 # routine to call when we want to send a message to a queue. Takes the message (in dict form) and the queue to send the message to as arguments
 # This does not actually send the message, but enqueues it to be sent
-def send(message, queue):
+def send(message, queue, src_tag = "", dest_tag = ""):
 
     # Get the incident ID from the message
     try:
@@ -312,6 +312,8 @@ def send(message, queue):
             "incident": incident,
             "caller": caller,
             "id": id,
+            "src_tag": src_tag,
+            "dest_tag": dest_tag
         }
     )
 
@@ -331,6 +333,8 @@ def FlushMessages():
         incident = message["incident"]
         caller = message["caller"]
         id = message["id"]
+        src_tag = message["src_tag"]
+        dest_tag = message["dest_tag"]
 
         # check if the incident is still active. If not, don't send message
         if (not _IsActive(incident)) and queue != "_Cleanup":
@@ -338,6 +342,7 @@ def FlushMessages():
                 "Message(s) not sent as incident %s is no longer active" % incident
             )
             return
+ 
 
         # log the message
         with pny.db_session:
@@ -349,6 +354,8 @@ def FlushMessages():
                 destination=queue,
                 incident_id=incident,
                 message=msg,
+                src_tag=src_tag,
+                dest_tag=dest_tag
             )
 
         # send the message

@@ -18,6 +18,8 @@ class MessageLog(db.Entity):
     message = pny.Required(str)
     comment = pny.Optional(str)
     consumer = pny.Optional(str)
+    src_tag = pny.Optional(str) #optional name for the sender (for workflow graph visualisation)
+    dest_tag = pny.Optional(str) #optional name for the reciever (for workflow graph visualisation)
 
 
 class Incident(db.Entity):
