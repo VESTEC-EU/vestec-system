@@ -1,5 +1,7 @@
 import sys
 sys.path.append("../")
+import requests
+import datetime
 from flask import Flask, request, jsonify
 import Utils.log as log
 import json
@@ -7,7 +9,8 @@ from apscheduler.schedulers.background import BackgroundScheduler
 
 app = Flask("External Data Interface")
 logger = log.VestecLogger("External Data Interface")
-registered_handlers={}
+push_registered_handlers={}
+pull_registered_handlers=[]
 poll_scheduler=BackgroundScheduler()
 
 def isHandlerAlreadyRegistered(handlerToAdd, existingList):
@@ -48,18 +51,29 @@ class DataHandler:
             self.schedulerevent.remove()
             self.schedulerevent=None
     def pollDataSource(self):
-        print("Ping source "+self.source_endpoint)
+        x = requests.head(self.source_endpoint, allow_redirects=True)
+        if x.ok:
+            data_packet={}
+            data_packet["source"]=self.source_endpoint
+            data_packet["timestamp"]=int(datetime.datetime.timestamp(datetime.datetime.now()))
+            data_packet["headers"]=x.headers
+            data_packet["status_code"]=x.status_code            
+            print("Forward headers "+str(data_packet))             
 
-
-@app.route("/EDI", methods=["POST"])
-def post_data():
-    data = request.get_data()
-    source_address = request.remote_addr
-    if source_address in registered_handlers:
-        print("got data from: "+request.remote_addr+" Data: "+str(data))        
-        return jsonify({"status": 201, "msg": "Data received"}) 
+def handlePostOfData(source, data):
+    if source in push_registered_handlers:
+        print("got data from: "+source+" Data: "+str(data))
+        return jsonify({"status": 200, "msg": "Data received"}) 
     else:
         return jsonify({"status": 400, "msg": "No matching handler registered"})
+
+@app.route("/EDI", methods=["POST"])
+def post_data_anon():    
+    return handlePostOfData(request.remote_addr, request.get_data())    
+
+@app.route("/EDI/<sourceid>", methods=["POST"])
+def post_data(sourceid):
+    return handlePostOfData(sourceid, request.get_data())
 
 def generateDataHandler(dict):
     dict = request.get_json()
@@ -72,46 +86,63 @@ def generateDataHandler(dict):
         pollperiod=None
     return DataHandler(queue_name, incident_ID, source_endpoint, pollperiod)
 
-@app.route("/EDI/register", methods=["POST"])
+@app.route("/EDImanager/register", methods=["POST"])
 def register_handler():
     dict = request.get_json()
     handler=generateDataHandler(dict)
     source_endpoint=handler.getSourceEndpoint()
-    if source_endpoint not in registered_handlers:
-        registered_handlers[source_endpoint]=[]
-    if not isHandlerAlreadyRegistered(handler, registered_handlers[source_endpoint]):
-        registered_handlers[source_endpoint].append(handler)
-        if handler.isPollHandler():
+    if handler.isPollHandler():
+        if not isHandlerAlreadyRegistered(handler, pull_registered_handlers):
+            pull_registered_handlers.append(handler)
             handler.schedule()
-        return jsonify({"status": 201, "msg": "Handler registered"})
+            return jsonify({"status": 200, "msg": "Handler registered"})
+        else:
+            return jsonify({"status": 400, "msg": "Handler already registered for polling"})
     else:
-        return jsonify({"status": 400, "msg": "Handler already registered"})
+        if source_endpoint not in push_registered_handlers:
+            push_registered_handlers[source_endpoint]=[]
+        if not isHandlerAlreadyRegistered(handler, push_registered_handlers[source_endpoint]):
+            push_registered_handlers[source_endpoint].append(handler)        
+            return jsonify({"status": 200, "msg": "Handler registered"})
+        else:
+            return jsonify({"status": 400, "msg": "Handler already registered for push"})
 
-@app.route("/EDI/remove", methods=["POST"])
+@app.route("/EDImanager/remove", methods=["POST"])
 def remove_handler():
     dict = request.get_json()
     remove_handler=generateDataHandler(dict)
+    handler_removed=False
+    for handler in pull_registered_handlers:
+        if remove_handler == handler:
+            pull_registered_handlers.remove(handler)
+            handler.cancel()
+            handler_removed=True
     source_endpoint=remove_handler.getSourceEndpoint()
-    if source_endpoint in registered_handlers:        
-        for handler in registered_handlers[source_endpoint]:
+    if source_endpoint in push_registered_handlers:        
+        for handler in push_registered_handlers[source_endpoint]:
             if (remove_handler == handler):
-                registered_handlers[source_endpoint].remove(handler)
-                handler.cancel()
-                return jsonify({"status": 201, "msg": "Handler removed"})
-    return jsonify({"status": 400, "msg": "No existing handler registered"})
+                push_registered_handlers[source_endpoint].remove(handler)
+                handler_removed=True
 
-@app.route("/EDI/list/<endpoint>", methods=["GET"])
-def list_handlers_withep(endpoint):
-    if endpoint in registered_handlers:
-        built_up_json_src=buildDescriptionOfHandlers(registered_handlers[endpoint])
-        return json.dumps(built_up_json_src)
+    if handler_removed:                
+        return jsonify({"status": 200, "msg": "Handler removed"})
     else:
-        return json.dumps([])
+        return jsonify({"status": 400, "msg": "No existing handler registered"})
 
-@app.route("/EDI/list", methods=["GET"])
-def list_handlers():
+@app.route("/EDImanager/list/<endpoint>", methods=["GET"])
+def list_handlers_withep(endpoint):
     built_up_json_src=[]
-    for value in registered_handlers.values():
+    for handler in pull_registered_handlers:
+        if handler.getSourceEndpoint==endpoint:
+            built_up_json_src.extend(handler.generateJSON())
+    if endpoint in push_registered_handlers:
+        built_up_json_src.extend(buildDescriptionOfHandlers(push_registered_handlers[endpoint]))
+    return json.dumps(built_up_json_src)    
+
+@app.route("/EDImanager/list", methods=["GET"])
+def list_handlers():
+    built_up_json_src=buildDescriptionOfHandlers(pull_registered_handlers)    
+    for value in push_registered_handlers.values():
         built_up_json_src.extend(buildDescriptionOfHandlers(value))
     return json.dumps(built_up_json_src)
 
