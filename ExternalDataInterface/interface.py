@@ -46,34 +46,49 @@ class DataHandler:
 
     def schedule(self):
         self.schedulerevent=poll_scheduler.add_job(self.pollDataSource, 'interval', seconds=self.getPollPeriod())
+
     def cancel(self):
         if self.schedulerevent is not None:            
             self.schedulerevent.remove()
             self.schedulerevent=None
+
+    def generateDataPacket(self, headers, type):
+        data_packet={}
+        data_packet["source"]=self.source_endpoint
+        data_packet["timestamp"]=int(datetime.datetime.timestamp(datetime.datetime.now()))
+        data_packet["headers"]=headers
+        data_packet["type"]=type
+        data_packet["incidentid"]=self.incidentId
+        return data_packet
+
     def pollDataSource(self):
         x = requests.head(self.source_endpoint, allow_redirects=True)
         if x.ok:
-            data_packet={}
-            data_packet["source"]=self.source_endpoint
-            data_packet["timestamp"]=int(datetime.datetime.timestamp(datetime.datetime.now()))
-            data_packet["headers"]=x.headers
+            data_packet=self.generateDataPacket(x.headers, "pull")
             data_packet["status_code"]=x.status_code            
-            print("Forward headers "+str(data_packet))             
+            print("Forward to queue "+str(data_packet))
 
-def handlePostOfData(source, data):
+    def forwardToQueue(self, data, headers):
+        data_packet=self.generateDataPacket(headers, "push")        
+        data_packet["payload"]=data
+        print("Forward to queue "+str(data_packet))
+
+def handlePostOfData(source, data, headers):
     if source in push_registered_handlers:
         print("got data from: "+source+" Data: "+str(data))
+        for handler in push_registered_handlers[source]:
+            handler.forwardToQueue(data, headers)
         return jsonify({"status": 200, "msg": "Data received"}) 
     else:
         return jsonify({"status": 400, "msg": "No matching handler registered"})
 
 @app.route("/EDI", methods=["POST"])
 def post_data_anon():    
-    return handlePostOfData(request.remote_addr, request.get_data())    
+    return handlePostOfData(request.remote_addr, request.get_data(), dict(request.headers))    
 
 @app.route("/EDI/<sourceid>", methods=["POST"])
 def post_data(sourceid):
-    return handlePostOfData(sourceid, request.get_data())
+    return handlePostOfData(sourceid, request.get_data(), dict(request.headers))
 
 def generateDataHandler(dict):
     dict = request.get_json()
