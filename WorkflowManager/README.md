@@ -10,7 +10,8 @@
 * `example.py` - Sets off an example forest fire workflow
 * `graph.py` - Given an IncidentID, this will create an image visualising the workflow graph
 * `simulation.py` - Contains functions for recording simulations run on HPC machines to the database. If run directly, periodically checks the statuses of running simulations on the HPC machine, and if completed, will send a message to the workflow notifying it of the finished simulation
-
+* `julia.py` - example workflow that constructs an image of a Mandelbrot set from many small Julia sets
+* `quick.py` - An implement of the quicksort algorithm using the workflow manager 
 
 ## Requirements
 * The python module `pika` is required. It can be installed with `pip`
