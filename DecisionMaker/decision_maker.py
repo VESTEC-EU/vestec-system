@@ -59,8 +59,8 @@ class DecisionMaker:
         from the standard queue.
         '''
         logging.info("Querying the queue...")
-        response = connection.ExecuteCommand(command)
-        jobs = self.parse_machine_response((response.stdout).splitlines(True))
+        stdout,stderr,exit_code = connection.ExecuteCommand(command)
+        jobs = self.parse_machine_response((stdout).splitlines(True))
 
         standard_queue = self.DBM.get_standard_queue(machine_name)
         jobs = self.get_queue(standard_queue, jobs)

@@ -52,15 +52,15 @@ class Jacobi():
         print("Submitting Job:")
         batchfile = os.path.join(self.wkdir,"submit.pbs")
         command = "qsub -q short %s"%batchfile
-        r=self.connection.ExecuteCommand(command)
-        if r.return_code == 0:
-            name = r.stdout.strip()
+        stdout,stderr,return_code=self.connection.ExecuteCommand(command)
+        if return_code == 0:
+            name = stdout.strip()
             print("Job submit successful. JobID = %s\n"%name)
             self.QueueID = name
             return name
         else:
             print("Job submit unsuccessful. Error message:")
-            print(r.stderr)
+            print(stderr)
             self.QueueID = None
             return None
 
@@ -69,11 +69,11 @@ class Jacobi():
         command = "qstat -fx %s"%self.QueueID
         #print("Command = '%s'"%command)
 
-        r=self.connection.ExecuteCommand(command)
+        stdout,stderr,exit_code=self.connection.ExecuteCommand(command)
 
         #print r.stdout
 
-        qdata = r.stdout.splitlines(True)
+        qdata = stdout.splitlines(True)
 
         jobs=QueueParsing.pbs.Parse(qdata)
         #print jobs

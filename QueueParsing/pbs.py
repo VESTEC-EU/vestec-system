@@ -139,11 +139,11 @@ def GetEstimatedTime(walltime,size,jobs):
 if __name__ == "__main__":
     c=ConnectionManager.RemoteConnection("ARCHER")
     print("Querying the queue...")
-    result = c.ExecuteCommand("qstat -f")
+    stdout,stderr,exit_status = c.ExecuteCommand("qstat -f")
 
     print("\n\n\nWriting data to file to test ParseFromFile")
     f=open("queuedata.txt","w")
-    f.write(result.stdout)
+    f.write(stdout)
     f.close()
 
     jobs=ParseFromFile("queuedata.txt")
@@ -161,7 +161,7 @@ if __name__ == "__main__":
     print("\n\n\n")
 
     print("Parsing string from RemoteCommand directly")
-    qstat = (result.stdout).splitlines(True)
+    qstat = (stdout).splitlines(True)
 
     jobs=Parse(qstat)
 
