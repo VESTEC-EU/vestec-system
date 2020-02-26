@@ -1,10 +1,15 @@
+###############################################################################
+###############################################################################
+########################## THIS FILE IS DEPRICATED ############################
+###############################################################################
+###############################################################################
 machines ={}
 
 machines["ARCHER"]  = {
     "host": "login.archer.ac.uk",
-    "username": "bpvestec",
-    "SSHkey": "rsa_cron",
-    "basedir": "/work/d170/d170/bpvestec/",
+    "username": "vestecgg",
+    "SSHkey": "rsa_archer",
+    "basedir": "/work/d170/d170/vestecgg/results",
     "available_nodes": 4920,
     "cores_per_node": 24,
     "scheduler": "pbs",
@@ -51,9 +56,9 @@ machines["ARCHER"]  = {
 
 machines["CIRRUS"] = {
     "host": "cirrus.epcc.ed.ac.uk",
-    "username": "bpcirrus",
+    "username": "gpsgibb",
     "SSHkey": "rsa_cirrus",
-    "basedir": "/lustre/home/z04/bpcirrus/vestec",
+    "basedir": "/lustre/home/z04/gpsgibb/vestec",
     "available_nodes": 280,
     "cores_per_node": 36,
     "scheduler": "pbs",
