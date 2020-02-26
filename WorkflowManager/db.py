@@ -36,6 +36,20 @@ class Incident(db.Entity):
 
     parameters = pny.Optional(str)
 
+    simulations = pny.Set("Simulation")
+
+#Stores records of simulations submitted to HPC machines
+class Simulation(db.Entity):
+    uuid = pny.PrimaryKey(str)
+    incident = pny.Required(Incident)
+    status = pny.Required(str,default="NOT SUBMITTED")
+    machine = pny.Optional(str)
+    queue = pny.Optional(str)
+    jobID = pny.Optional(str)
+    wkdir = pny.Optional(str)
+    results_handler = pny.Optional(str)
+    walltime = pny.Optional(datetime.timedelta)
+    nodes = pny.Optional(int)
 
 def initialise_database():
     dbpath = "db.sqlite"

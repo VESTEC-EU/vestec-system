@@ -3,14 +3,19 @@ import uuid
 import pony.orm as pny
 import datetime
 import time
+import sys
 
 
-def submit_fire(id):
+def submit_fire(id,remote=False):
 
     # create a basic message dictionary
     msg = {}
     msg["IncidentID"] = id
     msg["data"] = "blah blah blah"
+    if remote:
+        msg["remote"] = True
+    else:
+        msg["remote"] = False
 
     # send the messages to relevant queues to kick off the workflow
     workflow.send(message=msg, queue="fire_terrain")
@@ -22,5 +27,15 @@ def submit_fire(id):
 
 if __name__ == "__main__":
     id = workflow.CreateIncident(name="test fire", kind="FIRE")
-    submit_fire(id)
+
+    #If we used the remote argumnt when running this script, requests the workflow run a remote job
+    if len(sys.argv) == 2:
+        if sys.argv[1] == "remote":
+            remote=True
+        else:
+            print("Unknown command line option")
+            remote=False
+    else:
+        remote=False
+    submit_fire(id,remote=remote)
     workflow.finalise()
