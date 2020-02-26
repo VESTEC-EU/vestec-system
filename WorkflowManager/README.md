@@ -7,7 +7,10 @@
 * `manager.py` - This is a process that executes the workflow
 * `fire.py` - Contains example handlers for the forest fire workflow
 * `MesoNH.py` - Contains example handlers for MesoNH workflows
-* `example.py` - Sets off an example forest fire workflow 
+* `example.py` - Sets off an example forest fire workflow
+* `graph.py` - Given an IncidentID, this will create an image visualising the workflow graph
+* `simulation.py` - Contains functions for recording simulations run on HPC machines to the database. If run directly, periodically checks the statuses of running simulations on the HPC machine, and if completed, will send a message to the workflow notifying it of the finished simulation
+
 
 ## Requirements
 * The python module `pika` is required. It can be installed with `pip`
@@ -107,141 +110,46 @@ At present the workflow defined in `MesoNH.py` and `fire.py` (and executed in `e
 
 In order for the fire simulation to be run it requires three dependencies: terrain data, hotspot data and post-processed output data from MesoNH. In order to obtain the MesoNH output data, we must first collect data from a weather forecast, feed this into MesoNH, then reduce the MesoNH data. The handlers for each of these dependencies send messages to the fire simulation queue to say they have completed their tasks. Each time a message comes into the queue, the fire simulation handler is called and it checks to see if all three dependencies are met. If they are, it runs the simulation, else it does nothing and waits for another message.
 
+If the `remote` argument is passed to `example.py` when it is run, this will request that a dummy fire simulation is run on ARCHER. In this case, the workflow submits the job to ARCHER. Running `simulation.py` will periodically poll ARCHER's queue and when the job is completed, will send a message to the workflow to handle the simulation's results.
+
 ## Running the example workflow
 The example contained in `example.py` runs the fire workflow (see above). To run this we first need
 * A running RabbitMQ server (e.g. use a rabbitmq docker container exposing port 5672)
 * `manager.py` to be running (this is the "workflow engine" that listens for messages and executes the handlers)
 
-If we then run `example.py` it will send messages to the terrain, hotspot and weather data handlers to kickstart the workflow. The output from `example.py` should be:
-```
-$ python example.py 
- [*] Opening connection to RabbitMQ server
-Database initialised
- [*] Sent message to queue 'fire_terrain'
- [*] Sent message to queue 'fire_hotspot'
- [*] Sent message to queue 'weather_data'
- [*] Closing connection to RabbitMQ server
-```
-
-Whilst the output from `manager.py` should be:
+If we then run `example.py [remote]` it will send messages to the terrain, hotspot and weather data handlers to kickstart the workflow. If we chose the `remote` option, we then want to start `simulation.py` to monitor the queue and alert the workflow manager to the finsihed job. The output from `manager.py` (after everything has finished) should be:
 ```
 python manager.py 
  [*] Opening connection to RabbitMQ server
 Database initialised
- [*] 'fire_terrain_handler' registered to queue 'fire_terrain'
- [*] 'fire_hotspot_handler' registered to queue 'fire_hotspot'
- [*] 'fire_simulation_handler' registered to queue 'fire_simulation'
- [*] 'weather_data_handler' registered to queue 'weather_data'
- [*] 'weather_simulation_handler' registered to queue 'weather_simulation'
- [*] 'weather_results_handler' registered to queue 'weather_results'
 
  [*] Workflow Manager ready to accept messages. To exit press CTRL+C 
 
-
---------------------------------------------------------------------------------
- [*] Handler: fire_terrain_handler
- [*] Message: 22311c63-319d-4070-9b1b-ba9e1b05531b
- [*] Incident ID: 526d0b53-fadd-42e6-bcfb-81b53e78ca2d
- [*] Executing task
- [*] Creating LockDB entry for fire_terrain_handler526d0b53-fadd-42e6-bcfb-81b53e78ca2d
- [*] Aquired Lock
-In Fire terrain handler
- [*] Sent message to queue 'fire_simulation'
- [*] Lock released
- [*] Task complete
---------------------------------------------------------------------------------
-
-
---------------------------------------------------------------------------------
- [*] Handler: fire_hotspot_handler
- [*] Message: 580a72b7-2590-4023-a4af-e94d0fd0495f
- [*] Incident ID: 526d0b53-fadd-42e6-bcfb-81b53e78ca2d
- [*] Executing task
-In Fire hotspot handler
- [*] Sent message to queue 'fire_simulation'
- [*] Task complete
---------------------------------------------------------------------------------
-
-
---------------------------------------------------------------------------------
- [*] Handler: weather_data_handler
- [*] Message: f1223bb1-2f9b-40e9-8346-a64e44fad1c7
- [*] Incident ID: 526d0b53-fadd-42e6-bcfb-81b53e78ca2d
- [*] Executing task
 In weather data handler
- [*] Sent message to queue 'weather_simulation'
- [*] Task complete
---------------------------------------------------------------------------------
-
-
---------------------------------------------------------------------------------
- [*] Handler: fire_simulation_handler
- [*] Message: b4de7d53-53d0-46a6-9a95-505b8c6d3ae7
- [*] Incident ID: 526d0b53-fadd-42e6-bcfb-81b53e78ca2d
- [*] Executing task
- [*] Creating LockDB entry for some_label526d0b53-fadd-42e6-bcfb-81b53e78ca2d
- [*] Aquired Lock
-In fire simulation handler
-   Terrain data available
-Will do nothing - waiting for data
- [*] Lock released
- [*] Task complete
---------------------------------------------------------------------------------
-
-
---------------------------------------------------------------------------------
- [*] Handler: fire_simulation_handler
- [*] Message: 3f812b03-bd11-47df-b9c9-67bd78b64f98
- [*] Incident ID: 526d0b53-fadd-42e6-bcfb-81b53e78ca2d
- [*] Executing task
- [*] Aquired Lock
-In fire simulation handler
-   Terrain data available
-   Hotspot data available
-Will do nothing - waiting for data
- [*] Lock released
- [*] Task complete
---------------------------------------------------------------------------------
-
-
---------------------------------------------------------------------------------
- [*] Handler: weather_simulation_handler
- [*] Message: 69f9fd9e-d417-4c5e-978a-94444002a81e
- [*] Incident ID: 526d0b53-fadd-42e6-bcfb-81b53e78ca2d
- [*] Executing task
+In Fire hotspot handler
+In Fire terrain handler
 In weather simulation handler
- [*] Sent message to queue 'weather_results'
- [*] Task complete
---------------------------------------------------------------------------------
-
-
---------------------------------------------------------------------------------
- [*] Handler: weather_results_handler
- [*] Message: 0fda2847-c2d7-4bbe-a5ad-49628364e72e
- [*] Incident ID: 526d0b53-fadd-42e6-bcfb-81b53e78ca2d
- [*] Executing task
-In weather results handler
- [*] Sent message to queue 'fire_simulation'
- [*] Task complete
---------------------------------------------------------------------------------
-
-
---------------------------------------------------------------------------------
- [*] Handler: fire_simulation_handler
- [*] Message: c15a1b43-eb97-4fd7-98af-ff74ceb7e793
- [*] Incident ID: 526d0b53-fadd-42e6-bcfb-81b53e78ca2d
- [*] Executing task
- [*] Aquired Lock
 In fire simulation handler
-   Terrain data available
    Hotspot data available
+Will do nothing - waiting for data
+In fire simulation handler
+   Hotspot data available
+   Terrain data available
+Will do nothing - waiting for data
+In weather results handler
+In fire simulation handler
+   Hotspot data available
+   Terrain data available
    Weather data available
-Running Fire Simulation
-Done!
- [*] Lock released
- [*] Task complete
+Will execute fire simulation remotely
+Connecting to login.archer.ac.uk
+Submitted remote job 6901077.sdb
+Remote simulation results available!
+Connecting to login.archer.ac.uk
+Simulation results are:
 --------------------------------------------------------------------------------
-
+lots of fire - simulated remotely!
+--------------------------------------------------------------------------------
 
 
 ```
