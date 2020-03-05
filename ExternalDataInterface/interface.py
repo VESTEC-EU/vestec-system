@@ -8,6 +8,7 @@ import json
 from apscheduler.schedulers.background import BackgroundScheduler
 import pony.orm as pny
 from Database import initialiseDatabase
+from WorkflowManager import workflow
 
 app = Flask("External Data Interface")
 logger = log.VestecLogger("External Data Interface")
@@ -67,15 +68,25 @@ class DataHandler:
         x = requests.head(self.source_endpoint, allow_redirects=True)
         if x.ok:
             data_packet=self.generateDataPacket(x.headers, "pull")
-            data_packet["status_code"]=x.status_code     
-            logger.Log(log.LogType.Activity, "Forwarded pulled data from '"+self.source_endpoint+"' to queue '"+self.queue_name+"'")        
-            print("Forward to queue "+str(data_packet))
+            data_packet["status_code"]=x.status_code
+            self.sendMessageToWorkflowEngine(data_packet)
+            logger.Log(log.LogType.Activity, "Forwarded pulled data from '"+self.source_endpoint+"' to queue '"+self.queue_name+"'")            
 
     def forwardToQueue(self, data, headers):
         data_packet=self.generateDataPacket(headers, "push")        
-        data_packet["payload"]=data
-        logger.Log(log.LogType.Activity, "Forwarded posted data from '"+self.source_endpoint+"' to queue '"+self.queue_name+"'") 
-        print("Forward to queue "+str(data_packet))
+        data_packet["payload"]=data.decode('ascii')
+        self.sendMessageToWorkflowEngine(data_packet)
+        logger.Log(log.LogType.Activity, "Forwarded posted data from '"+self.source_endpoint+"' to queue '"+self.queue_name+"'")           
+
+    def sendMessageToWorkflowEngine(self, data_packet):
+        msg={}
+        if self.incidentId is None:
+            msg["IncidentID"] =  workflow.CreateIncident(name="test fire", kind="FIRE")
+        else:
+            msg["IncidentID"] = self.incidentId
+        msg["data"]=data_packet
+        workflow.send(message=msg, queue=self.queue_name)
+        workflow.FlushMessages()
 
 def handlePostOfData(source, data, headers):    
     if source in push_registered_handlers:  
