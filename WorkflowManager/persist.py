@@ -2,7 +2,10 @@ import json
 import pony.orm as pny
 import sys
 
-import utils
+try:
+    from . import utils
+except Exception: #ImportError
+    import utils
 
 logger = utils.GetLogger(__name__)
 

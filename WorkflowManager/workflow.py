@@ -1,16 +1,22 @@
 import pika
 import functools
 import sys
-from db import db, MessageLog, Incident, initialise_database
 import json
 import pony.orm as pny
 import uuid
 import datetime
 import time
 
-import utils
-import persist
-from lock import atomic, _CleanLock
+try:
+    from .db import db, MessageLog, Incident, initialise_database
+    from . import utils
+    from . import persist
+    from .lock import atomic, _CleanLock
+except Exception: #ImportError
+    from db import db, MessageLog, Incident, initialise_database
+    import utils
+    import persist
+    from lock import atomic, _CleanLock
 
 logger = utils.GetLogger(__name__)
 
@@ -163,8 +169,8 @@ def handler(f):
     def wrapper(ch, method, properties, body, **kwargs):
 
         # convert json message back to dictionary
-
-        msg = json.loads(body)
+        
+        msg = json.loads(body.decode('ascii'))
 
         incident = msg["IncidentID"]
         mssgid = msg["MessageID"]
@@ -300,7 +306,7 @@ def send(message, queue, src_tag = "", dest_tag = ""):
 
     # convert the message to a json
     try:
-        msg = json.dumps(message)
+        msg = json.dumps(message)        
     except ValueError as e:
         logger.error("workflow.send: Unable to jsonify message")
         raise Exception("workflow.send: Unable to jsonify message") from None
@@ -357,7 +363,7 @@ def FlushMessages():
                 src_tag=src_tag,
                 dest_tag=dest_tag
             )
-
+        
         # send the message
         channel.basic_publish(exchange="", routing_key=queue, body=msg)
 
