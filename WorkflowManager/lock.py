@@ -2,7 +2,11 @@ import pony.orm as pny
 import datetime
 import functools
 import json
-import utils
+
+try:
+    from . import utils
+except Exception: #ImportError
+    import utils
 
 
 logger = utils.GetLogger(__name__)
