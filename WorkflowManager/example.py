@@ -5,6 +5,8 @@ import datetime
 import time
 import sys
 
+import fire
+
 
 def submit_fire(id,remote=False):
 
@@ -26,6 +28,10 @@ def submit_fire(id,remote=False):
 
 
 if __name__ == "__main__":
+
+    workflow.OpenConnection()
+    fire.RegisterHandlers()
+
     id = workflow.CreateIncident(name="test fire", kind="FIRE")
 
     #If we used the remote argumnt when running this script, requests the workflow run a remote job
@@ -38,4 +44,4 @@ if __name__ == "__main__":
     else:
         remote=False
     submit_fire(id,remote=remote)
-    workflow.finalise()
+    workflow.CloseConnection()

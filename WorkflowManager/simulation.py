@@ -101,6 +101,7 @@ def CheckJobStatuses(jobs):
         elif status == "E":
             sim.status = "EXITING"
         elif status == "F":
+            #TODO CHECK FOR EXIT CODE FROM JOB - DID IT SUCCEED OR DID IT FAIL
             sim.status = "COMPLETED"
             #now send a message to tell the workflow that the simulation is finsihed
             NotifyWorkflowOfCompletion(sim)
@@ -109,6 +110,7 @@ def CheckJobStatuses(jobs):
 
 @pny.db_session
 def NotifyWorkflowOfCompletion(sim):
+         workflow.OpenConnection()
          handler = sim.results_handler
 
          message={}
@@ -119,6 +121,7 @@ def NotifyWorkflowOfCompletion(sim):
 
          workflow.send(message,handler)
          workflow.FlushMessages()
+         workflow.CloseConnection()
 
 
 
@@ -133,7 +136,8 @@ if __name__ == "__main__":
         #We need to use the rabbitmq connection.sleep command 
         # to prevent it from ignoring heartbeat checks from the 
         # rmq broker else the broker can terminate the connection
-        workflow.connection.sleep(60)
+        #workflow.connection.sleep(60)
+        time.sleep(60)
 
 
 

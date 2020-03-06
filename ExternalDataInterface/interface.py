@@ -79,6 +79,7 @@ class DataHandler:
         logger.Log(log.LogType.Activity, "Forwarded posted data from '"+self.source_endpoint+"' to queue '"+self.queue_name+"'")           
 
     def sendMessageToWorkflowEngine(self, data_packet):
+        workflow.OpenConnection()
         msg={}
         if self.incidentId is None:
             msg["IncidentID"] =  workflow.CreateIncident(name="test fire", kind="FIRE")
@@ -87,6 +88,7 @@ class DataHandler:
         msg["data"]=data_packet
         workflow.send(message=msg, queue=self.queue_name)
         workflow.FlushMessages()
+        workflow.CloseConnection()
 
 def handlePostOfData(source, data, headers):    
     if source in push_registered_handlers:  

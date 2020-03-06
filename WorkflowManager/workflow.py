@@ -25,16 +25,26 @@ def SetLoggingLevel(level):
     utils.SetLevel(level)
 
 
-print(" [*] Opening connection to RabbitMQ server")
+connection = None
+channel = None
 
-# Try to open a connection to the rmq server
-try:
-    connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
-except pika.exceptions.AMQPConnectionError as e:
-    logger.critical("Cannot create connection to AMQP server... Maybe it's down?")
-    raise e
+#opens a connection to the RMQ server
+def OpenConnection():
+    global connection
+    global channel
+    if connection is None:
+        # Try to open a connection to the rmq server
+        try:
+            print(" [*] Opening connection to RabbitMQ server")
+            connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
+        except pika.exceptions.AMQPConnectionError as e:
+            logger.critical("Cannot create connection to AMQP server... Maybe it's down?")
+            raise e
 
-channel = connection.channel()
+        channel = connection.channel()
+    else:
+        logger.warn("Attempting to open connection to RabbitMQ but one is already established")
+
 
 # initialise (connect to) the workflow database
 initialise_database()
@@ -109,6 +119,7 @@ def Cancel(
     incident.comment = reason
 
     logger.info("Cancelled incident %s" % IncidentID)
+    print(" [*] Cancelled Incident %s"%IncidentID)
 
     # send a cleanup message to the message queue
     _RequestCleanup(
@@ -145,6 +156,7 @@ def Complete(
     incident.date_completed = datetime.datetime.now()
 
     logger.info("Completed incident %s" % IncidentID)
+    print(" [*] Completed Incident %s"%IncidentID)
 
     # Send a cleanup message to the queue
     _RequestCleanup(
@@ -158,6 +170,9 @@ def Complete(
 
 # callback to register a handler with a queue, and also declare that queue to the RMQ system
 def RegisterHandler(handler, queue):
+    if channel is None:
+        logger.critical("Cannot register handler - no open RabbitMQ connection",exc_info=True)
+        raise Exception("Cannot register handler - no open RabbitMQ connection")
     logger.info("'%s' registered to queue '%s'" % (handler.__name__, queue))
     channel.queue_declare(queue=queue)
     channel.basic_consume(queue=queue, on_message_callback=handler, auto_ack=False)
@@ -192,7 +207,13 @@ def handler(f):
         if active:
             # Log that we are processing the message
             with pny.db_session:
-                log = MessageLog[mssgid]
+                try:
+                    log = MessageLog[mssgid]
+                except pny.core.ObjectNotFound:
+                    #sometimes happens if this message is picked up before the sent message has been committed to the database
+                    logger.warn("Message %s not found in database. Requeueing"%mssgid)
+                    ch.basic_nack(delivery_tag=method.delivery_tag)
+                    return
                 # This should only happen if a consumer process has died midway through processing
                 # The re-process of the message should go ok but this warning will be printed
                 if log.status != "SENT":
@@ -329,6 +350,10 @@ def send(message, queue, src_tag = "", dest_tag = ""):
 # Loops through enqueued messages and sends them
 def FlushMessages():
 
+    if channel is None:
+        logger.critical("RabbitMQ connection is not open. Cannot send messages",exc_info=True)
+        raise Exception("RabbitMQ connection is not open")
+
     # loop over all messages in the send queue
     while _sendqueue:
 
@@ -363,6 +388,9 @@ def FlushMessages():
                 src_tag=src_tag,
                 dest_tag=dest_tag
             )
+            #ensure this is written to the DB ASAP 
+            # (In some cases Flushmessages can be called within a pny.db_session and so messages are sent before their db entry has been committed)
+            pny.commit()
         
         # send the message
         channel.basic_publish(exchange="", routing_key=queue, body=msg)
@@ -418,6 +446,7 @@ def _Cleanup(ch, method, properties, body):
     log.consumer = ConsumerID
 
     logger.info("Cleaning up Incident %s" % IncidentID)
+    print(" [*] Cleaning up incident %s"%IncidentID)
 
     if msg["CleanLocks"]:
         _CleanLock(IncidentID)
@@ -435,10 +464,17 @@ def _Cleanup(ch, method, properties, body):
 
 
 # Closes a connection
-def finalise():
-    print(" [*] Closing connection to RabbitMQ server")
-    print("")
-    connection.close()
+def CloseConnection():
+    global connection
+    global channel
+    if connection is None:
+        logger.warn("Cannot close RabbitMQ connection - connection is not open...")
+    else:
+        print(" [*] Closing connection to RabbitMQ server")
+        connection.close()
+        channel = None
+        connection = None
+
 
 
 # Starts the workflow manager (starts waiting for messages to consume)
@@ -446,6 +482,10 @@ def execute():
     RegisterHandler(_Cleanup, "_Cleanup")
     print("")
     print(" [*] Workflow Manager ready to accept messages. To exit press CTRL+C \n")
+    if channel is None:
+        logger.critical("No open connection to RabbitMQ",exc_info=True)
+        raise Exception("No open connection to RabbitMQ")
+
     try:
         # Specify how many messages we want to prefetch... (may be important for load balancing)
         channel.basic_qos(prefetch_count=10)
@@ -453,7 +493,7 @@ def execute():
     except KeyboardInterrupt:
         print(" [*] Keyboard Interrupt detected")
         print(" [*] Cleaning up")
-        finalise()
+        CloseConnection()
     except pika.exceptions.ConnectionClosedByBroker as e:
         logger.critical("RabbitMQ server has shut down. Connection lost", exc_info=True)
         print(" [#] RabbitMQ server has shut down. Connection lost")
@@ -463,4 +503,4 @@ def execute():
         logger.critical(
             "Unknown error occurred. Shutting down the workflow engine.", exc_info=True
         )
-        finalise()
+        CloseConnection()

@@ -143,7 +143,7 @@ aprun -n 1 python script.py
     return
 
 
-workflow.RegisterHandler(fire_submit_job_handler,"fire_submit_job")
+
 
 
 @workflow.handler
@@ -155,7 +155,7 @@ def fire_results_handler(msg):
     
     workflow.Complete(incident)
 
-workflow.RegisterHandler(fire_results_handler,"fire_results")
+
 
 #Get simulation results from HPC machine
 @workflow.handler
@@ -187,12 +187,16 @@ def remote_fire_results_handler(msg):
     #complete the workflow
     workflow.Complete(incident)
 
-workflow.RegisterHandler(remote_fire_results_handler,"remote_fire_results")
 
 
 
 
 # we have to register them with the workflow system
-workflow.RegisterHandler(fire_terrain_handler, "fire_terrain")
-workflow.RegisterHandler(fire_hotspot_handler, "fire_hotspot")
-workflow.RegisterHandler(fire_simulation_handler, "fire_simulation")
+def RegisterHandlers():
+    workflow.RegisterHandler(fire_terrain_handler, "fire_terrain")
+    workflow.RegisterHandler(fire_hotspot_handler, "fire_hotspot")
+    workflow.RegisterHandler(fire_simulation_handler, "fire_simulation")
+    workflow.RegisterHandler(fire_results_handler,"fire_results")
+    workflow.RegisterHandler(fire_submit_job_handler,"fire_submit_job")
+    workflow.RegisterHandler(remote_fire_results_handler,"remote_fire_results")
+

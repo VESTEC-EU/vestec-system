@@ -87,9 +87,6 @@ def submit(n=100):
     logNodes(me,children)
 
     workflow.FlushMessages()
-    workflow.finalise()
-
-
     return
 
 
@@ -153,7 +150,7 @@ def quicksort_handler(msg):
 
     return
 
-workflow.RegisterHandler(quicksort_handler,"quicksort_queue")
+
 
 
 
@@ -247,7 +244,11 @@ def merge_handler(msg):
 
         return
 
-workflow.RegisterHandler(merge_handler,"merge_queue")
+
+
+def RegisterHandlers():
+    workflow.RegisterHandler(quicksort_handler,"quicksort_queue")
+    workflow.RegisterHandler(merge_handler,"merge_queue")
 
 
 
@@ -258,7 +259,11 @@ workflow.RegisterHandler(merge_handler,"merge_queue")
 
 
 if __name__ == "__main__":
+    workflow.OpenConnection()
+    RegisterHandlers()
    
     submit(n=128)
+
+    workflow.CloseConnection()
 
 

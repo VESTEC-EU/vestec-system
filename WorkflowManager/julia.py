@@ -64,7 +64,7 @@ def julia_calculate_handler(msg):
     return
 
 
-workflow.RegisterHandler(julia_calculate_handler, "julia_calculate_queue")
+
 
 #sees if all the sets are completed. If so, stitches them into a big image
 @workflow.atomic
@@ -99,7 +99,8 @@ def julia_stitch_handler(msg):
     if c == n:
         print("We can stitch the picture together now :)")
         workflow.Complete(incident)
-        print(files.sort())
+        #print(files.sort())
+        files.sort()
         f=open("images.txt","w")
         for file in files:
             f.write(os.path.join(wkdir,file)+" ")
@@ -123,7 +124,7 @@ def julia_stitch_handler(msg):
         return
 
 
-workflow.RegisterHandler(julia_stitch_handler, "julia_stitch_queue")
+
 
 
 #Entry point to the workflow. Determines the images that need to be made, then sends messages to make them
@@ -177,7 +178,7 @@ def julia_request_handler(msg):
     # workflow.Complete(incident)
 
 
-workflow.RegisterHandler(julia_request_handler, "julia_request_queue")
+
 
 
 def Start(nnx=5, nx=50, nits=256, centre=[0, 0], range=2):
@@ -200,6 +201,15 @@ def Start(nnx=5, nx=50, nits=256, centre=[0, 0], range=2):
     return
 
 
+def RegisterHandlers():
+    workflow.RegisterHandler(julia_calculate_handler, "julia_calculate_queue")
+    workflow.RegisterHandler(julia_request_handler, "julia_request_queue")
+    workflow.RegisterHandler(julia_stitch_handler, "julia_stitch_queue")
+
+
 if __name__ == "__main__":
+    workflow.OpenConnection()
+    RegisterHandlers()
     Start(nnx=25, centre=[-0.5, 0], range=1.5)
-    workflow.finalise()
+    workflow.CloseConnection()
+    

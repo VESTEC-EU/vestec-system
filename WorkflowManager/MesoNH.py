@@ -29,6 +29,7 @@ def weather_results_handler(message):
 
 
 # register these with the workflow system
-workflow.RegisterHandler(weather_data_handler, "weather_data")
-workflow.RegisterHandler(weather_simulation_handler, "weather_simulation")
-workflow.RegisterHandler(weather_results_handler, "weather_results")
+def RegisterHandlers():
+    workflow.RegisterHandler(weather_data_handler, "weather_data")
+    workflow.RegisterHandler(weather_simulation_handler, "weather_simulation")
+    workflow.RegisterHandler(weather_results_handler, "weather_results")

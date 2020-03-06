@@ -80,13 +80,13 @@ def B_handler(message):
     workflow.Complete(message["IncidentID"])
     
     
-
-#register these handlers to the queues
-workflow.RegisterHandler(handler=A_handler,queue="A_queue")
-workflow.RegisterHandler(handler=B_handler,queue="B_queue")
-
-
 if __name__ == "__main__":
+    #Open connection to RabbitMQ
+    workflow.OpenConnection()
+
+    #register these handlers to the queues
+    workflow.RegisterHandler(handler=A_handler,queue="A_queue")
+    workflow.RegisterHandler(handler=B_handler,queue="B_queue")
 
     #create an incident
     IncidentID = workflow.CreateIncident(name="some name",kind="DUMMY_INCIDENT")
