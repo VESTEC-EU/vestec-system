@@ -2,3 +2,4 @@ Flask
 pony
 fabric
 pymysql
+pyyaml

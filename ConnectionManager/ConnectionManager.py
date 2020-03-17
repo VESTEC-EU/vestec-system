@@ -9,8 +9,10 @@ import yaml
 
 dir=os.path.dirname(__file__)
 f=open(os.path.join(dir,"machines.yaml"),"r")
-machines = yaml.load(f)
+machines = yaml.safe_load(f)
 f.close()
+
+
 
 
 keydir = os.path.join(os.path.expanduser("~"),".ssh")
