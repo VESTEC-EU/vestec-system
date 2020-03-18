@@ -2,6 +2,10 @@ import pony.orm as pny
 import datetime
 import functools
 import json
+import sys
+sys.path.append("../")
+from Database.workflow import Lock
+
 
 try:
     from . import utils
@@ -11,21 +15,6 @@ except Exception: #ImportError
 
 logger = utils.GetLogger(__name__)
 
-
-##### A lock for if a handler needs to ensure it is the only version of it running at once
-
-# database for the locks
-lockDB = pny.Database()
-
-
-class Lock(lockDB.Entity):
-    name = pny.PrimaryKey(str)
-    date = pny.Optional(datetime.datetime)
-    locked = pny.Required(bool, default=False)
-
-
-lockDB.bind(provider="sqlite", filename="locks.sqlite", create_db=True)
-lockDB.generate_mapping(create_tables=True)
 
 # check that an entry for this handler exists in the lock database
 def _EnsureLockHandlerExists(name):

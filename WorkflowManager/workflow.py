@@ -1,6 +1,7 @@
 import pika
 import functools
 import sys
+sys.path.append("../")
 import json
 import pony.orm as pny
 import uuid
@@ -8,15 +9,19 @@ import datetime
 import time
 
 try:
-    from .db import db, MessageLog, Incident, initialise_database
+#     from .db import db, MessageLog, Incident, initialise_database, initialiseDatabase
     from . import utils
     from . import persist
     from .lock import atomic, _CleanLock
 except Exception: #ImportError
-    from db import db, MessageLog, Incident, initialise_database
+#     from db import db, MessageLog, Incident, initialise_database, initialiseDatabase
     import utils
     import persist
     from lock import atomic, _CleanLock
+
+
+from Database.workflow import MessageLog, Incident
+from Database import initialiseDatabase
 
 logger = utils.GetLogger(__name__)
 
@@ -47,7 +52,8 @@ def OpenConnection():
 
 
 # initialise (connect to) the workflow database
-initialise_database()
+#initialise_database()
+initialiseDatabase()
 
 # UUID for this running instance of the consumer (used for debugging when using multiple consumer processes)
 ConsumerID = str(uuid.uuid4())

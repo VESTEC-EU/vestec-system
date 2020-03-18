@@ -1,10 +1,17 @@
 import pony.orm as pny
-from db import Simulation, initialise_database
+#from db import Simulation, initialise_database
+import sys
+sys.path.append("../")
 import uuid
 import QueueParsing.pbs as pbs
 import time
 import workflow
 from ConnectionManager import RemoteConnection
+
+from Database.workflow import Simulation
+
+
+
 
 @pny.db_session
 def Create(incident):

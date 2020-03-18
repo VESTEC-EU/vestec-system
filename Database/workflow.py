@@ -1,10 +1,9 @@
 import pony.orm as pny
-import os
+from Database import db
 import datetime
 import uuid
 
-db = pny.Database()
-
+#these are all db tables related to the workflow system
 
 class MessageLog(db.Entity):
     uuid = pny.PrimaryKey(str)
@@ -51,31 +50,17 @@ class Simulation(db.Entity):
     walltime = pny.Optional(datetime.timedelta)
     nodes = pny.Optional(int)
 
-def initialise_database():
-    dbpath = "db.sqlite"
 
-    db.bind("sqlite", dbpath, create_db=True)
-    db.generate_mapping(create_tables=True)
-    print("Database initialised")
+#lock for workflow handlers
+class Lock(db.Entity):
+    name = pny.PrimaryKey(str)
+    date = pny.Optional(datetime.datetime)
+    locked = pny.Required(bool, default=False)
+
+#a log for the handlers to persist some data
+class HandlerLog(db.Entity):
+    incident = pny.Required(str)
+    originator = pny.Required(str)
+    data = pny.Required(str)
 
 
-if __name__ == "__main__":
-    initialise_database()
-    now = datetime.datetime.now()
-    uuid = str(uuid.uuid4())
-    uuidm = str(uuid.uuid4())
-    with pny.db_session:
-        Incident(
-            uuid=uuid, kind="TEST", name="TESTING", date_started=now, incident_date=now
-        )
-        MessageLog(
-            uuid=uuidm,
-            status="SENT",
-            date_submitted=now,
-            originator="Testprog",
-            destination="NONE",
-            incident_id=uuid,
-            payload="TESTING TESTING",
-        )
-
-    print("done?")
