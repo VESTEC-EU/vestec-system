@@ -1,6 +1,9 @@
 import json
 import pony.orm as pny
 import sys
+sys.path.append("../")
+
+from Database.workflow import HandlerLog
 
 try:
     from . import utils
@@ -13,16 +16,8 @@ logger = utils.GetLogger(__name__)
 
 # Class that allows handlers to log some data that persists after that handler has exited
 class _Persist:
-    localDB = pny.Database()
-
-    class DBlog(localDB.Entity):
-        incident = pny.Required(str)
-        originator = pny.Required(str)
-        data = pny.Required(str)
-
     def __init__(self):
-        self.localDB.bind(provider="sqlite", filename="handlers.sqlite", create_db=True)
-        self.localDB.generate_mapping(create_tables=True)
+        pass
 
     # Called by handler... logs information to be persisted between calls
     def Put(self, incident, data):
@@ -35,7 +30,7 @@ class _Persist:
             raise Exception("workflow.Persist.Put: Cannot jsonify data") from None
 
         with pny.db_session:
-            self.DBlog(incident=incident, originator=originator, data=data)
+            HandlerLog(incident=incident, originator=originator, data=data)
         logger.debug(
             "Handler %s persisted some data for incident %s" % (originator, incident)
         )
@@ -47,7 +42,7 @@ class _Persist:
             "Handler %s requesting data from incident %s" % (originator, incident)
         )
         with pny.db_session:
-            logs = self.DBlog.select(
+            logs = HandlerLog.select(
                 lambda p: p.incident == incident and p.originator == originator
             )
             l = []
@@ -59,5 +54,5 @@ class _Persist:
     # Cleans up any logs associated with an incident
     def _Cleanup(self, incident):
         with pny.db_session:
-            pny.delete(l for l in self.DBlog if l.incident == incident)
+            pny.delete(l for l in HandlerLog if l.incident == incident)
         logger.info("Cleaned up persistance data for incident %s" % incident)

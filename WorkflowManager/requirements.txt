@@ -1,0 +1,11 @@
+pika
+pony
+uuid
+PyYAML
+pymysql
+fabric
+numpy
+matplotlib
+numba
+networkx
+pygraphviz

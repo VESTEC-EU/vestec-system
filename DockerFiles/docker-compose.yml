@@ -56,6 +56,27 @@ services:
       - "/var/vestec/db:/var/lib/mysql"
     networks:
       - vestec
+    
+      
+  rmq:
+    container_name: rabbitmq
+    image: rabbitmq
+    networks:
+      - vestec
+  
+  workflow:
+    container_name: workflowManager
+    depends_on:
+      - "rmq"
+      - "maria"
+    build:
+      context: ../
+      dockerfile: WorkflowManager/Dockerfile
+    env_file:
+      - environment_variables.env
+    networks:
+      - vestec
+    
 
 networks:
   vestec:

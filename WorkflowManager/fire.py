@@ -1,6 +1,4 @@
 import workflow
-import pony.orm as pny
-from db import Incident
 import datetime
 import time
 import sys

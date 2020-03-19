@@ -1,22 +1,28 @@
 import pika
 import functools
 import sys
+sys.path.append("../")
 import json
 import pony.orm as pny
 import uuid
 import datetime
 import time
+import os
 
 try:
-    from .db import db, MessageLog, Incident, initialise_database
+#     from .db import db, MessageLog, Incident, initialise_database, initialiseDatabase
     from . import utils
     from . import persist
     from .lock import atomic, _CleanLock
 except Exception: #ImportError
-    from db import db, MessageLog, Incident, initialise_database
+#     from db import db, MessageLog, Incident, initialise_database, initialiseDatabase
     import utils
     import persist
     from lock import atomic, _CleanLock
+
+
+from Database.workflow import MessageLog, Incident
+from Database import initialiseDatabase
 
 logger = utils.GetLogger(__name__)
 
@@ -33,13 +39,26 @@ def OpenConnection():
     global connection
     global channel
     if connection is None:
-        # Try to open a connection to the rmq server
-        try:
-            print(" [*] Opening connection to RabbitMQ server")
-            connection = pika.BlockingConnection(pika.ConnectionParameters(host="localhost"))
-        except pika.exceptions.AMQPConnectionError as e:
-            logger.critical("Cannot create connection to AMQP server... Maybe it's down?")
-            raise e
+        for i in range(5):
+            # Try to open a connection to the rmq server
+            if "VESTEC_RMQ_SERVER" in os.environ:
+                host = os.environ["VESTEC_RMQ_SERVER"]
+                print("Attempting to connect to RabbitMQ server `%s`"%host)
+            else:
+                logger.warn("Environment variable VESTEC_RMQ_SERVER not set. Defaulting to `localhost`")
+                host="localhost"
+            try:
+                print(" [*] Opening connection to RabbitMQ server")
+                connection = pika.BlockingConnection(pika.ConnectionParameters(host=host))
+            except pika.exceptions.AMQPConnectionError as e:
+                if i<4:
+                    logger.warn("Cannot connect to RabbitMQ server. Will try again in 5 seconds...")
+                    time.sleep(5)
+                else:
+                    logger.critical("Cannot create connection to AMQP server... Maybe it's down?")
+                    raise e
+            else:
+                break
 
         channel = connection.channel()
     else:
@@ -47,7 +66,8 @@ def OpenConnection():
 
 
 # initialise (connect to) the workflow database
-initialise_database()
+#initialise_database()
+initialiseDatabase()
 
 # UUID for this running instance of the consumer (used for debugging when using multiple consumer processes)
 ConsumerID = str(uuid.uuid4())
