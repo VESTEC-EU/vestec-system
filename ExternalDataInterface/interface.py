@@ -119,6 +119,10 @@ def generateDataHandler(dict):
         pollperiod=None
     return DataHandler(queue_name, incident_ID, source_endpoint, pollperiod)
 
+@app.route("/EDImanager/health", methods=["GET"])
+def get_health():
+    return jsonify({"status": 200})
+
 @app.route("/EDImanager/register", methods=["POST"])
 @pny.db_session
 def register_handler():

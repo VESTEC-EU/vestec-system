@@ -23,6 +23,10 @@ import Utils.log as log
 app = Flask("Simulation Manager")
 logger = log.VestecLogger("Simulation Manager")
 
+@app.route("/jobs/health", methods=["GET"])
+def get_health():
+    return jsonify({"status": 200})
+
 @app.route("/jobs/<activity_id>", methods=["POST"])
 @pny.db_session
 def create_activity(activity_id):    

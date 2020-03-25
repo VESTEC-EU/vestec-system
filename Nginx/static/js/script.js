@@ -153,6 +153,7 @@ function generateAdminDropdown() {
   admin_html+="<button class=\"dropbtn\">Admin<i class=\"fa fa-caret-down\"></i></button>";
   admin_html+="<div class=\"admin_dropdown_content\">";
   admin_html+="<div class=\"admin_item\" onClick=\"getLogs()\">Logs</div>";
+  admin_html+="<div class=\"admin_item\" onClick=\"getSystemHealth()\">System health</div>";
   admin_html+="</div></div>";
   return admin_html;
 }
@@ -267,6 +268,41 @@ function loadJobDetails(job) {
     job_html += '</div>';
 
     return job_html;
+}
+
+function getSystemHealth() {
+    $("#nav-home").removeClass("blue");
+    $("#nav-dash").removeClass("blue");
+    $("#nav-logout").removeClass("blue");
+    $("#body-container").load("../templates/health.html");
+    $.ajax({
+        url: "/flask/health",
+        type: "GET",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        success: function(response) {
+            var health = JSON.parse(response);
+            $("#healthTable").append("<tbody>");
+
+            for (item in health) {
+                var health_entry = "<tr>";
+                item = health[item];
+                health_entry += "<td>" + item.name + "</td>";
+                if (item.status == true) {
+                    health_entry += "<td><img src='../img/tick.png' width=32 height=32></td>";
+                } else {
+                    health_entry += "<td><img src='../img/cross.png' width=32 height=32></td>";
+                }
+                health_entry += "</tr>";
+
+                $("#healthTable").append(health_entry);
+            }
+            $("#healthTable").append("</tbody>");
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> Health check failed");
+        }
+    });
 }
 
 function getLogs() {
