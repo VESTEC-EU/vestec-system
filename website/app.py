@@ -17,6 +17,7 @@ from Database.job import Job
 from Database.queues import Queue
 from Database.machine import Machine
 from Database.activity import Activity
+from Database.workflow import RegisteredWorkflow
 from pony.orm.serialization import to_dict
 from flask import Flask, request, jsonify
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
@@ -29,9 +30,10 @@ app = Flask(__name__)  # create an instance if the imported Flask class
 logger = log.VestecLogger("Website")
 
 if "VESTEC_MANAGER_URI" in os.environ:
-    TARGET_URI = os.environ["VESTEC_MANAGER_URI"]
+    JOB_MANAGER_URI = os.environ["VESTEC_MANAGER_URI"]
 else:
-    TARGET_URI = 'http://127.0.0.1:5500/jobs'
+    JOB_MANAGER_URI = 'http://127.0.0.1:5500/jobs'
+    EDI_URL= 'http://127.0.0.1:5501/EDImanager'
 
 # Initialise JWT
 app.config["JWT_SECRET_KEY"] = os.environ["JWT_PASSWD"]
@@ -125,7 +127,7 @@ def submit_job():
     job["creator"] = get_jwt_identity()
     job["job_id"] = str(uuid4())
 
-    job_request = requests.post(TARGET_URI + '/' + job["job_id"], json=job)
+    job_request = requests.post(JOB_MANAGER_URI + '/' + job["job_id"], json=job)
     response = job_request.text
 
     logger.Log(log.LogType.Website, ("Creation of activity %s by %s is %s" % (job["job_name"], job["creator"], response))[:200], user=job["creator"])
@@ -214,6 +216,70 @@ def showLogs():
         logs.append(lg)
 
     return json.dumps(logs)
+
+def getHealthOfComponent(component_name, displayname):
+    bd={}
+    bd["name"]=displayname
+    try:
+        edi_health = requests.get(component_name + '/health')        
+        if edi_health.status_code == 200:
+            bd["status"]=True
+        else:
+            bd["status"]=False
+    except:
+        bd["status"]=False
+    return bd
+
+@app.route('/flask/health', methods=['GET'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def getHealth():
+    component_healths=[]    
+    component_healths.append(getHealthOfComponent(EDI_URL, "External data interface"))    
+    component_healths.append(getHealthOfComponent(JOB_MANAGER_URI, "Simulation manager"))    
+    return json.dumps(component_healths)
+
+@app.route('/flask/deleteworkflow', methods=['POST'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def deleteWorkflow():
+    wf_data = request.json
+    kind = wf_data.get("kind", None)
+    item=RegisteredWorkflow.get(kind=kind)
+    item.delete()
+    pny.commit()    
+    return jsonify({"status": 200, "msg": "Workflow added"})
+
+
+@app.route('/flask/workflowinfo', methods=['GET'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def getWorkflowInfo():
+    workflow_info=[]    
+    registeredworkflows=pny.select(registeredworkflow for registeredworkflow in RegisteredWorkflow)
+    for workflow in registeredworkflows:
+        lg={}
+        lg["kind"]=workflow.kind
+        lg["queuename"]=workflow.init_queue_name
+        workflow_info.append(lg)
+    return json.dumps(workflow_info)
+    
+
+@app.route('/flask/addworkflow', methods=['POST'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def addWorkflow():
+    wf_data = request.json
+    kind = wf_data.get("kind", None)
+    queuename = wf_data.get("queuename", None)
+    newwf = RegisteredWorkflow(kind=kind, init_queue_name=queuename)
+
+    pny.commit()    
+    return jsonify({"status": 200, "msg": "Workflow added"})
 
 
 @app.route("/flask/logout", methods=["DELETE"])

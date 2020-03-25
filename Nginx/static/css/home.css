@@ -123,6 +123,30 @@
   color: white;
 }
 
+#workflowTable {
+  font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+  border-collapse: collapse;
+  width: 90%;
+  margin: 10px;
+}
+
+#workflowTable td, #workflowTable th {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+#workflowTable tr:nth-child(even){background-color: #f2f2f2;}
+
+#workflowTable tr:hover {background-color: #ddd;}
+
+#workflowTable th {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  text-align: left;
+  background-color: #008CBA;
+  color: white;
+}
+
 #dashboard {
   display: inline-flex;
   width: 100%;

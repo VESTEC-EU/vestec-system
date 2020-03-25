@@ -154,6 +154,7 @@ function generateAdminDropdown() {
   admin_html+="<div class=\"admin_dropdown_content\">";
   admin_html+="<div class=\"admin_item\" onClick=\"getLogs()\">Logs</div>";
   admin_html+="<div class=\"admin_item\" onClick=\"getSystemHealth()\">System health</div>";
+  admin_html+="<div class=\"admin_item\" onClick=\"getWorkflows()\">Workflows</div>";
   admin_html+="</div></div>";
   return admin_html;
 }
@@ -268,6 +269,83 @@ function loadJobDetails(job) {
     job_html += '</div>';
 
     return job_html;
+}
+
+function createWorkflow() {
+    var wf = {};
+    wf["kind"] = $("#workflowname").val();
+    wf["queuename"] = $("#workflowqueuename").val();
+    $.ajax({
+        url: "/flask/addworkflow",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(wf),
+        dataType: "json",
+        success: function(response) {
+            getWorkflows();
+        },
+        error: function(response) {
+            $("#confirmation").html("<span>&#10007</span> Error adding workflow");
+            $("#confirmation").removeClass().addClass("button white-btn red-high-btn self-center");
+            $("#confirmation").show();
+        }
+    });
+}
+
+function deleteWorkflow(kind) {
+    var wf = {};
+    wf["kind"] = kind;
+    $.ajax({
+        url: "/flask/deleteworkflow",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(wf),
+        dataType: "json",
+        success: function(response) {
+            getWorkflows();
+        },
+        error: function(response) {
+            $("#confirmation").html("<span>&#10007</span> Error removing workflow");
+            $("#confirmation").removeClass().addClass("button white-btn red-high-btn self-center");
+            $("#confirmation").show();
+        }
+    });
+}
+
+function getWorkflows() {
+    $("#nav-home").removeClass("blue");
+    $("#nav-dash").removeClass("blue");
+    $("#nav-logout").removeClass("blue");
+    $("#body-container").load("../templates/workflows.html");
+
+    $.ajax({
+        url: "/flask/workflowinfo",
+        type: "GET",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        success: function(response) {
+            var workflows = JSON.parse(response);
+            $("#workflowTable").append("<tbody>");
+
+            for (item in workflows) {
+                var wf_entry = "<tr>";
+                item = workflows[item];
+                wf_entry += "<td>" + item.kind + "</td>";
+                wf_entry += "<td>" + item.queuename + "</td>";
+                wf_entry += "<td><img src='../img/cross.png' width=32 height=32 onClick=\"deleteWorkflow('"+item.kind+"')\"></td>";
+                
+                wf_entry += "</tr>";
+
+                $("#workflowTable").append(wf_entry);
+            }
+            $("#workflowTable").append("</tbody>");
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> Workflow retrieval failed");
+        }
+    });
 }
 
 function getSystemHealth() {

@@ -63,4 +63,8 @@ class HandlerLog(db.Entity):
     originator = pny.Required(str)
     data = pny.Required(str)
 
+class RegisteredWorkflow(db.Entity):
+	kind=pny.Required(str)
+	init_queue_name=pny.Required(str)
+
 
