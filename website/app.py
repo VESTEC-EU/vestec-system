@@ -67,8 +67,7 @@ def signup():
 @app.route('/flask/user_type', methods=["GET"])
 @fresh_jwt_required
 def getUserType():
-  username = get_jwt_identity()
-  print(username)
+  username = get_jwt_identity()  
   return jsonify({"status": 200, "access_level": logins.get_user_access_level(username)})
 
 @app.route('/flask/login', methods=['POST'])
@@ -280,6 +279,39 @@ def addWorkflow():
 
     pny.commit()    
     return jsonify({"status": 200, "msg": "Workflow added"})
+
+@app.route('/flask/getallusers', methods=['GET'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def getAllUsers():
+    return json.dumps(logins.get_all_users())
+
+@app.route('/flask/getuser', methods=['POST'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def getUserDetails():
+    user_data = request.json
+    return json.dumps(logins.get_user_details(user_data.get("username", None)))    
+
+@app.route('/flask/edituser', methods=['POST'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def editUserDetails():
+    user_data = request.json    
+    username = user_data.get("username", None)
+    stored_user=User.get(username=username)
+    stored_user.name=user_data.get("name", None)
+    stored_user.email=user_data.get("email", None)
+    if user_data.get("type", None)=="user":
+        stored_user.access_rights=0
+    elif user_data.get("type", None)=="administrator":
+        stored_user.access_rights=1
+    stored_user.enabled=user_data.get("enabled", None)    
+    pny.commit()    
+    return jsonify({"status": 200, "msg": "User edited"})     
 
 
 @app.route("/flask/logout", methods=["DELETE"])

@@ -16,6 +16,36 @@ def get_user_access_level(username):
     return user.access_rights
 
 @pny.db_session
+def get_all_users():
+    user_descriptions=[]
+    users=pny.select(user for user in User)
+    for user in users:
+        if not user == None:
+            user_info={}
+            user_info["username"]=user.username
+            user_info["name"]=user.name
+            user_info["email"]=user.email
+            user_info["access_rights"]=user.access_rights
+            user_info["enabled"]=user.enabled
+            user_descriptions.append(user_info)
+    return user_descriptions
+
+@pny.db_session
+def get_user_details(user):
+    user_descriptions=[]
+    users=[User.get(username=user)]
+    for user in users:
+        if not user == None:
+            user_info={}
+            user_info["username"]=user.username
+            user_info["name"]=user.name
+            user_info["email"]=user.email
+            user_info["access_rights"]=user.access_rights
+            user_info["enabled"]=user.enabled
+            user_descriptions.append(user_info)
+    return user_descriptions
+
+@pny.db_session
 def add_user(username, name, email, password):
     #check if the user already exists
     test_user = User.get(username=username)

@@ -69,6 +69,12 @@
   cursor: pointer;
 }
 
+.link {
+    color:blue;
+    text-decoration:underline;
+    cursor:pointer;
+}
+
 .job-wizard {
   width: 96%;
   margin: 2%;
@@ -140,6 +146,30 @@
 #workflowTable tr:hover {background-color: #ddd;}
 
 #workflowTable th {
+  padding-top: 12px;
+  padding-bottom: 12px;
+  text-align: left;
+  background-color: #008CBA;
+  color: white;
+}
+
+#userTable {
+  font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+  border-collapse: collapse;
+  width: 90%;
+  margin: 10px;
+}
+
+#userTable td, #userTable th {
+  border: 1px solid #ddd;
+  padding: 8px;
+}
+
+#userTable tr:nth-child(even){background-color: #f2f2f2;}
+
+#userTable tr:hover {background-color: #ddd;}
+
+#userTable th {
   padding-top: 12px;
   padding-bottom: 12px;
   text-align: left;

@@ -155,6 +155,7 @@ function generateAdminDropdown() {
   admin_html+="<div class=\"admin_item\" onClick=\"getLogs()\">Logs</div>";
   admin_html+="<div class=\"admin_item\" onClick=\"getSystemHealth()\">System health</div>";
   admin_html+="<div class=\"admin_item\" onClick=\"getWorkflows()\">Workflows</div>";
+  admin_html+="<div class=\"admin_item\" onClick=\"getUsers()\">Users</div>";
   admin_html+="</div></div>";
   return admin_html;
 }
@@ -344,6 +345,104 @@ function getWorkflows() {
         error: function(xhr) {
             $("#confirmation").removeClass().addClass("button red self-center");
             $("#confirmation").html("<span>&#10007</span> Workflow retrieval failed");
+        }
+    });
+}
+
+function getUsers() {
+    $("#nav-home").removeClass("blue");
+    $("#nav-dash").removeClass("blue");
+    $("#nav-logout").removeClass("blue");
+    $("#body-container").load("../templates/users.html");   
+
+    $.ajax({
+        url: "/flask/getallusers",
+        type: "GET",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        success: function(response) {
+            var users = JSON.parse(response);
+            $("#userTable").append("<tbody>");
+
+            for (item in users) {
+                var user_entry = "<tr>";
+                item = users[item];
+                user_entry += "<td><span class=\"link\" onclick=\"manageUser('"+item.username+"');\">" + item.username + "</span></td>";
+                user_entry += "<td>" + item.name + "</td>";
+                user_entry += "<td>" + item.email + "</td>";
+                if (item.access_rights == 0) {
+                    user_entry += "<td>user</td>";
+                } else if (item.access_rights == 1) {
+                    user_entry += "<td>administrator</td>";
+                }
+                
+                user_entry += "<td></td>";
+                
+                user_entry += "</tr>";
+
+                $("#userTable").append(user_entry);
+            }
+            $("#userTable").append("</tbody>");
+            $("#userDetails").hide();
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> User retrieval failed");
+        }
+    });
+}
+
+function manageUser(username) {
+    var wf = {};
+    wf["username"] = username;
+    $.ajax({
+        url: "/flask/getuser",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(wf),
+        dataType: "json",
+        success: function(response) {
+            var users = JSON.parse(JSON.stringify(response));
+            user=users[0]
+            $('#usernameh2').text(user.username);
+            $('#name').val(user.name)
+            $('#email').val(user.email)
+            if (user.access_rights == 0) {
+                $('#type').val("user");
+            } else if (user.access_rights == 1) {
+                $('#type').val("administrator");
+            }
+            $('#enabled').prop('checked', user.enabled);
+            $("#userTable").hide();
+            $("#userDetails").show();
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> User retrieval failed");
+        }
+    });
+}
+
+function editUser() {
+    var wf = {};
+    wf["username"] = $("#usernameh2").text();
+    wf["name"] = $("#name").val();
+    wf["email"] = $("#email").val();
+    wf["type"] = $("#type").val();
+    wf["enabled"] = $("#enabled").prop('checked');
+    $.ajax({
+        url: "/flask/edituser",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(wf),
+        dataType: "json",
+        success: function(response) {
+            getUsers();
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> User edit failed");
         }
     });
 }
