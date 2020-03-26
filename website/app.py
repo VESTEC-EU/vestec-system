@@ -249,7 +249,7 @@ def deleteWorkflow():
     item=RegisteredWorkflow.get(kind=kind)
     item.delete()
     pny.commit()    
-    return jsonify({"status": 200, "msg": "Workflow added"})
+    return jsonify({"status": 200, "msg": "Workflow deleted"})
 
 
 @app.route('/flask/workflowinfo', methods=['GET'])
