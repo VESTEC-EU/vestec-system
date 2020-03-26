@@ -391,9 +391,64 @@ function getUsers() {
     });
 }
 
+function addWorkflowToUser() {
+    var data = {};
+    var username=$('#usernameh2').text();
+    data["username"] = username;
+    data["workflow"] = $('#all_registeredworkflows').val();
+    $.ajax({
+        url: "/flask/addusertoworkflow",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(data),
+        dataType: "json",
+        success: function(response) {
+            manageUser(username);
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> User edit failed");
+        }
+    });
+}
+
+function removeWorkflowFromUser() {
+    var data = {};
+    var username=$('#usernameh2').text();
+    data["username"] = username;
+    data["workflow"] = $('#registeredworkflows_users').val();
+    $.ajax({
+        url: "/flask/removeuserfromworkflow",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(data),
+        dataType: "json",
+        success: function(response) {
+            manageUser(username);
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> User edit failed");
+        }
+    });
+}
+
 function manageUser(username) {
     var wf = {};
     wf["username"] = username;
+    var workflows;
+    var users;
+    $.when(
+    $.ajax({
+        url: "/flask/workflowinfo",
+        type: "GET",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        success: function(response) {
+            workflows = JSON.parse(response);
+        }
+    }),
     $.ajax({
         url: "/flask/getuser",
         type: "POST",
@@ -402,24 +457,36 @@ function manageUser(username) {
         data: JSON.stringify(wf),
         dataType: "json",
         success: function(response) {
-            var users = JSON.parse(JSON.stringify(response));
-            user=users[0]
-            $('#usernameh2').text(user.username);
-            $('#name').val(user.name)
-            $('#email').val(user.email)
-            if (user.access_rights == 0) {
-                $('#type').val("user");
-            } else if (user.access_rights == 1) {
-                $('#type').val("administrator");
-            }
-            $('#enabled').prop('checked', user.enabled);
-            $("#userTable").hide();
-            $("#userDetails").show();
+            users = JSON.parse(JSON.stringify(response));            
         },
         error: function(xhr) {
             $("#confirmation").removeClass().addClass("button red self-center");
             $("#confirmation").html("<span>&#10007</span> User retrieval failed");
         }
+    })
+    ).then(function() {
+        user=users[0]
+        $('#usernameh2').text(user.username);
+        $('#name').val(user.name)
+        $('#email').val(user.email)
+        if (user.access_rights == 0) {
+            $('#type').val("user");
+        } else if (user.access_rights == 1) {
+            $('#type').val("administrator");
+        }
+        $('#enabled').prop('checked', user.enabled);
+        $("#registeredworkflows_users").empty();
+        for (wf in user.workflows) {
+            wf=user.workflows[wf];
+            $("#registeredworkflows_users").append($('<option>', {value:wf, text: wf}))
+        }
+        $("#all_registeredworkflows").empty();
+        for (wf in workflows) {
+            wf=workflows[wf].kind;
+            $("#all_registeredworkflows").append("<option value='"+wf+"'>"+wf+"</option>");
+        }
+        $("#userTable").hide();
+        $("#userDetails").show();
     });
 }
 

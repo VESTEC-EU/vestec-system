@@ -27,6 +27,9 @@ def get_all_users():
             user_info["email"]=user.email
             user_info["access_rights"]=user.access_rights
             user_info["enabled"]=user.enabled
+            user_info["workflows"]=[]
+            for wf in user.allowed_workflows:
+                user_info["workflows"].append(wf.kind)
             user_descriptions.append(user_info)
     return user_descriptions
 
@@ -42,6 +45,9 @@ def get_user_details(user):
             user_info["email"]=user.email
             user_info["access_rights"]=user.access_rights
             user_info["enabled"]=user.enabled
+            user_info["workflows"]=[]
+            for wf in user.allowed_workflows:
+                user_info["workflows"].append(wf.kind)
             user_descriptions.append(user_info)
     return user_descriptions
 

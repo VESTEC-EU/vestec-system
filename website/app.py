@@ -311,7 +311,36 @@ def editUserDetails():
         stored_user.access_rights=1
     stored_user.enabled=user_data.get("enabled", None)    
     pny.commit()    
-    return jsonify({"status": 200, "msg": "User edited"})     
+    return jsonify({"status": 200, "msg": "User edited"})
+
+@app.route('/flask/addusertoworkflow', methods=['POST'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def addUserToWorkflow():
+    user_data = request.json    
+    username = user_data.get("username", None)
+    workflow_kind = user_data.get("workflow", None)
+    user=User.get(username=username)
+    workflow=RegisteredWorkflow.get(kind=workflow_kind)
+    user.allowed_workflows.add(workflow)
+    pny.commit()    
+    return jsonify({"status": 200, "msg": "Workflow added"})   
+
+@app.route('/flask/removeuserfromworkflow', methods=['POST'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def removeUserFromWorkflow():
+    user_data = request.json    
+    username = user_data.get("username", None)
+    workflow_kind = user_data.get("workflow", None)[0]    
+    user=User.get(username=username)    
+    for item in user.allowed_workflows:        
+        if (item.kind == workflow_kind):            
+            user.allowed_workflows.remove(item);    
+    pny.commit()    
+    return jsonify({"status": 200, "msg": "Workflow removed"})
 
 
 @app.route("/flask/logout", methods=["DELETE"])

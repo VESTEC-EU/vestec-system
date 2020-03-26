@@ -66,5 +66,4 @@ class HandlerLog(db.Entity):
 class RegisteredWorkflow(db.Entity):
 	kind=pny.Required(str)
 	init_queue_name=pny.Required(str)
-
-
+	users = pny.Set("User")
