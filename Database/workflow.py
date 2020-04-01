@@ -21,12 +21,11 @@ class MessageLog(db.Entity):
     src_tag = pny.Optional(str) #optional name for the sender (for workflow graph visualisation)
     dest_tag = pny.Optional(str) #optional name for the reciever (for workflow graph visualisation)
 
-
 class Incident(db.Entity):
     uuid = pny.PrimaryKey(str)
     kind = pny.Required(str)
     name = pny.Required(str)
-    status = pny.Required(str, default="ACTIVE")
+    status = pny.Required(str, default="PENDING")
     comment = pny.Optional(str)
     user_id = pny.Optional(User)
 

@@ -107,7 +107,7 @@ def CreateIncident(name, kind, incident_date=None, user_id=None):
 @pny.db_session
 def _IsActive(IncidentID):
     try:
-        return Incident[IncidentID].status == "ACTIVE"
+        return Incident[IncidentID].status == "ACTIVE" or Incident[IncidentID].status == "PENDING"
     except pny.core.ObjectNotFound as e:
         logger.error("_IsActive: Unknown IncidentID %s" % (IncidentID))
         raise Exception("_IsActive: Unknown IncidentID %s" % (IncidentID)) from None
@@ -129,7 +129,7 @@ def Cancel(
     except pny.core.ObjectNotFound as e:
         logger.error("workflow.cancel: Unknown IncidentID %s" % IncidentID)
         raise Exception("workflow.cancel: Unknown IncidentID %s" % IncidentID) from None
-    if incident.status != "ACTIVE":
+    if incident.status != "ACTIVE" and incident.status != "PENDING":
         # incident is already not active, don't need to do anything here besides print message
         logger.warning(
             "Tried to cancel %s but it is inactive with status %s"
@@ -165,7 +165,7 @@ def Complete(
             "workflow.Complete: Unknown IncidentID %s" % IncidentID
         ) from None
 
-    if incident.status != "ACTIVE":
+    if incident.status != "ACTIVE" and incident.status != "PENDING":
         # incident is already not active, don't need to do anything here besides print message
         logger.warn(
             "Tried to complete %s but it is inactive with status %s"
