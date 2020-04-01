@@ -14,8 +14,9 @@ function checkAuth() {
             headers: {'Authorization': 'Bearer ' + jwt_token},
             success: function(response) {
                 if (response.status == 200) {                    
-                    $("#body").load("../templates/loggedin.html");
-                    generateNavigationBar();
+                    $("#body").load("../templates/loggedin.html", function() {
+                        generateNavigationBar();
+                    });                    
                 } else {
                     window.location.href = "/login";
                 }
@@ -81,7 +82,7 @@ function getJobWizard() {
     $("#nav-home").removeClass("blue");
     $("#nav-logout").removeClass("blue");
     $("#nav-dash").addClass("blue");
-    $("#body-container").load("../templates/createJobWizard.html");
+    $("#body-container").load("../templates/createJobWizard.html", function() {
     $.ajax({
         url: "/flask/getmyworkflows",
         type: "GET",
@@ -98,6 +99,7 @@ function getJobWizard() {
             $("#confirmation").removeClass().addClass("button red self-center");
             $("#confirmation").html("<span>&#10007</span> User workflow lookup failed");
         }
+    });
     });
 }
 
@@ -357,7 +359,7 @@ function getWorkflows() {
     $("#nav-home").removeClass("blue");
     $("#nav-dash").removeClass("blue");
     $("#nav-logout").removeClass("blue");
-    $("#body-container").load("../templates/workflows.html");
+    $("#body-container").load("../templates/workflows.html", function() {
 
     $.ajax({
         url: "/flask/workflowinfo",
@@ -384,6 +386,7 @@ function getWorkflows() {
             $("#confirmation").removeClass().addClass("button red self-center");
             $("#confirmation").html("<span>&#10007</span> Workflow retrieval failed");
         }
+    });
     });
 }
 
@@ -556,7 +559,7 @@ function getSystemHealth() {
     $("#nav-home").removeClass("blue");
     $("#nav-dash").removeClass("blue");
     $("#nav-logout").removeClass("blue");
-    $("#body-container").load("../templates/health.html");
+    $("#body-container").load("../templates/health.html", function() {
     $.ajax({
         url: "/flask/health",
         type: "GET",
@@ -585,13 +588,14 @@ function getSystemHealth() {
             $("#confirmation").html("<span>&#10007</span> Health check failed");
         }
     });
+    });
 }
 
 function getLogs() {
     $("#nav-home").removeClass("blue");
     $("#nav-dash").removeClass("blue");
     $("#nav-logout").removeClass("blue");
-    $("#body-container").load("../templates/logs.html");
+    $("#body-container").load("../templates/logs.html", function() {
 
     $.ajax({
         url: "/flask/logs",
@@ -620,6 +624,7 @@ function getLogs() {
             $("#confirmation").removeClass().addClass("button red self-center");
             $("#confirmation").html("<span>&#10007</span> Logs check failed");
         }
+    });
     });
 }
 
