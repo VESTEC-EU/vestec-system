@@ -30,8 +30,7 @@ function checkAuth() {
 
 $("#checkJobStatus").hide();
 
-$(function() {
-    //$("#body-container").load("../templates/createJobWizard.html");
+$(function() {    
     getJobsDashboard();
 });
 
@@ -179,17 +178,35 @@ function generateAdminDropdown() {
 function getJobsDashboard() {
     $("#nav-dash").removeClass("blue");
     $("#nav-logout").removeClass("blue");
-    $("#nav-home").addClass("blue");
+    $("#nav-home").addClass("blue");    
+
+    pending_filter=getDashboardFilterValue("pending_incidents", true);
+    active_filter=getDashboardFilterValue("active_incidents", true);
+    completed_filter=getDashboardFilterValue("completed_incidents", false);
+    cancelled_filter=getDashboardFilterValue("cancelled_incidents", false);
+    error_filter=getDashboardFilterValue("error_incidents", false);
+    archived_filter=getDashboardFilterValue("archived_incidents", false);
     $("#body-container").html("");
+
+    var filter_dict = {};
+    filter_dict["pending"] = pending_filter;
+    filter_dict["active"] = active_filter;
+    filter_dict["completed"] = completed_filter;
+    filter_dict["cancelled"] = cancelled_filter;
+    filter_dict["error"] = error_filter;
+    filter_dict["archived"] = archived_filter;
 
     $.ajax({
         url: "/flask/getincidents",
-        type: "GET",
+        type: "POST",
         headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(filter_dict),
+        dataType: "json",
         success: function(response) {
             if (response.status == 200) {
                 all_incidents = JSON.parse(response.incidents);
-                loadIncidentCards(all_incidents);
+                loadIncidentCards(all_incidents, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter);
             } else {
                 console.log({"status": 400, "msg": "Sorry, there seems to be a problem with the extraction of activities."});
             }
@@ -200,10 +217,42 @@ function getJobsDashboard() {
     });
 }
 
-function loadIncidentCards(incidents) {
+function getDashboardFilterValue(identifier, default_val) {    
+    if ($("#"+identifier).length) return $('#'+identifier).prop("checked");
+    return default_val;
+}
+
+function generateDashboardFilterBar(pending_checked, active_checked, completed_checked, cancelled_checked, error_checked, archived_checked) {
+    var filter_bar = '<div class="jobDetails self-center" style="display: flex;">';
+    filter_bar+='<div style="margin-right: 10px;"><input type="checkbox" id="pending_incidents" ';
+    if (pending_checked) filter_bar+="checked ";
+    filter_bar+='onclick="getJobsDashboard()"><label for="pending_incidents">Pending</label></div>';
+    filter_bar+='<div style="margin-right: 10px;"><input type="checkbox" id="active_incidents" ';
+    if (active_checked) filter_bar+="checked ";    
+    filter_bar+='onclick="getJobsDashboard()"><label for="active_incidents">Active</label></div>';    
+    filter_bar+='<div style="margin-right: 10px;"><input type="checkbox" id="completed_incidents" ';
+    if (completed_checked) filter_bar+="checked ";    
+    filter_bar+='onclick="getJobsDashboard()"><label for="completed_incidents">Completed</label></div>';    
+    filter_bar+='<div style="margin-right: 10px;"><input type="checkbox" id="cancelled_incidents" ';
+    if (cancelled_checked) filter_bar+="checked ";    
+    filter_bar+='onclick="getJobsDashboard()"><label for="cancelled_incidents">Cancelled</label></div>';
+    filter_bar+='<div style="margin-right: 10px;"><input type="checkbox" id="error_incidents" ';
+    if (error_checked) filter_bar+="checked ";    
+    filter_bar+='onclick="getJobsDashboard()"><label for="error_incidents">Error</label></div>';
+    filter_bar+='<div style="margin-right: 10px;"><input type="checkbox" id="archived_incidents" ';
+    if (archived_checked) filter_bar+="checked ";    
+    filter_bar+='onclick="getJobsDashboard()"><label for="archived_incidents">Archived</label></div>';
+    filter_bar+="</div>";
+    return filter_bar;
+}
+
+function loadIncidentCards(incidents, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter) {
     // order = string; if "ASC", the list of jobs is loaded in ascending order, if "DESC", in descending order
     $.get("../templates/jobCard.html", function(template) {
         $('<div id="dashboard" class="w3-container">').appendTo("#body-container");
+
+        
+        $("#dashboard").append(generateDashboardFilterBar(pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter));
 
         for (incident in incidents) {
             createIncidentCard(template, incidents[incident]);

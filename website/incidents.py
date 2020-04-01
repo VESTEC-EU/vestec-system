@@ -51,12 +51,34 @@ def activateIncident(incident_uuid, user):
     except pny.core.ObjectNotFound as e:        
         return False
 
+def doesStoredIncidentMatchFilter(stored_incident, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter):
+    if stored_incident.status=="PENDING":
+        if pending_filter: return True        
+        return False
+    if stored_incident.status=="ACTIVE":
+        if active_filter: return True        
+        return False
+    if stored_incident.status=="COMPLETED":
+        if completed_filter: return True        
+        return False
+    if stored_incident.status=="CANCELLED":
+        if cancelled_filter: return True        
+        return False
+    if stored_incident.status=="ERROR":
+        if error_filter: return True        
+        return False
+    if stored_incident.status=="ARCHIVED":
+        if archived_filter: return True        
+        return False
+    return False
+
 @pny.db_session
-def retrieveMyIncidents(username):
+def retrieveMyIncidents(username, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter):
     incidents=[]
     user = User.get(username=username)
-    for stored_incident in user.incidents:        
-        incidents.append(packageIncident(stored_incident))
+    for stored_incident in user.incidents:
+        if doesStoredIncidentMatchFilter(stored_incident, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter):
+            incidents.append(packageIncident(stored_incident))
     return incidents
 
 @pny.db_session
