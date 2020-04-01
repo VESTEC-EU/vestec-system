@@ -59,7 +59,7 @@ def doesStoredIncidentMatchFilter(stored_incident, pending_filter, active_filter
     if stored_incident.status=="ACTIVE":
         if active_filter: return True        
         return False
-    if stored_incident.status=="COMPLETED":
+    if stored_incident.status=="COMPLETE":
         if completed_filter: return True        
         return False
     if stored_incident.status=="CANCELLED":
