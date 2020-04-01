@@ -448,7 +448,7 @@ def _RequestCleanup(
 # Handler for a cleanup message to clean up a given incident.
 @pny.db_session
 def _Cleanup(ch, method, properties, body):
-    msg = json.loads(body)
+    msg = json.loads(body.decode('ascii'))
     IncidentID = msg["IncidentID"]
 
     messages = pny.select(
