@@ -266,7 +266,8 @@ function loadIncidentDetails(incident) {
     if (incident.status == "PENDING") {
         incident_html += "<button id=\"stopincident\" class=\"button blue self-center\" onClick=\"activateIncident(\'"+incident.uuid+"\')\">Activate Incident</button>";
     }
-    incident_html += '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button id="stopincident" class="button blue self-center" onClick="">Cancel Incident</button></div>';
+    incident_html += '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button id="stopincident" class="button blue self-center" onClick="">Cancel Incident</button>';
+    incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" onClick=\"getIncidentDetails(\'"+incident.uuid+"\')\">Refresh Status</button></div>";
 
     return incident_html;
 }
