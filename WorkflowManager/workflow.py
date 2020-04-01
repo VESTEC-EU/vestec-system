@@ -79,7 +79,7 @@ _sendqueue = []
 Persist = persist._Persist()
 
 # Creates an incident in the database. Returns the ncidentID
-def CreateIncident(name, kind, incident_date=None):
+def CreateIncident(name, kind, incident_date=None, user_id=None):
 
     # get uuid for this event and set up some basic (dummy) parameters
     id = str(uuid.uuid4())
@@ -95,6 +95,7 @@ def CreateIncident(name, kind, incident_date=None):
             name=name,
             date_started=date_started,
             incident_date=incident_date,
+            user_id=user_id,
         )
 
     logger.info("Created incident %s" % id)

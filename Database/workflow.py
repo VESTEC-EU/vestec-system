@@ -1,5 +1,6 @@
 import pony.orm as pny
 from Database import db
+from Database.users import User
 import datetime
 import uuid
 
@@ -27,6 +28,7 @@ class Incident(db.Entity):
     name = pny.Required(str)
     status = pny.Required(str, default="ACTIVE")
     comment = pny.Optional(str)
+    user_id = pny.Optional(User)
 
     date_started = pny.Required(datetime.datetime)
     date_completed = pny.Optional(datetime.datetime)

@@ -181,13 +181,13 @@ function getJobsDashboard() {
     $("#body-container").html("");
 
     $.ajax({
-        url: "/flask/jobs",
+        url: "/flask/getincidents",
         type: "GET",
         headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
         success: function(response) {
             if (response.status == 200) {
-                all_activities = JSON.parse(response.activities);
-                loadActivityCards("DESC");
+                all_incidents = JSON.parse(response.incidents);
+                loadIncidentCards(all_incidents);
             } else {
                 console.log({"status": 400, "msg": "Sorry, there seems to be a problem with the extraction of activities."});
             }
@@ -198,80 +198,59 @@ function getJobsDashboard() {
     });
 }
 
-function loadActivityCards(order) {
+function loadIncidentCards(incidents) {
     // order = string; if "ASC", the list of jobs is loaded in ascending order, if "DESC", in descending order
     $.get("../templates/jobCard.html", function(template) {
         $('<div id="dashboard" class="w3-container">').appendTo("#body-container");
 
-        activities_length = Object.keys(all_activities).length
-
-        if (order == "ASC") {
-            for (i=0; i<activities_length; i++) {
-                createActivityCard(template, i);
-            }
-        } else {
-            for (i=activities_length-1; i>=0; i--) {
-                createActivityCard(template, i);
-            }
+        for (incident in incidents) {
+            createIncidentCard(template, incidents[incident]);
         }
 
         $('</div>').appendTo("#body-container");
     });
 }
 
-function createActivityCard(template, index) {
-    var activity = all_activities["activity" + index];
+function createIncidentCard(template, incident) {    
     var card = $(template)[0];
-    $(card).attr("id", "card_" + index);
-    $(card).find("#cardTitle").html(activity.activity_name);
-
-    try {
-        machines = activity.machines;
-    } catch(error) {
-        machines = "PENDING..."
-    }
-
-    $(card).find("#cardBody").html("<p><b>Machines: </b>" + machines.join(", ") + "</p><p><b>Submitted on: </b>" + activity.date_submitted + "</p><p><b>No. Jobs: </b>" + activity.jobs + "</p>");
-    $(card).find("#cardStatus").html(activity.status);
-    $(card).find("#viewDetails").attr('onClick', "getJobDetails(" + index + ")");
-    $(card).find("#cardTitle").attr('onClick', "getJobDetails(" + index + ")");
+    //$(card).attr("id", "card_" + index);
+    $(card).find("#cardTitle").html(incident.name);
+    
+    $(card).find("#cardBody").html("<p><b>Kind: </b>" + incident.kind + "</p><p><b>Incident on: </b>" + incident.incident_date + "</p><p><b>Created by: </b>" + incident.creator+"</p>");
+    $(card).find("#cardStatus").html(incident.status);
+    $(card).find("#viewDetails").attr('onClick', "getIncidentDetails(\"" + incident.uuid + "\")");
+    $(card).find("#cardTitle").attr('onClick', "getIncidentDetails(\"" + incident.uuid + "\")");
     $("#dashboard").append(card);
 }
 
-function getJobDetails(index) {
-    $("#nav-dash").removeClass("blue");
-    activity = all_activities["activity" + index];
+function getIncidentDetails(incident_uuid) {
+    $("#nav-home").removeClass("blue");    
 
     $.ajax({
-        url: "/flask/job/" + activity["activity_id"],
+        url: "/flask/incident/" + incident_uuid,
         type: "GET",
         headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
         success: function(response) {
-            activity_jobs = JSON.parse(response);
-
-            for (job in activity_jobs) {
-                $("#body-container").html(loadJobDetails(activity_jobs[job]));
-            }
-
-            if (($("#nav-home").hasClass("blue")) && (current_job.status !== "COMPLETED")) {
-                setTimeout(getCurrentJobStatus, 5000);
-            } else {
-                console.log("finished");
-            }
+            incident_details = JSON.parse(response.incident);            
+            $("#body-container").html(loadIncidentDetails(incident_details));            
         },
         error: function(xhr) {
             $("#confirmation").removeClass().addClass("button red self-center");
-            $("#confirmation").html("<span>&#10007</span> Job status check failed");
+            $("#confirmation").html("<span>&#10007</span> Incident detail retrieval failed");
         }
     });
 }
 
-function loadJobDetails(job) {
+function loadIncidentDetails(incident) {
     var job_html = '<div class="jobDetails self-center">';
-    job_html += '<div class="jobLine"><b>Machine: </b><div id="jobMachine">' + job.machine + '</div></div>';
-    job_html += '<div class="jobLine"><b>Queue: </b><div id="jobQueue">' + job.queue + '</div></div>';
-    job_html += '<div class="jobLine"><b>Date: </b><div id="jobSubmit">' + job.submit_time + '</div></div>';
+    job_html += '<div class="jobLine"><b>UUID: </b><div>' + incident.uuid + '</div></div>';
+    job_html += '<div class="jobLine"><b>Name: </b><div>' + incident.name + '</div></div>';
+    job_html += '<div class="jobLine"><b>Kind: </b><div>' + incident.kind + '</div></div>';
+    job_html += '<div class="jobLine"><b>Created On: </b><div>' + incident.incident_date + '</div></div>';
+    job_html += '<div class="jobLine"><b>Created By: </b><div>' + incident.creator + '</div></div>';
+    job_html += '<div class="jobLine"><b>Status: </b><div>' + incident.status + '</div></div>';
 
+    /*
     if (job.status == "QUEUED") {
         job_html += '<div class="jobLine"><b>Status: </b><button id="jobStatus" class="button amber self-right">' + job.status + '</button></div>';
     } else if (job.status == "RUNNING") {
@@ -281,6 +260,7 @@ function loadJobDetails(job) {
     } else {
         job_html += '<div class="jobLine"><b>Status: </b><button id="jobStatus" class="button blue self-right">' + job.status + '</button></div>';
     }
+    */
 
     job_html += '</div>';
 

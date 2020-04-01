@@ -12,6 +12,7 @@ class User(db.Entity):
     enabled = pny.Required(bool, default=False, sql_default='0')
 
     activities = pny.Set("Activity", cascade_delete=True)
+    incidents = pny.Set("Incident")
     allowed_workflows=pny.Set("RegisteredWorkflow")
 
     pny.PrimaryKey(user_id, username)
