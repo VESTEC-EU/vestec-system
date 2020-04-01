@@ -242,13 +242,13 @@ function getIncidentDetails(incident_uuid) {
 }
 
 function loadIncidentDetails(incident) {
-    var job_html = '<div class="jobDetails self-center">';
-    job_html += '<div class="jobLine"><b>UUID: </b><div>' + incident.uuid + '</div></div>';
-    job_html += '<div class="jobLine"><b>Name: </b><div>' + incident.name + '</div></div>';
-    job_html += '<div class="jobLine"><b>Kind: </b><div>' + incident.kind + '</div></div>';
-    job_html += '<div class="jobLine"><b>Created On: </b><div>' + incident.incident_date + '</div></div>';
-    job_html += '<div class="jobLine"><b>Created By: </b><div>' + incident.creator + '</div></div>';
-    job_html += '<div class="jobLine"><b>Status: </b><div>' + incident.status + '</div></div>';
+    var incident_html = '<div class="jobDetails self-center">';
+    incident_html += '<div class="jobLine"><b>UUID: </b><div>' + incident.uuid + '</div></div>';
+    incident_html += '<div class="jobLine"><b>Name: </b><div>' + incident.name + '</div></div>';
+    incident_html += '<div class="jobLine"><b>Kind: </b><div>' + incident.kind + '</div></div>';
+    incident_html += '<div class="jobLine"><b>Created On: </b><div>' + incident.incident_date + '</div></div>';
+    incident_html += '<div class="jobLine"><b>Created By: </b><div>' + incident.creator + '</div></div>';
+    incident_html += '<div class="jobLine"><b>Status: </b><div>' + incident.status + '</div></div>';
 
     /*
     if (job.status == "QUEUED") {
@@ -262,9 +262,9 @@ function loadIncidentDetails(incident) {
     }
     */
 
-    job_html += '</div>';
+    incident_html += '</div><div class="jobDetails self-center"><button id="stopincident" class="button blue self-center" onClick="">Cancel Incident</button></div>';
 
-    return job_html;
+    return incident_html;
 }
 
 function createWorkflow() {
