@@ -27,6 +27,7 @@ input[type=text]:focus, input[type=password]:focus, input[type=email] {
   font-size: 14px;
   border-radius: 3px;
   margin: 5px;
+  cursor:pointer;
 }
 
 a:link {
