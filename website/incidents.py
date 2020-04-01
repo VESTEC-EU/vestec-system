@@ -26,6 +26,7 @@ def packageIncident(stored_incident):
     if (stored_incident.date_completed is not None):
         incident["date_completed"]=stored_incident.date_completed.strftime("%d/%m/%Y, %H:%M:%S")
     incident["incident_date"]=stored_incident.incident_date.strftime("%d/%m/%Y, %H:%M:%S")
+    incident["srt_key"]=stored_incident.incident_date
     return incident
 
 @pny.db_session
@@ -79,7 +80,10 @@ def retrieveMyIncidents(username, pending_filter, active_filter, completed_filte
     for stored_incident in user.incidents:
         if doesStoredIncidentMatchFilter(stored_incident, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter):
             incidents.append(packageIncident(stored_incident))
-    return incidents
+    sorted_incidents=sorted(incidents, key = lambda i: (i['status'], i['srt_key']),reverse=True)
+    for d in sorted_incidents:
+        del d['srt_key']
+    return sorted_incidents
 
 @pny.db_session
 def retrieveIncident(incident_uuid, username):    
