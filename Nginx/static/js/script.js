@@ -81,43 +81,55 @@ function getJobWizard() {
     $("#nav-logout").removeClass("blue");
     $("#nav-dash").addClass("blue");
     $("#body-container").load("../templates/createJobWizard.html");
+    $.ajax({
+        url: "/flask/getmyworkflows",
+        type: "GET",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        success: function(response) {            
+            var workflows = JSON.parse(response);
+            $("#incidentType").empty();
+            for (item in workflows) {
+                item = workflows[item];                                                   
+                $("#incidentType").append("<option value='"+item+"'>"+item+"</option>");                
+            }            
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> User workflow lookup failed");
+        }
+    });
 }
 
 function submitJob() {
     var job = {}
-    job["job_name"] = $("#userInput").val();
-
-    if (job["job_name"] == "") {
-        $("#confirmation").html("<span>&#9888</span> Please enter a job name.");
-        $("#confirmation").removeClass().addClass("button white-btn amber-high-btn self-center");
-        $("#confirmation").show();
-    } else {
-        $.ajax({
-            url: "/flask/submit",
-            type: "POST",
-            headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
-            contentType: "application/json",
-            data: JSON.stringify(job),
-            dataType: "json",
-            success: function(response) {
-                if (response.status == "201") {
-                    $("#userInput").val('');
-                    $("#confirmation").html("<span>&#10003</span>" + response.msg);
-                    $("#confirmation").removeClass().addClass("button white-btn green-high-btn self-center");
-                    $("#confirmation").show();
-                } else {
-                    $("#confirmation").html("<span>&#10007</span>" + response.msg);
-                    $("#confirmation").removeClass().addClass("button white-btn amber-high-btn self-center");
-                    $("#confirmation").show();
-                }
-            },
-            error: function(response) {
-                $("#confirmation").html("<span>&#10007</span> Sorry, there seems to be a problem with our system.");
-                $("#confirmation").removeClass().addClass("button white-btn red-high-btn self-center");
+    job["incidentType"] = $("#incidentType").val();
+    job["incidentName"] = $("#incidentName").val();
+    
+    $.ajax({
+        url: "/flask/createincident",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(job),
+        dataType: "json",
+        success: function(response) {
+            if (response.status == "201") {
+                $("#userInput").val('');
+                $("#confirmation").html("<span>&#10003</span>" + response.msg);
+                $("#confirmation").removeClass().addClass("button white-btn green-high-btn self-center");
+                $("#confirmation").show();
+            } else {
+                $("#confirmation").html("<span>&#10007</span>" + response.msg);
+                $("#confirmation").removeClass().addClass("button white-btn amber-high-btn self-center");
                 $("#confirmation").show();
             }
-        });
-    }
+        },
+        error: function(response) {
+            $("#confirmation").html("<span>&#10007</span> Error creating new incident");
+            $("#confirmation").removeClass().addClass("button white-btn red-high-btn self-center");
+            $("#confirmation").show();
+        }
+    });
 }
 
 function generateNavigationBar() {

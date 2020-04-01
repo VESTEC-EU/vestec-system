@@ -1,10 +1,11 @@
 <div id="job-wizard" style="display:flex;">
     <div class="contents-center" style="width:80%;">
-        <h2>Please enter a job name</h2>
-        <input type="text" id="userInput" placeholder="Enter a job name to submit...">
+        <h2>Create a new incident</h2>
+        <select id="incidentType"></select>  
+        <input type="text" id="incidentName" placeholder="Enter name of incident">      
         
         <div class="inline">
-            <button id="submitJob" class="button blue self-center" onClick="submitJob()">Submit Job</button>
+            <button id="submitJob" class="button blue self-center" onClick="submitJob()">Create incident</button>
             <!--<button id="checkJobStatus" class="button blue self-center" onClick="getCurrentJobStatus()">Check Job Status</button>-->
         </div>
         <button id="confirmation" class="button amber self-center" style="margin-top:5px;display:none;"></div>

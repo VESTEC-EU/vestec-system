@@ -52,6 +52,16 @@ def get_user_details(user):
     return user_descriptions
 
 @pny.db_session
+def get_allowed_workflows(user):
+    workflows=[]
+    users=[User.get(username=user)]
+    for user in users:
+        if not user == None:
+            for wf in user.allowed_workflows:
+                workflows.append(wf.kind)
+    return workflows
+
+@pny.db_session
 def add_user(username, name, email, password):
     #check if the user already exists
     test_user = User.get(username=username)

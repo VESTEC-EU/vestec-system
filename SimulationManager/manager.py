@@ -11,6 +11,7 @@ from Database.generate_db import initialiseStaticInformation
 from Database.machine import Machine
 from Database.queues import Queue
 from Database.users import User
+from Database.workflow import RegisteredWorkflow
 from Database.job import Job, JobStatus
 from Database.activity import Activity, ActivityStatus
 import datetime
@@ -31,7 +32,7 @@ def get_health():
 @pny.db_session
 def create_activity(activity_id):    
     data = dict = request.get_json()
-    name = data["job_name"]
+    name = data["incidentName"]
     creator = data["creator"]
 
     activity_creation = ""
@@ -48,10 +49,10 @@ def create_activity(activity_id):
         thread = threading.Thread(target=task, args=(activity_id,), name=activity_id)
         thread.start()
 
-        return jsonify({"status": 201, "msg": "Activity successfully created."})
+        return jsonify({"status": 201, "msg": "Incident successfully created."})
     except Exception as e:
         logger.Log(type=log.LogType.Activity, comment=str(e)[:200], user=creator)
-        return jsonify({"status": 400, "msg": "Activity details incorrect."})
+        return jsonify({"status": 400, "msg": "Incident details incorrect."})
 
 
 # Displays a simple HTML page with the currently active threads

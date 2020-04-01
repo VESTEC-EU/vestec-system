@@ -18,6 +18,7 @@ from Database.queues import Queue
 from Database.machine import Machine
 from Database.activity import Activity
 from Database.workflow import RegisteredWorkflow
+from WorkflowManager import workflow
 from pony.orm.serialization import to_dict
 from flask import Flask, request, jsonify
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
@@ -102,8 +103,15 @@ def authorised():
 
     return jsonify({"status": 200, "msg": "User authorised."})
 
+@app.route('/flask/getmyworkflows', methods=['GET'])
+@pny.db_session
+@fresh_jwt_required
+def getMyWorkflows():
+    username = get_jwt_identity()
+    return json.dumps(logins.get_allowed_workflows(username)) 
 
-@app.route('/flask/submit', methods=['POST'])
+
+@app.route('/flask/createincident', methods=['POST'])
 @jwt_required
 def submit_job():
     '''This function sends a PUT request to the SMI for a CURRENT_JOB
@@ -124,12 +132,12 @@ def submit_job():
     '''
     job = request.json
     job["creator"] = get_jwt_identity()
-    job["job_id"] = str(uuid4())
+    job["job_id"] = workflow.CreateIncident(name=job["incidentName"], kind=job["incidentType"])    
 
     job_request = requests.post(JOB_MANAGER_URI + '/' + job["job_id"], json=job)
     response = job_request.text
 
-    logger.Log(log.LogType.Website, ("Creation of activity %s by %s is %s" % (job["job_name"], job["creator"], response))[:200], user=job["creator"])
+    logger.Log(log.LogType.Website, ("Creation of incident kind %s of name %s by %s is %s" % (job["incidentType"], job["incidentName"], job["creator"], response))[:200], user=job["creator"])
 
     return response
 
@@ -338,7 +346,7 @@ def removeUserFromWorkflow():
     user=User.get(username=username)    
     for item in user.allowed_workflows:        
         if (item.kind == workflow_kind):            
-            user.allowed_workflows.remove(item);    
+            user.allowed_workflows.remove(item);
     pny.commit()    
     return jsonify({"status": 200, "msg": "Workflow removed"})
 
