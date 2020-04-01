@@ -115,16 +115,16 @@ def getMyWorkflows():
 @app.route('/flask/createincident', methods=['POST'])
 @jwt_required
 def createIncident():
-    job = request.json
+    incident_request = request.json
     creator = get_jwt_identity()
-    job_id = incidents.createIncident(job["incidentName"], job["incidentType"], creator)        
-
-    #job_request = requests.post(JOB_MANAGER_URI + '/' + job["job_id"], json=job)
-    #response = job_request.text
-
-    logger.Log(log.LogType.Website, ("Creation of incident kind %s of name %s by %s" % (job["incidentType"], job["incidentName"], creator)), user=creator)
-
-    return jsonify({"status": 201, "msg": "Incident successfully created.", "incidentid" : job_id})    
+    incident_name=incident_request.get("incidentName", None)
+    incident_kind=incident_request.get("incidentType", None)
+    if incident_name and incident_kind:
+        job_id = incidents.createIncident(incident_name, incident_kind, creator)
+        logger.Log(log.LogType.Website, ("Creation of incident kind %s of name %s by %s" % (incident_name, incident_kind, creator)), user=creator)
+        return jsonify({"status": 201, "msg": "Incident successfully created.", "incidentid" : job_id})    
+    else:
+        return jsonify({"status": 400, "msg": "Incident name or type is missing"})
 
 
 @app.route('/flask/getincidents', methods=['GET'])
