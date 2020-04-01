@@ -233,7 +233,8 @@ function createActivityCard(template, index) {
 
     $(card).find("#cardBody").html("<p><b>Machines: </b>" + machines.join(", ") + "</p><p><b>Submitted on: </b>" + activity.date_submitted + "</p><p><b>No. Jobs: </b>" + activity.jobs + "</p>");
     $(card).find("#cardStatus").html(activity.status);
-    $(card).find("#viewDetails").attr('onClick', "getJobDetails(" + index + ")")
+    $(card).find("#viewDetails").attr('onClick', "getJobDetails(" + index + ")");
+    $(card).find("#cardTitle").attr('onClick', "getJobDetails(" + index + ")");
     $("#dashboard").append(card);
 }
 
