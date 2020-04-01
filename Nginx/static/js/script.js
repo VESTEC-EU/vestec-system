@@ -15,6 +15,7 @@ function checkAuth() {
             success: function(response) {
                 if (response.status == 200) {                    
                     $("#body").load("../templates/loggedin.html", function() {
+                        getJobsDashboard();
                         generateNavigationBar();
                     });                    
                 } else {
@@ -28,12 +29,29 @@ function checkAuth() {
     }
 }
 
+function checkAuthStillValid() {
+    var jwt_token = sessionStorage.getItem("access_token");
+
+    if (typeof jwt_token === 'undefined' || jwt_token === null || jwt_token === '') {
+        window.location.href = "/login";
+    } else {
+        $.ajax({
+            url: "/flask/authorised",
+            type: "GET",
+            headers: {'Authorization': 'Bearer ' + jwt_token},
+            success: function(response) {
+                if (response.status != 200) {                    
+                    window.location.href = "/login";
+                }
+            },
+            error: function(xhr) {
+                window.location.href = "/login";
+            }
+        });
+    }
+}
+
 $("#checkJobStatus").hide();
-
-$(function() {    
-    getJobsDashboard();
-});
-
 $("#userInput").keyup(function(e) {
     if (e.keyCode == 13) {
         submitJob();
@@ -78,6 +96,7 @@ function userLogin() {
 }
 
 function getJobWizard() {
+    checkAuthStillValid();
     $("#nav-home").removeClass("blue");
     $("#nav-logout").removeClass("blue");
     $("#nav-dash").addClass("blue");
@@ -103,6 +122,7 @@ function getJobWizard() {
 }
 
 function submitJob() {
+    checkAuthStillValid();
     var job = {}
     job["incidentType"] = $("#incidentType").val();
     job["incidentName"] = $("#incidentName").val();
@@ -176,6 +196,7 @@ function generateAdminDropdown() {
 }
 
 function getJobsDashboard() {
+    checkAuthStillValid();
     $("#nav-dash").removeClass("blue");
     $("#nav-logout").removeClass("blue");
     $("#nav-home").addClass("blue");    
