@@ -29,6 +29,13 @@ def packageIncident(stored_incident):
     return incident
 
 @pny.db_session
+def cancelIncident(incident_uuid, user):
+    workflow.OpenConnection()
+    workflow.Cancel(incident_uuid)
+    workflow.FlushMessages()
+    workflow.CloseConnection()
+
+@pny.db_session
 def activateIncident(incident_uuid, user):
     try:
         incident = Incident[incident_uuid]

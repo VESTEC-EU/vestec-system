@@ -135,7 +135,6 @@ def getAllMyIncidents():
     return jsonify({"status": 200, "incidents": json.dumps(incidents.retrieveMyIncidents(username))})
     #return jsonify({"status": 401, "msg": "Error retrieving user incidents."})
 
-
 @app.route('/flask/incident/<incident_uuid>', methods=['GET'])
 @pny.db_session
 @fresh_jwt_required
@@ -148,6 +147,14 @@ def getSpecificIncident(incident_uuid):
         return jsonify({"status": 401, "msg": "Error retrieving incident."})
     else:
         return jsonify({"status": 200, "incident": json.dumps(incident_info)})
+
+@app.route('/flask/incident/<incident_uuid>', methods=['DELETE'])
+@pny.db_session
+@fresh_jwt_required
+def cancelSpecificIncident(incident_uuid):
+    user = get_jwt_identity()
+    incidents.cancelIncident(incident_uuid, user)
+    return jsonify({"status": 200, "msg": "Incident cancelled"})
 
 @app.route('/flask/activateincident/<incident_uuid>', methods=['GET'])
 @pny.db_session

@@ -264,14 +264,35 @@ function loadIncidentDetails(incident) {
 
     incident_html += '</div><div class="jobDetails self-center">';
     if (incident.status == "PENDING") {
-        incident_html += "<button id=\"stopincident\" class=\"button blue self-center\" onClick=\"activateIncident(\'"+incident.uuid+"\')\">Activate Incident</button>";
+        incident_html += "<button class=\"button blue self-center\" onClick=\"activateIncident(\'"+incident.uuid+"\')\">Activate Incident</button>";
     }
-    incident_html += '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button id="stopincident" class="button blue self-center" onClick="">Cancel Incident</button>';
+    if (incident.status == "PENDING" || incident.status == "ACTIVE") {
+        incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" onClick=\"cancelIncident(\'"+incident.uuid+"\')\">Cancel Incident</button>";
+    }
+    if (incident.status == "COMPLETE" || incident.status == "CANCELLED") {
+        incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" onClick=\"archiveIncident(\'"+incident.uuid+"\')\">Archive Incident</button>";
+    }
     incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" onClick=\"getIncidentDetails(\'"+incident.uuid+"\')\">Refresh Status</button></div>";
 
     return incident_html;
 }
 
+function cancelIncident(incident_uuid) {
+    $.ajax({
+        url: "/flask/incident/"+incident_uuid,
+        type: "DELETE",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",        
+        success: function(response) {
+            getIncidentDetails(incident_uuid);
+        },
+        error: function(response) {
+            $("#confirmation").html("<span>&#10007</span> Error cancelling incident");
+            $("#confirmation").removeClass().addClass("button white-btn red-high-btn self-center");
+            $("#confirmation").show();
+        }
+    });
+}
 function activateIncident(incident_uuid) {    
     $.ajax({
         url: "/flask/activateincident/"+incident_uuid,
