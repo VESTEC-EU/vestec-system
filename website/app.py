@@ -196,6 +196,7 @@ def showLogs():
 
         logs.append(lg)
 
+    logs.reverse()
     return json.dumps(logs)
 
 def getHealthOfComponent(component_name, displayname):
