@@ -298,8 +298,11 @@ function loadIncidentDetails(incident) {
     incident_html += '<div class="jobLine"><b>Name: </b><div>' + incident.name + '</div></div>';
     incident_html += '<div class="jobLine"><b>Kind: </b><div>' + incident.kind + '</div></div>';
     incident_html += '<div class="jobLine"><b>Created On: </b><div>' + incident.incident_date + '</div></div>';
-    incident_html += '<div class="jobLine"><b>Created By: </b><div>' + incident.creator + '</div></div>';
+    incident_html += '<div class="jobLine"><b>Created By: </b><div>' + incident.creator + '</div></div>';    
     incident_html += '<div class="jobLine"><b>Status: </b><div>' + incident.status + '</div></div>';
+    if (incident.status == "COMPLETE") {
+        incident_html += '<div class="jobLine"><b>Completed On: </b><div>' + incident.date_completed + '</div></div>';
+    }
 
     /*
     if (job.status == "QUEUED") {
