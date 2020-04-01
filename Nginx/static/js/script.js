@@ -272,7 +272,7 @@ function loadIncidentDetails(incident) {
     if (incident.status == "COMPLETE" || incident.status == "CANCELLED") {
         incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" onClick=\"archiveIncident(\'"+incident.uuid+"\')\">Archive Incident</button>";
     }
-    incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" onClick=\"getIncidentDetails(\'"+incident.uuid+"\')\">Refresh Status</button></div>";
+    incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" style=\"float: right;\" onClick=\"getIncidentDetails(\'"+incident.uuid+"\')\">Refresh Status</button></div>";
 
     return incident_html;
 }
