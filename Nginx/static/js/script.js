@@ -13,8 +13,9 @@ function checkAuth() {
             type: "GET",
             headers: {'Authorization': 'Bearer ' + jwt_token},
             success: function(response) {
-                if (response.status == 200) {
-                    return
+                if (response.status == 200) {                    
+                    $("#body").load("../templates/loggedin.html");
+                    generateNavigationBar();
                 } else {
                     window.location.href = "/login";
                 }
