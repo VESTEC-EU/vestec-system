@@ -102,6 +102,15 @@ def CreateIncident(name, kind, incident_date=None, user_id=None):
 
     return id
 
+@pny.db_session
+def setIncidentActive(incidentId):
+    try:
+        incident = Incident[incidentId]
+        incident.status="ACTIVE"
+    except pny.core.ObjectNotFound as e:
+        logger.error("workflow.cancel: Unknown IncidentID %s" % incidentId)
+        raise Exception("workflow.cancel: Unknown IncidentID %s" % incidentId) from None
+
 
 # Test if a given Incident is active (returns True/False)
 @pny.db_session

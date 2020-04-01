@@ -1,6 +1,6 @@
 from WorkflowManager import workflow
 from Database.users import User
-from Database.workflow import Incident
+from Database.workflow import Incident, RegisteredWorkflow
 import pony.orm as pny
 from flask import jsonify
 from flask_jwt_extended import get_jwt_identity
@@ -27,6 +27,22 @@ def packageIncident(stored_incident):
         incident["date_completed"]=stored_incident.date_completed.strftime("%d/%m/%Y, %H:%M:%S")
     incident["incident_date"]=stored_incident.incident_date.strftime("%d/%m/%Y, %H:%M:%S")
     return incident
+
+@pny.db_session
+def activateIncident(incident_uuid, user):
+    try:
+        incident = Incident[incident_uuid]
+        incident_workflow=RegisteredWorkflow.get(kind=incident.kind)
+        msg = {}
+        msg["IncidentID"]=incident_uuid
+
+        workflow.OpenConnection()
+        workflow.send(message=msg, queue=incident_workflow.init_queue_name)
+        workflow.FlushMessages()
+        workflow.CloseConnection()
+        return True
+    except pny.core.ObjectNotFound as e:        
+        return False
 
 @pny.db_session
 def retrieveMyIncidents(username):

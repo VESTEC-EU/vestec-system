@@ -147,7 +147,21 @@ def getSpecificIncident(incident_uuid):
         logger.Log(log.LogType.Website, "User %s raised error retrieving incident %s" % (user, incident_uuid), user=user)
         return jsonify({"status": 401, "msg": "Error retrieving incident."})
     else:
-        return jsonify({"status": 200, "incident": json.dumps(incident_info)})    
+        return jsonify({"status": 200, "incident": json.dumps(incident_info)})
+
+@app.route('/flask/activateincident/<incident_uuid>', methods=['GET'])
+@pny.db_session
+@fresh_jwt_required
+def activateIncident(incident_uuid):    
+    user = get_jwt_identity()
+    retval=incidents.activateIncident(incident_uuid, user)    
+
+    if (retval):
+        logger.Log(log.LogType.Website, "User %s activated incident %s" % (user, incident_uuid), user=user)
+        return jsonify({"status": 200, "msg": "Incident activated"})         
+    else:
+        logger.Log(log.LogType.Website, "User %s raised error activating incident %s" % (user, incident_uuid), user=user)
+        return jsonify({"status": 401, "msg": "Error retrieving incident."})
 
 
 @app.route('/flask/logs', methods=['GET'])

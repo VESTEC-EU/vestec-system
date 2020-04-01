@@ -262,9 +262,30 @@ function loadIncidentDetails(incident) {
     }
     */
 
-    incident_html += '</div><div class="jobDetails self-center"><button id="stopincident" class="button blue self-center" onClick="">Cancel Incident</button></div>';
+    incident_html += '</div><div class="jobDetails self-center">';
+    if (incident.status == "PENDING") {
+        incident_html += "<button id=\"stopincident\" class=\"button blue self-center\" onClick=\"activateIncident(\'"+incident.uuid+"\')\">Activate Incident</button>";
+    }
+    incident_html += '&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button id="stopincident" class="button blue self-center" onClick="">Cancel Incident</button></div>';
 
     return incident_html;
+}
+
+function activateIncident(incident_uuid) {    
+    $.ajax({
+        url: "/flask/activateincident/"+incident_uuid,
+        type: "GET",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",        
+        success: function(response) {
+            getIncidentDetails(incident_uuid);
+        },
+        error: function(response) {
+            $("#confirmation").html("<span>&#10007</span> Error activating incident");
+            $("#confirmation").removeClass().addClass("button white-btn red-high-btn self-center");
+            $("#confirmation").show();
+        }
+    });
 }
 
 function createWorkflow() {
