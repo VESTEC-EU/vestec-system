@@ -29,7 +29,8 @@ function checkAuth() {
 $("#checkJobStatus").hide();
 
 $(function() {
-    $("#body-container").load("../templates/createJobWizard.html");
+    //$("#body-container").load("../templates/createJobWizard.html");
+    getJobsDashboard();
 });
 
 $("#userInput").keyup(function(e) {
@@ -76,9 +77,9 @@ function userLogin() {
 }
 
 function getJobWizard() {
-    $("#nav-dash").removeClass("blue");
+    $("#nav-home").removeClass("blue");
     $("#nav-logout").removeClass("blue");
-    $("#nav-home").addClass("blue");
+    $("#nav-dash").addClass("blue");
     $("#body-container").load("../templates/createJobWizard.html");
 }
 
@@ -120,7 +121,7 @@ function submitJob() {
 }
 
 function generateNavigationBar() {
-  var html_code="<div id=\"nav-home\" class=\"blue menu_item\" onClick=\"getJobWizard()\">Home</div>\<div id=\"nav-dash\" class=\"menu_item\" onClick=\"getJobsDashboard()\">Dashboard</div>"
+  var html_code="<div id=\"nav-home\" class=\"blue menu_item\" onClick=\"getJobsDashboard()\">Home</div>\<div id=\"nav-dash\" class=\"menu_item\" onClick=\"getJobWizard()\">New incident</div>"
   html_code+="<div id=\"nav-logout\" class=\"self-right menu_item\" onClick=\"logOut()\">Log Out</div>"
   // We store the user type to avoid hitting the server, as the activities are also protected on the server then at worst a user could
   // force the menu to display but couldn't action any of the activities under it
@@ -161,9 +162,9 @@ function generateAdminDropdown() {
 }
 
 function getJobsDashboard() {
-    $("#nav-home").removeClass("blue");
+    $("#nav-dash").removeClass("blue");
     $("#nav-logout").removeClass("blue");
-    $("#nav-dash").addClass("blue");
+    $("#nav-home").addClass("blue");
     $("#body-container").html("");
 
     $.ajax({
