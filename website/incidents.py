@@ -9,6 +9,12 @@ import networkx as nx
 from networkx.drawing.nx_agraph import to_agraph
 import datetime
 
+def checkIfUserCanAccessIncident(incident, user):
+    if (incident is not None and user is not None):
+        if (incident.user_id.user_id==user.user_id):
+            return True
+    return False
+
 @pny.db_session
 def createIncident(incident_name, incident_kind, username):
     user_id = User.get(username=username)
@@ -84,25 +90,32 @@ def packageIncident(stored_incident, include_sort_key, include_digraph):
     return incident
 
 @pny.db_session
-def cancelIncident(incident_uuid, user):
-    workflow.OpenConnection()
-    workflow.Cancel(incident_uuid)
-    workflow.FlushMessages()
-    workflow.CloseConnection()
-
-@pny.db_session
-def activateIncident(incident_uuid, user):
-    try:
-        incident = Incident[incident_uuid]
-        incident_workflow=RegisteredWorkflow.get(kind=incident.kind)
-        msg = {}
-        msg["IncidentID"]=incident_uuid
-
+def cancelIncident(incident_uuid, username):
+    incident = Incident[incident_uuid]
+    user = User.get(username=username)
+    if checkIfUserCanAccessIncident(incident, user):
         workflow.OpenConnection()
-        workflow.send(message=msg, queue=incident_workflow.init_queue_name)
+        workflow.Cancel(incident_uuid)
         workflow.FlushMessages()
         workflow.CloseConnection()
-        return True
+
+@pny.db_session
+def activateIncident(incident_uuid, username):
+    try:
+        incident = Incident[incident_uuid]
+        user = User.get(username=username)
+        if checkIfUserCanAccessIncident(incident, user): 
+            incident_workflow=RegisteredWorkflow.get(kind=incident.kind)
+            msg = {}
+            msg["IncidentID"]=incident_uuid
+
+            workflow.OpenConnection()
+            workflow.send(message=msg, queue=incident_workflow.init_queue_name)
+            workflow.FlushMessages()
+            workflow.CloseConnection()
+            return True
+        else:
+            return False
     except pny.core.ObjectNotFound as e:        
         return False
 
@@ -143,7 +156,6 @@ def retrieveMyIncidentSummary(username, pending_filter, active_filter, completed
 def retrieveIncident(incident_uuid, username):    
     user = User.get(username=username)
     incident = Incident.get(uuid=incident_uuid)
-    if (incident is not None and user is not None):
-        if (incident.user_id.user_id==user.user_id):
-            return packageIncident(incident, False, True)    
+    if checkIfUserCanAccessIncident(incident, user):    
+        return packageIncident(incident, False, True)    
     return None
