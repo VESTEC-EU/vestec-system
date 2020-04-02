@@ -355,17 +355,21 @@ function loadIncidentDetails(incident) {
         incident_html += '<div class="jobLine"><b>Completed On: </b><div>' + incident.date_completed + '</div></div>';
     }
 
-    incident_html += '</div><div class="jobDetails self-center">';
-    if (incident.status == "PENDING") {
-        incident_html += "<button class=\"button blue self-center\" onClick=\"activateIncident(\'"+incident.uuid+"\')\">Activate Incident</button>";
+    incident_html += '</div>';
+    if (incident.status != "ARCHIVED") {
+        incident_html+='<div class="jobDetails self-center">';
+        if (incident.status == "PENDING") {
+            incident_html += "<button class=\"button blue self-center\" onClick=\"activateIncident(\'"+incident.uuid+"\')\">Activate Incident</button>";
+        }
+        if (incident.status == "PENDING" || incident.status == "ACTIVE") {
+            incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" onClick=\"cancelIncident(\'"+incident.uuid+"\')\">Cancel Incident</button>";
+        }
+        if (incident.status == "COMPLETE" || incident.status == "CANCELLED") {
+            incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" onClick=\"archiveIncident(\'"+incident.uuid+"\')\">Archive Incident</button>";
+        }
+        
+        incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" style=\"float: right;\" onClick=\"getIncidentDetails(\'"+incident.uuid+"\')\">Refresh Status</button></div>";
     }
-    if (incident.status == "PENDING" || incident.status == "ACTIVE") {
-        incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" onClick=\"cancelIncident(\'"+incident.uuid+"\')\">Cancel Incident</button>";
-    }
-    if (incident.status == "COMPLETE" || incident.status == "CANCELLED") {
-        incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" onClick=\"archiveIncident(\'"+incident.uuid+"\')\">Archive Incident</button>";
-    }
-    incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" style=\"float: right;\" onClick=\"getIncidentDetails(\'"+incident.uuid+"\')\">Refresh Status</button></div>";    
 
     incident_html+="<div id=\"workflow_diagram\" class=\"jobDetails self-center\"><svg id=\"svg-canvas\" style='width: 100%; height: auto;'></svg></div>"    
 
@@ -388,6 +392,24 @@ function cancelIncident(incident_uuid) {
         }
     });
 }
+
+function archiveIncident(incident_uuid) {    
+    $.ajax({
+        url: "/flask/archiveincident/"+incident_uuid,
+        type: "GET",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",        
+        success: function(response) {
+            getIncidentDetails(incident_uuid);
+        },
+        error: function(response) {
+            $("#confirmation").html("<span>&#10007</span> Error archiving incident");
+            $("#confirmation").removeClass().addClass("button white-btn red-high-btn self-center");
+            $("#confirmation").show();
+        }
+    });
+}
+
 function activateIncident(incident_uuid) {    
     $.ajax({
         url: "/flask/activateincident/"+incident_uuid,

@@ -170,6 +170,20 @@ def cancelSpecificIncident(incident_uuid):
     incidents.cancelIncident(incident_uuid, user)
     return jsonify({"status": 200, "msg": "Incident cancelled"})
 
+@app.route('/flask/archiveincident/<incident_uuid>', methods=['GET'])
+@pny.db_session
+@fresh_jwt_required
+def archiveIncident(incident_uuid):    
+    user = get_jwt_identity()
+    retval=incidents.archiveIncident(incident_uuid, user)    
+
+    if (retval):
+        logger.Log(log.LogType.Website, "User %s archived incident %s" % (user, incident_uuid), user=user)
+        return jsonify({"status": 200, "msg": "Incident archived"})         
+    else:
+        logger.Log(log.LogType.Website, "User %s raised error archived incident %s" % (user, incident_uuid), user=user)
+        return jsonify({"status": 401, "msg": "Error archiving incident."})    
+
 @app.route('/flask/activateincident/<incident_uuid>', methods=['GET'])
 @pny.db_session
 @fresh_jwt_required

@@ -100,6 +100,19 @@ def cancelIncident(incident_uuid, username):
         workflow.CloseConnection()
 
 @pny.db_session
+def archiveIncident(incident_uuid, username):
+    try:
+        incident = Incident[incident_uuid]
+        user = User.get(username=username)
+        if checkIfUserCanAccessIncident(incident, user): 
+            incident.status="ARCHIVED"
+            return True
+        else:
+            return False
+    except pny.core.ObjectNotFound as e:        
+        return False
+
+@pny.db_session
 def activateIncident(incident_uuid, username):
     try:
         incident = Incident[incident_uuid]
