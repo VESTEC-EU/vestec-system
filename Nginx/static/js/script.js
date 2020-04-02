@@ -1,5 +1,6 @@
 var all_activities = {};
 var user_type=-1;
+var version_number=-1;
 
 function checkAuth() {
     // need to add a check to flask to see if the token in the session is the same as the current user's
@@ -14,9 +15,10 @@ function checkAuth() {
             headers: {'Authorization': 'Bearer ' + jwt_token},
             success: function(response) {
                 if (response.status == 200) {                    
-                    $("#body").load("../templates/loggedin.html", function() {
+                    $("#mainbody").load("../templates/loggedin.html", function() {
                         getJobsDashboard();
                         generateNavigationBar();
+                        setVersionNumber();
                     });                    
                 } else {
                     window.location.href = "/login";
@@ -154,6 +156,29 @@ function submitJob() {
     });
 }
 
+function setVersionNumber() {
+    if (version_number == -1) {
+        $.ajax({
+            url: "/flask/version",
+            type: "GET",
+            headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+            success: function(response) {
+              if (response.status == 200) {
+                version_number = response.version;
+                $("#systemversioninfo").text("System version "+version_number)
+              } else {
+                console.log({"status": 400, "msg": "Error with the look up version number"});
+              }
+            },
+            error: function(xhr) {
+              console.log({"status": 500, "msg": "Error with the look up version number"});
+            }
+          });
+      } else {
+        $("#systemversioninfo").text("System version "+version_number)
+      }
+}
+
 function generateNavigationBar() {
   var html_code="<div id=\"nav-home\" class=\"blue menu_item\" onClick=\"getJobsDashboard()\">Home</div>\<div id=\"nav-dash\" class=\"menu_item\" onClick=\"getJobWizard()\">New incident</div>"
   html_code+="<div id=\"nav-logout\" class=\"self-right menu_item\" onClick=\"logOut()\">Log Out</div>"
@@ -180,7 +205,7 @@ function generateNavigationBar() {
   } else if (user_type > 0) {
     html_code+=generateAdminDropdown();
   }
-  $("#navigation_bar").html(html_code);
+  $("#navigation_bar").html(html_code);  
 }
 
 function generateAdminDropdown() {

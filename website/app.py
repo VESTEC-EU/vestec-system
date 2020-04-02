@@ -2,6 +2,7 @@
 '''render_template loads html pages of the application
 '''
 import sys
+import subprocess
 import os
 sys.path.append("../")
 import json
@@ -24,6 +25,9 @@ from pony.orm.serialization import to_dict
 from flask import Flask, request, jsonify
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
 
+VERSION_PRECLUDE="1.0"
+version_number="?.?.?"
+
 # Initialise database
 Database.initialiseDatabase()
 
@@ -44,6 +48,9 @@ app.config["JWT_ACCESS_COOKIE_PATH"] = "/flask/"
 app.config["JWT_COOKIE_CSRF_PROTECT"] = False
 jwt = JWTManager(app)
 
+@app.route('/flask/version', methods=["GET"])
+def getVersion():
+    return jsonify({"status": 200, "version": version_number})
 
 @app.route("/flask/signup", methods=["POST"])
 def signup():
@@ -335,5 +342,8 @@ def logout():
 
 
 if __name__ == '__main__':
+    result = subprocess.run(['misc/gitnumber.sh', '../'], stdout=subprocess.PIPE)
+    repo_commit_number=result.stdout.decode('utf-8')
+    version_number=VERSION_PRECLUDE+"."+repo_commit_number.strip()    
     app.run(host='0.0.0.0', port=8000)
 
