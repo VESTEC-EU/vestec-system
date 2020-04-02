@@ -471,6 +471,7 @@ function deleteWorkflow(kind) {
 }
 
 function getWorkflows() {
+    checkAuthStillValid();
     $("#nav-home").removeClass("blue");
     $("#nav-dash").removeClass("blue");
     $("#nav-logout").removeClass("blue");
@@ -506,6 +507,7 @@ function getWorkflows() {
 }
 
 function getUsers() {
+    checkAuthStillValid();
     $("#nav-home").removeClass("blue");
     $("#nav-dash").removeClass("blue");
     $("#nav-logout").removeClass("blue");
@@ -592,6 +594,7 @@ function removeWorkflowFromUser() {
 }
 
 function manageUser(username) {
+    checkAuthStillValid();
     var wf = {};
     wf["username"] = username;
     var workflows;
@@ -671,6 +674,7 @@ function editUser() {
 }
 
 function getSystemHealth() {
+    checkAuthStillValid();
     $("#nav-home").removeClass("blue");
     $("#nav-dash").removeClass("blue");
     $("#nav-logout").removeClass("blue");
@@ -707,6 +711,7 @@ function getSystemHealth() {
 }
 
 function getLogs() {
+    checkAuthStillValid();
     $("#nav-home").removeClass("blue");
     $("#nav-dash").removeClass("blue");
     $("#nav-logout").removeClass("blue");
