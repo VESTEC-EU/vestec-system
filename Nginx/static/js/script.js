@@ -304,7 +304,12 @@ function getIncidentDetails(incident_uuid) {
         headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
         success: function(response) {
             incident_details = JSON.parse(response.incident);            
-            $("#body-container").html(loadIncidentDetails(incident_details));            
+            $("#body-container").html(loadIncidentDetails(incident_details));           
+            var viz = new Viz();
+            viz.renderSVGElement(incident_details.digraph).then(function(element) {
+                $("svg").append(element);
+                $("#workflow_diagram").html($("#workflow_diagram").html());
+            });
         },
         error: function(xhr) {
             $("#confirmation").removeClass().addClass("button red self-center");
@@ -325,18 +330,6 @@ function loadIncidentDetails(incident) {
         incident_html += '<div class="jobLine"><b>Completed On: </b><div>' + incident.date_completed + '</div></div>';
     }
 
-    /*
-    if (job.status == "QUEUED") {
-        job_html += '<div class="jobLine"><b>Status: </b><button id="jobStatus" class="button amber self-right">' + job.status + '</button></div>';
-    } else if (job.status == "RUNNING") {
-        job_html += '<div class="jobLine"><b>Status: </b><button id="jobStatus" class="button green self-right">' + job.status + '</button></div>';
-    } else if (job.status == "ERROR") {
-        job_html += '<div class="jobLine"><b>Status: </b><button id="jobStatus" class="button red self-right">' + job.status + '</button></div>';
-    } else {
-        job_html += '<div class="jobLine"><b>Status: </b><button id="jobStatus" class="button blue self-right">' + job.status + '</button></div>';
-    }
-    */
-
     incident_html += '</div><div class="jobDetails self-center">';
     if (incident.status == "PENDING") {
         incident_html += "<button class=\"button blue self-center\" onClick=\"activateIncident(\'"+incident.uuid+"\')\">Activate Incident</button>";
@@ -347,7 +340,9 @@ function loadIncidentDetails(incident) {
     if (incident.status == "COMPLETE" || incident.status == "CANCELLED") {
         incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" onClick=\"archiveIncident(\'"+incident.uuid+"\')\">Archive Incident</button>";
     }
-    incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" style=\"float: right;\" onClick=\"getIncidentDetails(\'"+incident.uuid+"\')\">Refresh Status</button></div>";
+    incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" style=\"float: right;\" onClick=\"getIncidentDetails(\'"+incident.uuid+"\')\">Refresh Status</button></div>";    
+
+    incident_html+="<div id=\"workflow_diagram\" class=\"jobDetails self-center\"><svg id=\"svg-canvas\" style='width: 100%; height: auto;'></svg></div>"    
 
     return incident_html;
 }

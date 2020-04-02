@@ -139,7 +139,7 @@ def getAllMyIncidents():
     error_filter = filter_data.get("error", None)
     archived_filter = filter_data.get("archived", None)
 
-    return jsonify({"status": 200, "incidents": json.dumps(incidents.retrieveMyIncidents(username, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter))})
+    return jsonify({"status": 200, "incidents": json.dumps(incidents.retrieveMyIncidentSummary(username, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter))})
     #return jsonify({"status": 401, "msg": "Error retrieving user incidents."})
 
 @app.route('/flask/incident/<incident_uuid>', methods=['GET'])
