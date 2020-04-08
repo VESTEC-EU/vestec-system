@@ -26,7 +26,7 @@ services:
       - 8000:8000
     environment:
       VESTEC_MANAGER_URI: "http://manager:5500/jobs"
-      VESTEC_EDI_URI: "http://manager:5501/EDImanager"
+      VESTEC_EDI_URI: "http://edi:5501/EDImanager"
       JWT_PASSWD: "SECRET"  # to be replaced by docker secrets
     env_file:
       - environment_variables.env
