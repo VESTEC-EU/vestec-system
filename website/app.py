@@ -37,6 +37,7 @@ logger = log.VestecLogger("Website")
 
 if "VESTEC_MANAGER_URI" in os.environ:
     JOB_MANAGER_URI = os.environ["VESTEC_MANAGER_URI"]
+    EDI_URL= os.environ["VESTEC_EDI_URI"]
 else:
     JOB_MANAGER_URI = 'http://127.0.0.1:5500/jobs'
     EDI_URL= 'http://127.0.0.1:5501/EDImanager'
