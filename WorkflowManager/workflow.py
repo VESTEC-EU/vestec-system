@@ -108,8 +108,8 @@ def setIncidentActive(incidentId):
         incident = Incident[incidentId]
         incident.status="ACTIVE"
     except pny.core.ObjectNotFound as e:
-        logger.error("workflow.cancel: Unknown IncidentID %s" % incidentId)
-        raise Exception("workflow.cancel: Unknown IncidentID %s" % incidentId) from None
+        logger.error("workflow.setIncidentActive: Unknown IncidentID %s" % incidentId)
+        raise Exception("workflow.setIncidentActive: Unknown IncidentID %s" % incidentId) from None
 
 
 # Test if a given Incident is active (returns True/False)
