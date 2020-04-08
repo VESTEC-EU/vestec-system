@@ -16,6 +16,7 @@ post==2018.11.20
 pika
 public==2018.11.20
 pytz==2018.9
+pygraphviz
 pony==0.7.11
 pymysql==0.9.3
 passlib==1.7.1
