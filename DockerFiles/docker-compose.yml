@@ -48,6 +48,21 @@ services:
     networks:
       - vestec
 
+  edi:
+    container_name: edi
+    depends_on:
+      - "maria"
+    build:
+      context: ../
+      dockerfile: ExternalDataInterface/Dockerfile
+    #WE ONLY NEED THIS IF WE ARE USING SQLITE
+    # volumes:
+    #   - "../Database:/database"
+    env_file:
+      - environment_variables.env
+    networks:
+      - vestec
+
   maria:
     container_name: mariadb
     image: mariadb

@@ -1,0 +1,4 @@
+Flask
+pony
+requests
+apscheduler
