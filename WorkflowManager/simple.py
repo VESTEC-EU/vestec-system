@@ -4,7 +4,10 @@ import datetime
 import time
 import requests
 
-EDI_url = 'http://localhost:5501/EDImanager'
+if "VESTEC_EDI_URI" in os.environ:    
+    EDI_URL= os.environ["VESTEC_EDI_URI"]
+else:    
+    EDI_URL= 'http://localhost:5501/EDImanager'
 
 # we now want to define some handlers
 @workflow.handler

@@ -88,6 +88,8 @@ services:
     build:
       context: ../
       dockerfile: WorkflowManager/Dockerfile
+    environment:    
+      VESTEC_EDI_URI: "http://edi:5501/EDImanager"
     env_file:
       - environment_variables.env
     networks:
