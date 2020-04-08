@@ -11,6 +11,7 @@ import pony.orm as pny
 import Utils.log as log
 import Database
 import datetime
+from version_info import VERSION_POSTFIX
 from uuid import uuid4
 from website import logins
 from website import incidents
@@ -26,7 +27,7 @@ from flask import Flask, request, jsonify
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
 
 VERSION_PRECLUDE="1.0"
-version_number="?.?.?"
+version_number=VERSION_PRECLUDE+"."+VERSION_POSTFIX
 
 # Initialise database
 Database.initialiseDatabase()
@@ -357,8 +358,5 @@ def logout():
 
 
 if __name__ == '__main__':
-    result = subprocess.run(['misc/gitnumber.sh', '../'], stdout=subprocess.PIPE)
-    repo_commit_number=result.stdout.decode('utf-8')
-    version_number=VERSION_PRECLUDE+"."+repo_commit_number.strip()    
     app.run(host='0.0.0.0', port=8000)
 
