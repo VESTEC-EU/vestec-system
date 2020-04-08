@@ -1,0 +1,40 @@
+<table id="userTable" class="self-center">
+    <thead>
+        <tr>
+            <th>Username</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Access level</th>
+            <th>Incident kinds</th>
+        </tr>
+    </thead>
+</table>
+
+<div id="userDetails" >
+    <h2 id="usernameh2">Username</h2>
+    <table>
+        <tr><td>Name:</td><td><input type="text" id="name" placeholder=""></td></tr>
+        <tr><td>Email: </td><td><input type="text" id="email" placeholder=""></td></tr>
+        <tr><td>Type: </td><td>
+            <select id="type">        
+                <option value="user">User</option>
+                <option value="administrator">Administrator</option>                
+            </select>
+        </td></tr>
+        <tr><td>Enabled: </td><td><input type="checkbox" id="enabled" name="enabled" value="enabled"></td></tr>
+    </table>
+        
+    <div class="inline">
+        <button id="editUser" class="button blue self-center" onClick="editUser()">Edit User</button>        
+    </div>
+
+    <div>
+        <select id="registeredworkflows_users" multiple></select>
+        <button id="removeWorkflowFromUser" class="button blue self-center" onClick="removeWorkflowFromUser()">Remove</button>
+    </div>
+    <div>
+        <select id="all_registeredworkflows"></select>
+        <button id="addWorkflowUser" class="button blue self-center" onClick="addWorkflowToUser()">Add</button>
+    </div>
+    
+</div>

@@ -1,5 +1,6 @@
 import pony.orm as pny
 from Database import db
+from Database.users import User
 import datetime
 import uuid
 
@@ -20,13 +21,13 @@ class MessageLog(db.Entity):
     src_tag = pny.Optional(str) #optional name for the sender (for workflow graph visualisation)
     dest_tag = pny.Optional(str) #optional name for the reciever (for workflow graph visualisation)
 
-
 class Incident(db.Entity):
     uuid = pny.PrimaryKey(str)
     kind = pny.Required(str)
     name = pny.Required(str)
-    status = pny.Required(str, default="ACTIVE")
+    status = pny.Required(str, default="PENDING")
     comment = pny.Optional(str)
+    user_id = pny.Optional(User)
 
     date_started = pny.Required(datetime.datetime)
     date_completed = pny.Optional(datetime.datetime)
@@ -63,4 +64,7 @@ class HandlerLog(db.Entity):
     originator = pny.Required(str)
     data = pny.Required(str)
 
-
+class RegisteredWorkflow(db.Entity):
+	kind=pny.Required(str)
+	init_queue_name=pny.Required(str)
+	users = pny.Set("User")

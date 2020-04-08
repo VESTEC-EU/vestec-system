@@ -1,5 +1,6 @@
 var all_activities = {};
 var user_type=-1;
+var version_number=-1;
 
 function checkAuth() {
     // need to add a check to flask to see if the token in the session is the same as the current user's
@@ -13,8 +14,12 @@ function checkAuth() {
             type: "GET",
             headers: {'Authorization': 'Bearer ' + jwt_token},
             success: function(response) {
-                if (response.status == 200) {
-                    return
+                if (response.status == 200) {                    
+                    $("#mainbody").load("../templates/loggedin.html", function() {
+                        getJobsDashboard();
+                        generateNavigationBar();
+                        setVersionNumber();
+                    });                    
                 } else {
                     window.location.href = "/login";
                 }
@@ -26,12 +31,29 @@ function checkAuth() {
     }
 }
 
+function checkAuthStillValid() {
+    var jwt_token = sessionStorage.getItem("access_token");
+
+    if (typeof jwt_token === 'undefined' || jwt_token === null || jwt_token === '') {
+        window.location.href = "/login";
+    } else {
+        $.ajax({
+            url: "/flask/authorised",
+            type: "GET",
+            headers: {'Authorization': 'Bearer ' + jwt_token},
+            success: function(response) {
+                if (response.status != 200) {                    
+                    window.location.href = "/login";
+                }
+            },
+            error: function(xhr) {
+                window.location.href = "/login";
+            }
+        });
+    }
+}
+
 $("#checkJobStatus").hide();
-
-$(function() {
-    $("#body-container").load("../templates/createJobWizard.html");
-});
-
 $("#userInput").keyup(function(e) {
     if (e.keyCode == 13) {
         submitJob();
@@ -76,51 +98,89 @@ function userLogin() {
 }
 
 function getJobWizard() {
-    $("#nav-dash").removeClass("blue");
+    checkAuthStillValid();
+    $("#nav-home").removeClass("blue");
     $("#nav-logout").removeClass("blue");
-    $("#nav-home").addClass("blue");
-    $("#body-container").load("../templates/createJobWizard.html");
+    $("#nav-dash").addClass("blue");
+    $("#body-container").load("../templates/createJobWizard.html", function() {
+    $.ajax({
+        url: "/flask/getmyworkflows",
+        type: "GET",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        success: function(response) {            
+            var workflows = JSON.parse(response);
+            $("#incidentType").empty();
+            for (item in workflows) {
+                item = workflows[item];                                                   
+                $("#incidentType").append("<option value='"+item+"'>"+item+"</option>");                
+            }            
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> User workflow lookup failed");
+        }
+    });
+    });
 }
 
 function submitJob() {
+    checkAuthStillValid();
     var job = {}
-    job["job_name"] = $("#userInput").val();
-
-    if (job["job_name"] == "") {
-        $("#confirmation").html("<span>&#9888</span> Please enter a job name.");
-        $("#confirmation").removeClass().addClass("button white-btn amber-high-btn self-center");
-        $("#confirmation").show();
-    } else {
-        $.ajax({
-            url: "/flask/submit",
-            type: "POST",
-            headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
-            contentType: "application/json",
-            data: JSON.stringify(job),
-            dataType: "json",
-            success: function(response) {
-                if (response.status == "201") {
-                    $("#userInput").val('');
-                    $("#confirmation").html("<span>&#10003</span>" + response.msg);
-                    $("#confirmation").removeClass().addClass("button white-btn green-high-btn self-center");
-                    $("#confirmation").show();
-                } else {
-                    $("#confirmation").html("<span>&#10007</span>" + response.msg);
-                    $("#confirmation").removeClass().addClass("button white-btn amber-high-btn self-center");
-                    $("#confirmation").show();
-                }
-            },
-            error: function(response) {
-                $("#confirmation").html("<span>&#10007</span> Sorry, there seems to be a problem with our system.");
-                $("#confirmation").removeClass().addClass("button white-btn red-high-btn self-center");
+    job["incidentType"] = $("#incidentType").val();
+    job["incidentName"] = $("#incidentName").val();
+    
+    $.ajax({
+        url: "/flask/createincident",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(job),
+        dataType: "json",
+        success: function(response) {
+            if (response.status == "201") {
+                $("#userInput").val('');
+                $("#confirmation").html("<span>&#10003</span>" + response.msg);
+                $("#confirmation").removeClass().addClass("button white-btn green-high-btn self-center");
+                $("#confirmation").show();
+            } else {
+                $("#confirmation").html("<span>&#10007</span>" + response.msg);
+                $("#confirmation").removeClass().addClass("button white-btn amber-high-btn self-center");
                 $("#confirmation").show();
             }
-        });
-    }
+        },
+        error: function(response) {
+            $("#confirmation").html("<span>&#10007</span> Error creating new incident");
+            $("#confirmation").removeClass().addClass("button white-btn red-high-btn self-center");
+            $("#confirmation").show();
+        }
+    });
+}
+
+function setVersionNumber() {
+    if (version_number == -1) {
+        $.ajax({
+            url: "/flask/version",
+            type: "GET",
+            headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+            success: function(response) {
+              if (response.status == 200) {
+                version_number = response.version;
+                $("#systemversioninfo").text("System version "+version_number)
+              } else {
+                console.log({"status": 400, "msg": "Error with the look up version number"});
+              }
+            },
+            error: function(xhr) {
+              console.log({"status": 500, "msg": "Error with the look up version number"});
+            }
+          });
+      } else {
+        $("#systemversioninfo").text("System version "+version_number)
+      }
 }
 
 function generateNavigationBar() {
-  var html_code="<div id=\"nav-home\" class=\"blue menu_item\" onClick=\"getJobWizard()\">Home</div>\<div id=\"nav-dash\" class=\"menu_item\" onClick=\"getJobsDashboard()\">Dashboard</div>"
+  var html_code="<div id=\"nav-home\" class=\"blue menu_item\" onClick=\"getJobsDashboard()\">Home</div>\<div id=\"nav-dash\" class=\"menu_item\" onClick=\"getJobWizard()\">New incident</div>"
   html_code+="<div id=\"nav-logout\" class=\"self-right menu_item\" onClick=\"logOut()\">Log Out</div>"
   // We store the user type to avoid hitting the server, as the activities are also protected on the server then at worst a user could
   // force the menu to display but couldn't action any of the activities under it
@@ -145,7 +205,7 @@ function generateNavigationBar() {
   } else if (user_type > 0) {
     html_code+=generateAdminDropdown();
   }
-  $("#navigation_bar").html(html_code);
+  $("#navigation_bar").html(html_code);  
 }
 
 function generateAdminDropdown() {
@@ -153,24 +213,46 @@ function generateAdminDropdown() {
   admin_html+="<button class=\"dropbtn\">Admin<i class=\"fa fa-caret-down\"></i></button>";
   admin_html+="<div class=\"admin_dropdown_content\">";
   admin_html+="<div class=\"admin_item\" onClick=\"getLogs()\">Logs</div>";
+  admin_html+="<div class=\"admin_item\" onClick=\"getSystemHealth()\">System health</div>";
+  admin_html+="<div class=\"admin_item\" onClick=\"getWorkflows()\">Workflows</div>";
+  admin_html+="<div class=\"admin_item\" onClick=\"getUsers()\">Users</div>";
   admin_html+="</div></div>";
   return admin_html;
 }
 
 function getJobsDashboard() {
-    $("#nav-home").removeClass("blue");
+    checkAuthStillValid();
+    $("#nav-dash").removeClass("blue");
     $("#nav-logout").removeClass("blue");
-    $("#nav-dash").addClass("blue");
+    $("#nav-home").addClass("blue");    
+
+    pending_filter=getDashboardFilterValue("pending_incidents", true);
+    active_filter=getDashboardFilterValue("active_incidents", true);
+    completed_filter=getDashboardFilterValue("completed_incidents", false);
+    cancelled_filter=getDashboardFilterValue("cancelled_incidents", false);
+    error_filter=getDashboardFilterValue("error_incidents", false);
+    archived_filter=getDashboardFilterValue("archived_incidents", false);
     $("#body-container").html("");
 
+    var filter_dict = {};
+    filter_dict["pending"] = pending_filter;
+    filter_dict["active"] = active_filter;
+    filter_dict["completed"] = completed_filter;
+    filter_dict["cancelled"] = cancelled_filter;
+    filter_dict["error"] = error_filter;
+    filter_dict["archived"] = archived_filter;
+
     $.ajax({
-        url: "/flask/jobs",
-        type: "GET",
+        url: "/flask/getincidents",
+        type: "POST",
         headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(filter_dict),
+        dataType: "json",
         success: function(response) {
             if (response.status == 200) {
-                all_activities = JSON.parse(response.activities);
-                loadActivityCards("DESC");
+                all_incidents = JSON.parse(response.incidents);
+                loadIncidentCards(all_incidents, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter);
             } else {
                 console.log({"status": 400, "msg": "Sorry, there seems to be a problem with the extraction of activities."});
             }
@@ -181,99 +263,459 @@ function getJobsDashboard() {
     });
 }
 
-function loadActivityCards(order) {
+function getDashboardFilterValue(identifier, default_val) {    
+    if ($("#"+identifier).length) return $('#'+identifier).prop("checked");
+    return default_val;
+}
+
+function generateDashboardFilterBar(pending_checked, active_checked, completed_checked, cancelled_checked, error_checked, archived_checked) {
+    var filter_bar = '<div class="jobDetails self-center" style="display: flex;">';
+    filter_bar+='<div style="margin-right: 10px;"><input type="checkbox" id="pending_incidents" ';
+    if (pending_checked) filter_bar+="checked ";
+    filter_bar+='onclick="getJobsDashboard()"><label for="pending_incidents">Pending</label></div>';
+    filter_bar+='<div style="margin-right: 10px;"><input type="checkbox" id="active_incidents" ';
+    if (active_checked) filter_bar+="checked ";    
+    filter_bar+='onclick="getJobsDashboard()"><label for="active_incidents">Active</label></div>';    
+    filter_bar+='<div style="margin-right: 10px;"><input type="checkbox" id="completed_incidents" ';
+    if (completed_checked) filter_bar+="checked ";    
+    filter_bar+='onclick="getJobsDashboard()"><label for="completed_incidents">Completed</label></div>';    
+    filter_bar+='<div style="margin-right: 10px;"><input type="checkbox" id="cancelled_incidents" ';
+    if (cancelled_checked) filter_bar+="checked ";    
+    filter_bar+='onclick="getJobsDashboard()"><label for="cancelled_incidents">Cancelled</label></div>';
+    filter_bar+='<div style="margin-right: 10px;"><input type="checkbox" id="error_incidents" ';
+    if (error_checked) filter_bar+="checked ";    
+    filter_bar+='onclick="getJobsDashboard()"><label for="error_incidents">Error</label></div>';
+    filter_bar+='<div style="margin-right: 10px;"><input type="checkbox" id="archived_incidents" ';
+    if (archived_checked) filter_bar+="checked ";    
+    filter_bar+='onclick="getJobsDashboard()"><label for="archived_incidents">Archived</label></div>';
+    filter_bar+="</div>";
+    return filter_bar;
+}
+
+function loadIncidentCards(incidents, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter) {
     // order = string; if "ASC", the list of jobs is loaded in ascending order, if "DESC", in descending order
     $.get("../templates/jobCard.html", function(template) {
         $('<div id="dashboard" class="w3-container">').appendTo("#body-container");
 
-        activities_length = Object.keys(all_activities).length
+        
+        $("#dashboard").append(generateDashboardFilterBar(pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter));
 
-        if (order == "ASC") {
-            for (i=0; i<activities_length; i++) {
-                createActivityCard(template, i);
-            }
-        } else {
-            for (i=activities_length-1; i>=0; i--) {
-                createActivityCard(template, i);
-            }
+        for (incident in incidents) {
+            createIncidentCard(template, incidents[incident]);
         }
 
         $('</div>').appendTo("#body-container");
     });
 }
 
-function createActivityCard(template, index) {
-    var activity = all_activities["activity" + index];
+function createIncidentCard(template, incident) {    
     var card = $(template)[0];
-    $(card).attr("id", "card_" + index);
-    $(card).find("#cardTitle").html(activity.activity_name);
-
-    try {
-        machines = activity.machines;
-    } catch(error) {
-        machines = "PENDING..."
-    }
-
-    $(card).find("#cardBody").html("<p><b>Machines: </b>" + machines.join(", ") + "</p><p><b>Submitted on: </b>" + activity.date_submitted + "</p><p><b>No. Jobs: </b>" + activity.jobs + "</p>");
-    $(card).find("#cardStatus").html(activity.status);
-    $(card).find("#viewDetails").attr('onClick', "getJobDetails(" + index + ")")
+    //$(card).attr("id", "card_" + index);
+    $(card).find("#cardTitle").html(incident.name);
+    
+    $(card).find("#cardBody").html("<p><b>Kind: </b>" + incident.kind + "</p><p><b>Incident on: </b>" + incident.incident_date + "</p><p><b>Created by: </b>" + incident.creator+"</p>");
+    $(card).find("#cardStatus").html(incident.status);
+    $(card).find("#viewDetails").attr('onClick', "getIncidentDetails(\"" + incident.uuid + "\")");
+    $(card).find("#cardTitle").attr('onClick', "getIncidentDetails(\"" + incident.uuid + "\")");
     $("#dashboard").append(card);
 }
 
-function getJobDetails(index) {
-    $("#nav-dash").removeClass("blue");
-    activity = all_activities["activity" + index];
+function getIncidentDetails(incident_uuid) {
+    $("#nav-home").removeClass("blue");    
 
     $.ajax({
-        url: "/flask/job/" + activity["activity_id"],
+        url: "/flask/incident/" + incident_uuid,
         type: "GET",
         headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
         success: function(response) {
-            activity_jobs = JSON.parse(response);
-
-            for (job in activity_jobs) {
-                $("#body-container").html(loadJobDetails(activity_jobs[job]));
-            }
-
-            if (($("#nav-home").hasClass("blue")) && (current_job.status !== "COMPLETED")) {
-                setTimeout(getCurrentJobStatus, 5000);
-            } else {
-                console.log("finished");
-            }
+            incident_details = JSON.parse(response.incident);            
+            $("#body-container").html(loadIncidentDetails(incident_details));           
+            var viz = new Viz();
+            viz.renderSVGElement(incident_details.digraph).then(function(element) {
+                $("svg").append(element);
+                $("#workflow_diagram").html($("#workflow_diagram").html());
+            });
         },
         error: function(xhr) {
             $("#confirmation").removeClass().addClass("button red self-center");
-            $("#confirmation").html("<span>&#10007</span> Job status check failed");
+            $("#confirmation").html("<span>&#10007</span> Incident detail retrieval failed");
         }
     });
 }
 
-function loadJobDetails(job) {
-    var job_html = '<div class="jobDetails self-center">';
-    job_html += '<div class="jobLine"><b>Machine: </b><div id="jobMachine">' + job.machine + '</div></div>';
-    job_html += '<div class="jobLine"><b>Queue: </b><div id="jobQueue">' + job.queue + '</div></div>';
-    job_html += '<div class="jobLine"><b>Date: </b><div id="jobSubmit">' + job.submit_time + '</div></div>';
-
-    if (job.status == "QUEUED") {
-        job_html += '<div class="jobLine"><b>Status: </b><button id="jobStatus" class="button amber self-right">' + job.status + '</button></div>';
-    } else if (job.status == "RUNNING") {
-        job_html += '<div class="jobLine"><b>Status: </b><button id="jobStatus" class="button green self-right">' + job.status + '</button></div>';
-    } else if (job.status == "ERROR") {
-        job_html += '<div class="jobLine"><b>Status: </b><button id="jobStatus" class="button red self-right">' + job.status + '</button></div>';
-    } else {
-        job_html += '<div class="jobLine"><b>Status: </b><button id="jobStatus" class="button blue self-right">' + job.status + '</button></div>';
+function loadIncidentDetails(incident) {
+    var incident_html = '<div class="jobDetails self-center">';
+    incident_html += '<div class="jobLine"><b>UUID: </b><div>' + incident.uuid + '</div></div>';
+    incident_html += '<div class="jobLine"><b>Name: </b><div>' + incident.name + '</div></div>';
+    incident_html += '<div class="jobLine"><b>Kind: </b><div>' + incident.kind + '</div></div>';
+    incident_html += '<div class="jobLine"><b>Created On: </b><div>' + incident.incident_date + '</div></div>';
+    incident_html += '<div class="jobLine"><b>Created By: </b><div>' + incident.creator + '</div></div>';    
+    incident_html += '<div class="jobLine"><b>Status: </b><div>' + incident.status + '</div></div>';
+    if (incident.status == "COMPLETE") {
+        incident_html += '<div class="jobLine"><b>Completed On: </b><div>' + incident.date_completed + '</div></div>';
     }
 
-    job_html += '</div>';
+    incident_html += '</div>';
+    if (incident.status != "ARCHIVED") {
+        incident_html+='<div class="jobDetails self-center">';
+        if (incident.status == "PENDING") {
+            incident_html += "<button class=\"button blue self-center\" onClick=\"activateIncident(\'"+incident.uuid+"\')\">Activate Incident</button>";
+        }
+        if (incident.status == "PENDING" || incident.status == "ACTIVE") {
+            incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" onClick=\"cancelIncident(\'"+incident.uuid+"\')\">Cancel Incident</button>";
+        }
+        if (incident.status == "COMPLETE" || incident.status == "CANCELLED") {
+            incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" onClick=\"archiveIncident(\'"+incident.uuid+"\')\">Archive Incident</button>";
+        }
+        
+        incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" style=\"float: right;\" onClick=\"getIncidentDetails(\'"+incident.uuid+"\')\">Refresh Status</button></div>";
+    }
 
-    return job_html;
+    incident_html+="<div id=\"workflow_diagram\" class=\"jobDetails self-center\"><svg id=\"svg-canvas\" style='width: 100%; height: auto;'></svg></div>"    
+
+    return incident_html;
 }
 
-function getLogs() {
+function cancelIncident(incident_uuid) {
+    $.ajax({
+        url: "/flask/incident/"+incident_uuid,
+        type: "DELETE",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",        
+        success: function(response) {
+            getIncidentDetails(incident_uuid);
+        },
+        error: function(response) {
+            $("#confirmation").html("<span>&#10007</span> Error cancelling incident");
+            $("#confirmation").removeClass().addClass("button white-btn red-high-btn self-center");
+            $("#confirmation").show();
+        }
+    });
+}
+
+function archiveIncident(incident_uuid) {    
+    $.ajax({
+        url: "/flask/archiveincident/"+incident_uuid,
+        type: "GET",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",        
+        success: function(response) {
+            getIncidentDetails(incident_uuid);
+        },
+        error: function(response) {
+            $("#confirmation").html("<span>&#10007</span> Error archiving incident");
+            $("#confirmation").removeClass().addClass("button white-btn red-high-btn self-center");
+            $("#confirmation").show();
+        }
+    });
+}
+
+function activateIncident(incident_uuid) {    
+    $.ajax({
+        url: "/flask/activateincident/"+incident_uuid,
+        type: "GET",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",        
+        success: function(response) {
+            getIncidentDetails(incident_uuid);
+        },
+        error: function(response) {
+            $("#confirmation").html("<span>&#10007</span> Error activating incident");
+            $("#confirmation").removeClass().addClass("button white-btn red-high-btn self-center");
+            $("#confirmation").show();
+        }
+    });
+}
+
+function createWorkflow() {
+    var wf = {};
+    wf["kind"] = $("#workflowname").val();
+    wf["queuename"] = $("#workflowqueuename").val();
+    $.ajax({
+        url: "/flask/addworkflow",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(wf),
+        dataType: "json",
+        success: function(response) {
+            getWorkflows();
+        },
+        error: function(response) {
+            $("#confirmation").html("<span>&#10007</span> Error adding workflow");
+            $("#confirmation").removeClass().addClass("button white-btn red-high-btn self-center");
+            $("#confirmation").show();
+        }
+    });
+}
+
+function deleteWorkflow(kind) {
+    var wf = {};
+    wf["kind"] = kind;
+    $.ajax({
+        url: "/flask/deleteworkflow",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(wf),
+        dataType: "json",
+        success: function(response) {
+            getWorkflows();
+        },
+        error: function(response) {
+            $("#confirmation").html("<span>&#10007</span> Error removing workflow");
+            $("#confirmation").removeClass().addClass("button white-btn red-high-btn self-center");
+            $("#confirmation").show();
+        }
+    });
+}
+
+function getWorkflows() {
+    checkAuthStillValid();
     $("#nav-home").removeClass("blue");
     $("#nav-dash").removeClass("blue");
     $("#nav-logout").removeClass("blue");
-    $("#body-container").load("../templates/logs.html");
+    $("#body-container").load("../templates/workflows.html", function() {
+
+    $.ajax({
+        url: "/flask/workflowinfo",
+        type: "GET",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        success: function(response) {
+            var workflows = JSON.parse(response);
+            $("#workflowTable").append("<tbody>");
+
+            for (item in workflows) {
+                var wf_entry = "<tr>";
+                item = workflows[item];
+                wf_entry += "<td>" + item.kind + "</td>";
+                wf_entry += "<td>" + item.queuename + "</td>";
+                wf_entry += "<td><img src='../img/cross.png' width=32 height=32 onClick=\"deleteWorkflow('"+item.kind+"')\"></td>";
+                
+                wf_entry += "</tr>";
+
+                $("#workflowTable").append(wf_entry);
+            }
+            $("#workflowTable").append("</tbody>");
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> Workflow retrieval failed");
+        }
+    });
+    });
+}
+
+function getUsers() {
+    checkAuthStillValid();
+    $("#nav-home").removeClass("blue");
+    $("#nav-dash").removeClass("blue");
+    $("#nav-logout").removeClass("blue");
+    $("#body-container").load("../templates/users.html");   
+
+    $.ajax({
+        url: "/flask/getallusers",
+        type: "GET",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        success: function(response) {
+            var users = JSON.parse(response);
+            $("#userTable").append("<tbody>");
+
+            for (item in users) {
+                var user_entry = "<tr>";
+                item = users[item];
+                user_entry += "<td><span class=\"link\" onclick=\"manageUser('"+item.username+"');\">" + item.username + "</span></td>";
+                user_entry += "<td>" + item.name + "</td>";
+                user_entry += "<td>" + item.email + "</td>";
+                if (item.access_rights == 0) {
+                    user_entry += "<td>user</td>";
+                } else if (item.access_rights == 1) {
+                    user_entry += "<td>administrator</td>";
+                }
+                
+                user_entry += "<td></td>";
+                
+                user_entry += "</tr>";
+
+                $("#userTable").append(user_entry);
+            }
+            $("#userTable").append("</tbody>");
+            $("#userDetails").hide();
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> User retrieval failed");
+        }
+    });
+}
+
+function addWorkflowToUser() {
+    var data = {};
+    var username=$('#usernameh2').text();
+    data["username"] = username;
+    data["workflow"] = $('#all_registeredworkflows').val();
+    $.ajax({
+        url: "/flask/addusertoworkflow",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(data),
+        dataType: "json",
+        success: function(response) {
+            manageUser(username);
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> User edit failed");
+        }
+    });
+}
+
+function removeWorkflowFromUser() {
+    var data = {};
+    var username=$('#usernameh2').text();
+    data["username"] = username;
+    data["workflow"] = $('#registeredworkflows_users').val();
+    $.ajax({
+        url: "/flask/removeuserfromworkflow",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(data),
+        dataType: "json",
+        success: function(response) {
+            manageUser(username);
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> User edit failed");
+        }
+    });
+}
+
+function manageUser(username) {
+    checkAuthStillValid();
+    var wf = {};
+    wf["username"] = username;
+    var workflows;
+    var users;
+    $.when(
+    $.ajax({
+        url: "/flask/workflowinfo",
+        type: "GET",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        success: function(response) {
+            workflows = JSON.parse(response);
+        }
+    }),
+    $.ajax({
+        url: "/flask/getuser",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(wf),
+        dataType: "json",
+        success: function(response) {
+            users = JSON.parse(JSON.stringify(response));            
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> User retrieval failed");
+        }
+    })
+    ).then(function() {
+        user=users[0]
+        $('#usernameh2').text(user.username);
+        $('#name').val(user.name)
+        $('#email').val(user.email)
+        if (user.access_rights == 0) {
+            $('#type').val("user");
+        } else if (user.access_rights == 1) {
+            $('#type').val("administrator");
+        }
+        $('#enabled').prop('checked', user.enabled);
+        $("#registeredworkflows_users").empty();
+        for (wf in user.workflows) {
+            wf=user.workflows[wf];
+            $("#registeredworkflows_users").append($('<option>', {value:wf, text: wf}))
+        }
+        $("#all_registeredworkflows").empty();
+        for (wf in workflows) {
+            wf=workflows[wf].kind;
+            $("#all_registeredworkflows").append("<option value='"+wf+"'>"+wf+"</option>");
+        }
+        $("#userTable").hide();
+        $("#userDetails").show();
+    });
+}
+
+function editUser() {
+    var wf = {};
+    wf["username"] = $("#usernameh2").text();
+    wf["name"] = $("#name").val();
+    wf["email"] = $("#email").val();
+    wf["type"] = $("#type").val();
+    wf["enabled"] = $("#enabled").prop('checked');
+    $.ajax({
+        url: "/flask/edituser",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(wf),
+        dataType: "json",
+        success: function(response) {
+            getUsers();
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> User edit failed");
+        }
+    });
+}
+
+function getSystemHealth() {
+    checkAuthStillValid();
+    $("#nav-home").removeClass("blue");
+    $("#nav-dash").removeClass("blue");
+    $("#nav-logout").removeClass("blue");
+    $("#body-container").load("../templates/health.html", function() {
+    $.ajax({
+        url: "/flask/health",
+        type: "GET",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        success: function(response) {
+            var health = JSON.parse(response);
+            $("#healthTable").append("<tbody>");
+
+            for (item in health) {
+                var health_entry = "<tr>";
+                item = health[item];
+                health_entry += "<td>" + item.name + "</td>";
+                if (item.status == true) {
+                    health_entry += "<td><img src='../img/tick.png' width=32 height=32></td>";
+                } else {
+                    health_entry += "<td><img src='../img/cross.png' width=32 height=32></td>";
+                }
+                health_entry += "</tr>";
+
+                $("#healthTable").append(health_entry);
+            }
+            $("#healthTable").append("</tbody>");
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> Health check failed");
+        }
+    });
+    });
+}
+
+function getLogs() {
+    checkAuthStillValid();
+    $("#nav-home").removeClass("blue");
+    $("#nav-dash").removeClass("blue");
+    $("#nav-logout").removeClass("blue");
+    $("#body-container").load("../templates/logs.html", function() {
 
     $.ajax({
         url: "/flask/logs",
@@ -302,6 +744,7 @@ function getLogs() {
             $("#confirmation").removeClass().addClass("button red self-center");
             $("#confirmation").html("<span>&#10007</span> Logs check failed");
         }
+    });
     });
 }
 

@@ -79,7 +79,7 @@ _sendqueue = []
 Persist = persist._Persist()
 
 # Creates an incident in the database. Returns the ncidentID
-def CreateIncident(name, kind, incident_date=None):
+def CreateIncident(name, kind, incident_date=None, user_id=None):
 
     # get uuid for this event and set up some basic (dummy) parameters
     id = str(uuid.uuid4())
@@ -95,18 +95,28 @@ def CreateIncident(name, kind, incident_date=None):
             name=name,
             date_started=date_started,
             incident_date=incident_date,
+            user_id=user_id,
         )
 
     logger.info("Created incident %s" % id)
 
     return id
 
+@pny.db_session
+def setIncidentActive(incidentId):
+    try:
+        incident = Incident[incidentId]
+        incident.status="ACTIVE"
+    except pny.core.ObjectNotFound as e:
+        logger.error("workflow.setIncidentActive: Unknown IncidentID %s" % incidentId)
+        raise Exception("workflow.setIncidentActive: Unknown IncidentID %s" % incidentId) from None
+
 
 # Test if a given Incident is active (returns True/False)
 @pny.db_session
 def _IsActive(IncidentID):
     try:
-        return Incident[IncidentID].status == "ACTIVE"
+        return Incident[IncidentID].status == "ACTIVE" or Incident[IncidentID].status == "PENDING"
     except pny.core.ObjectNotFound as e:
         logger.error("_IsActive: Unknown IncidentID %s" % (IncidentID))
         raise Exception("_IsActive: Unknown IncidentID %s" % (IncidentID)) from None
@@ -128,7 +138,7 @@ def Cancel(
     except pny.core.ObjectNotFound as e:
         logger.error("workflow.cancel: Unknown IncidentID %s" % IncidentID)
         raise Exception("workflow.cancel: Unknown IncidentID %s" % IncidentID) from None
-    if incident.status != "ACTIVE":
+    if incident.status != "ACTIVE" and incident.status != "PENDING":
         # incident is already not active, don't need to do anything here besides print message
         logger.warning(
             "Tried to cancel %s but it is inactive with status %s"
@@ -164,7 +174,7 @@ def Complete(
             "workflow.Complete: Unknown IncidentID %s" % IncidentID
         ) from None
 
-    if incident.status != "ACTIVE":
+    if incident.status != "ACTIVE" and incident.status != "PENDING":
         # incident is already not active, don't need to do anything here besides print message
         logger.warn(
             "Tried to complete %s but it is inactive with status %s"
@@ -438,7 +448,7 @@ def _RequestCleanup(
 # Handler for a cleanup message to clean up a given incident.
 @pny.db_session
 def _Cleanup(ch, method, properties, body):
-    msg = json.loads(body)
+    msg = json.loads(body.decode('ascii'))
     IncidentID = msg["IncidentID"]
 
     messages = pny.select(

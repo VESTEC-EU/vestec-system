@@ -1,5 +1,8 @@
 import pony.orm as pny
-from db import MessageLog, initialise_database
+import sys
+sys.path.append("../")
+from Database.workflow import MessageLog
+from Database import initialiseDatabase
 import sys
 import os
 
@@ -61,7 +64,7 @@ def main(incident):
 
 
 if __name__ == "__main__":
-    initialise_database()
+    initialiseDatabase()
 
     if len(sys.argv) ==2:
         incident = sys.argv[1]

@@ -3,6 +3,17 @@ body {
   height: 100vh;
 }
 
+.footer {
+   position: fixed;
+   left: 0;
+   bottom: 0;
+   width: 100%;
+   background-color: rgba(5, 38, 255, 0.2);
+   color: black;
+   text-align: right;
+   height:50px;
+}
+
 input[type=text], input[type=password], input[type=email] {
   display: inline-flex;
   padding: 12px 20px;
@@ -27,6 +38,7 @@ input[type=text]:focus, input[type=password]:focus, input[type=email] {
   font-size: 14px;
   border-radius: 3px;
   margin: 5px;
+  cursor:pointer;
 }
 
 a:link {

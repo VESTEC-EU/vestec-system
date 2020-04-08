@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <script type="text/javascript" src="js/script.js"></script>    
+    <script src="js/viz.js"></script>
+    <script src="js/full.render.js"></script>
     <head>
         <title></title>
         <link rel="stylesheet" href="css/general.css" />
@@ -6,13 +10,11 @@
         <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
     </head>
-    <body onload="checkAuth()">
-        <div>
-            <div id="navigation_bar" class="navbar"></div>
-        </div>
-        <div id="body-container"></div>
-    </body>
-    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
-    <script type="text/javascript" src="js/script.js"></script>
-    <script type="text/javascript">generateNavigationBar();</script>
+    <body onload="checkAuth()" id="body">
+	<div id="mainbody"></div>
+	<div class="footer">
+	<img src="img/logo2.png" height="100%" style="float:left;">
+  	<p id="systemversioninfo" style="padding-right: 10px; float:right;font-family: Arial;font-size: 15px;"></p>
+	</div>	
+    </body>    
 </html>
