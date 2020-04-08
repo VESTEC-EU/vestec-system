@@ -1,4 +1,5 @@
 import workflow
+import os
 import pony.orm as pny
 import datetime
 import time
@@ -19,7 +20,7 @@ def external_data_arrival_handler(message):
 def initialise_simple(message):
     print("Initialise simple workflow for "+message["IncidentID"])
     myobj = {'queuename': 'external_data_arrival', 'incidentid':message["IncidentID"], 'endpoint':'editest'}
-    x = requests.post(EDI_url+"/register", json = myobj)
+    x = requests.post(EDI_URL+"/register", json = myobj)
     print("EDI response" + x.text)
     workflow.setIncidentActive(message["IncidentID"])
 
