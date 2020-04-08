@@ -3,6 +3,7 @@ import sys
 sys.path.append("../")
 import Database
 from Database.users import User
+from Database.workflow import Incident
 import pony.orm as pny
 
 ACCESS_LEVEL_NORMAL=0
