@@ -283,14 +283,15 @@ def handler(f):
 
             else:
                 # log completion of task
-                logger.info(
-                    "Handler %s for incident %s completed successfully"
-                    % (f.__name__, incident)
-                )
                 with pny.db_session:
                     log = MessageLog[mssgid]
                     log.date_completed = datetime.datetime.now()
+                    log.completion_time = log.date_completed - log.date_received
                     log.status = "COMPLETE"
+                logger.info(
+                    "Handler %s for incident %s completed successfully in %s"
+                    % (f.__name__, incident, str(log.completion_time))
+                )
 
                 # send the messages queued up by the handler
                 FlushMessages()
