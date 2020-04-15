@@ -109,6 +109,11 @@ class RemoteConnection:
         self._CheckActive()
         return self.sftp.open(file,mode)
 
+    def size(self,file):
+        self._CheckActive()
+        result=self.sftp.stat(file)
+        return result.st_size
+
     def CloseConnection(self):
         self._CheckActive()
         self.connection.close()

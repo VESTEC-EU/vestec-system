@@ -8,6 +8,7 @@ from db import Data, initialise_database
 import datetime
 import os
 import ConnectionManager
+import json
 
 app = flask.Flask(__name__)
 
@@ -57,7 +58,30 @@ def register():
 #instructs the data manager to download data from the internet onto a specified machine. Returns a uuid for that data entity
 @app.route("/getexternal",methods=["PUT"])
 def GetExternal():
-    return "Not Implemented", 501
+    #get required fields from the header
+    fname = flask.request.form["filename"]
+    path = flask.request.form["path"]
+    machine = flask.request.form["machine"]
+    description = flask.request.form["description"]
+    originator = flask.request.form["originator"]
+    group = flask.request.form["group"]
+    url = flask.request.form["url"]
+    protocol = flask.request.form["protocol"]
+    options = json.loads(flask.request.form["options"])
+
+    #instruct the machine to download the file (passes the size of the file back in the "options" dict)
+    result = _download(fname,path,machine,url,protocol,options)
+
+    if result == OK:
+        size=options["size"]
+        #register this new file with the data manager
+        id=_register(fname,path,machine,description,size,originator,group)
+        return id, 201
+    elif result == NOT_IMPLEMENTED:
+        return "Not implemented", 501
+    elif result==FILE_ERROR:
+        return "File Error occurred", 500
+    
 
 #Moves a data entity from one location to another
 @app.route("/move/<id>",methods=["POST"])
@@ -308,9 +332,48 @@ def _copy(src,src_machine,dest,dest_machine,move=False):
             
 
 
-#downloads a file to a (possibly remote) locarion
-def _download(uri,machine,dest):
-    return
+#downloads a file to a (possibly remote) location
+def _download(filename,path,machine,url,protocol,options):
+    #get the filename (with path ) of the file we want created 
+    dest = os.path.join(path,filename)
+    
+    #deterine the command we wish to run to download the file
+    if protocol == "http":
+        if options:
+            print("Do not know how to deal with non-empty options")
+            print(options)
+            return NOT_IMPLEMENTED
+        cmd = "curl -o %s %s"%(dest,url)
+    else:
+        print("Do not know how to handle protocols that are not http")
+        return NOT_IMPLEMENTED
+
+    if machine == "localhost":
+        #run the command locally
+        r=os.system(cmd)
+        if r != 0:
+            print("An error occurred in the download")
+            return FILE_ERROR
+        else:
+            #get size of the new file and put this in the options dict
+            size=os.path.getsize(dest)
+            options["size"]=size
+            return OK
+    else:
+        #run the command remotely
+        c = ConnectionManager.RemoteConnection(machine)
+        stdout,stderr,exit_code = c.ExecuteCommand(cmd)
+        if exit_code != 0:
+            print("Remote download encountered an error:")
+            print(stderr)
+            return FILE_ERROR
+        else:
+            print("Remote download completed successfully")
+            #get the size of the new file and put it in the options dict
+            size = c.size(dest)
+            options["size"]=size
+            return OK
+
 
 if __name__ == "__main__":
     initialise_database()
