@@ -18,6 +18,7 @@ workflow.SetLoggingLevel(logging.WARNING)
 workflow.OpenConnection()
 
 fire.RegisterHandlers()
+MesoNH.RegisterHandlers()
 #julia.RegisterHandlers()
 #quick.RegisterHandlers()
 simple.RegisterHandlers()
