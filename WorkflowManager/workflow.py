@@ -214,14 +214,14 @@ def handler(f):
     def wrapper(ch, method, properties, body, **kwargs):
 
         # convert json message back to dictionary
-        
+
         msg = json.loads(body.decode('ascii'))
 
         incident = msg["IncidentID"]
         mssgid = msg["MessageID"]
 
         logger.debug(
-            "Recieved message %s for incident %s. Handler is %s"
+            "Received message %s for incident %s. Handler is %s"
             % (mssgid, incident, f.__name__)
         )
 
@@ -255,7 +255,7 @@ def handler(f):
                 log.consumer = ConsumerID
 
             # call message handler
-            logger.info("Executing handler %s for indicent %s" % (f.__name__, incident))
+            logger.info("Executing handler %s for incident %s" % (f.__name__, incident))
             try:
                 f(msg)
             except Exception as e:
@@ -284,7 +284,7 @@ def handler(f):
             else:
                 # log completion of task
                 logger.info(
-                    "Handler %s for indicent %s completed successfully"
+                    "Handler %s for incident %s completed successfully"
                     % (f.__name__, incident)
                 )
                 with pny.db_session:
@@ -309,7 +309,7 @@ def handler(f):
                         "Incident is no longer active with status %s" % istatus
                     )
                     logger.info(
-                        "Handler %s for indicent %s not started: incident is no longer active"
+                        "Handler %s for incident %s not started: incident is no longer active"
                         % (f.__name__, incident)
                     )
                 except pny.core.ObjectNotFound as e:
@@ -357,7 +357,7 @@ def send(message, queue, src_tag = "", dest_tag = ""):
 
     # convert the message to a json
     try:
-        msg = json.dumps(message)        
+        msg = json.dumps(message)
     except ValueError as e:
         logger.error("workflow.send: Unable to jsonify message")
         raise Exception("workflow.send: Unable to jsonify message") from None
@@ -403,7 +403,7 @@ def FlushMessages():
                 "Message(s) not sent as incident %s is no longer active" % incident
             )
             return
- 
+
 
         # log the message
         with pny.db_session:
@@ -418,10 +418,10 @@ def FlushMessages():
                 src_tag=src_tag,
                 dest_tag=dest_tag
             )
-            #ensure this is written to the DB ASAP 
+            #ensure this is written to the DB ASAP
             # (In some cases Flushmessages can be called within a pny.db_session and so messages are sent before their db entry has been committed)
             pny.commit()
-        
+
         # send the message
         channel.basic_publish(exchange="", routing_key=queue, body=msg)
 
