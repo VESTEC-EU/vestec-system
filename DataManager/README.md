@@ -39,7 +39,17 @@ The Data Manager consists of a RESTful interface with the following URIs:
   This deletes a file associated with `uuid`. This only deletes the file and changes its status in the Data Manager to be "DELETED". This does not remove the entry in the Data Manager's database.
 
 - `/getexternal` (method=`PUT`):
-  This downloads a file from an external URI onto a machine. This will return a UUID for the new file. THIS IS NOT IMPLEMENTED YET
+  This downloads a file from an external URI onto a machine. This will return a UUID for the new file. The request must contain:
+  - `filename`: The name of the file
+  - `path`: The path of the file
+  - `machine`: the machine the file resides on
+  - `size`: THe size of the file in bytes
+  - `description`: A string describing the file
+  - `originator`: Where the file came from (e.g. the URL it was downloaded from, or the simulation that produced it)
+  - `group`: What the file belongs to, e.g. fire, disease, space weather
+  - `url`: The URL of the remote resource to be downloaded
+  - `protocol`: The protocol to use to get the file (Currently only `http` is supported)
+  - `options`: A json dictionary of options (e.g. username and password). At present a non-empty dictionary is not supported
 
 - `/archive/[uuid]` (method=`POST`):
   This (tars? then) moves the file represented by `uuid` to a long-term storage facility. THIS IS NOT IMPLEMENTED YET
@@ -65,7 +75,10 @@ The Data Manager stores information on all the data objects with a database tabl
 
 ## TODO
 
-- Implement `/getexternal`, `/archive` and `/activate`
+- Implement `/archive` and `/activate`
+- Add more functionality to `/getexternal`
+- Check if a file already exists in the database, if so, raise an error
+- Create directories for a filepath if they do not exist?
 - Implement a non-blocking option, so the client does not need to wait for the (possibly large) file transfer to complete. We can either implement:
   - Returning a handle, which can be used to query the progress of the transfer
   - Implement something like the WorkflowManager in AMQP, where a message is sent to the sender upon completion of the transfer
