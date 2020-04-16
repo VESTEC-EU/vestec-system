@@ -12,6 +12,7 @@ class MessageLog(db.Entity):
     date_submitted = pny.Required(datetime.datetime)
     date_received = pny.Optional(datetime.datetime)
     date_completed = pny.Optional(datetime.datetime)
+    completion_time = pny.Optional(datetime.timedelta)
     originator = pny.Required(str)
     destination = pny.Required(str)
     incident_id = pny.Required(str)
