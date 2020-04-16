@@ -430,7 +430,8 @@ function activateIncident(incident_uuid) {
 function createWorkflow() {
     var wf = {};
     wf["kind"] = $("#workflowname").val();
-    wf["queuename"] = $("#workflowqueuename").val();
+    wf["initqueuename"] = $("#workflowqueuename").val();
+    wf["dataqueuename"] = $("#manualdataqueuename").val();
     $.ajax({
         url: "/flask/addworkflow",
         type: "POST",
@@ -489,7 +490,8 @@ function getWorkflows() {
                 var wf_entry = "<tr>";
                 item = workflows[item];
                 wf_entry += "<td>" + item.kind + "</td>";
-                wf_entry += "<td>" + item.queuename + "</td>";
+                wf_entry += "<td>" + item.initqueuename + "</td>";
+                wf_entry += "<td>" + item.dataqueuename + "</td>";
                 wf_entry += "<td><img src='../img/cross.png' width=32 height=32 onClick=\"deleteWorkflow('"+item.kind+"')\"></td>";
                 
                 wf_entry += "</tr>";
