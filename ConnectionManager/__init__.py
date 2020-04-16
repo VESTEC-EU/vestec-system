@@ -1,1 +1,1 @@
-from .ConnectionManager import RemoteConnection, machines
+from .ConnectionManager import RemoteConnection, machines, ConnectionError

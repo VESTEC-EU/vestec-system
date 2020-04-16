@@ -9,6 +9,7 @@ import datetime
 import os
 import ConnectionManager
 import json
+import subprocess
 
 app = flask.Flask(__name__)
 
@@ -50,6 +51,9 @@ def register():
     size = flask.request.form["size"]
     originator = flask.request.form["originator"]
     group = flask.request.form["group"]
+
+    if _checkExists(machine,fname,path):
+        return "File already exists", 406
     
     #register this with the database and return its UUID
     id=_register(fname,path,machine,description,size,originator,group)
@@ -69,18 +73,24 @@ def GetExternal():
     protocol = flask.request.form["protocol"]
     options = json.loads(flask.request.form["options"])
 
-    #instruct the machine to download the file (passes the size of the file back in the "options" dict)
-    result = _download(fname,path,machine,url,protocol,options)
+    if _checkExists(machine,fname,path):
+        return "File already exists", 406
 
-    if result == OK:
+    #instruct the machine to download the file (passes the size of the file back in the "options" dict)
+    try:
+        status, message = _download(fname,path,machine,url,protocol,options)
+    except ConnectionManager.ConnectionError as e:
+        return str(e), 500
+
+    if status == OK:
         size=options["size"]
         #register this new file with the data manager
         id=_register(fname,path,machine,description,size,originator,group)
         return id, 201
-    elif result == NOT_IMPLEMENTED:
-        return "Not implemented", 501
-    elif result==FILE_ERROR:
-        return "File Error occurred", 500
+    elif status == NOT_IMPLEMENTED:
+        return message, 501
+    elif status==FILE_ERROR:
+        return message, 500
     
 
 #Moves a data entity from one location to another
@@ -102,15 +112,23 @@ def move(id):
     #get the options from the header
     dest_machine = flask.request.form["machine"]
     dest = flask.request.form["dest"]
+
+    path,fname = os.path.split(dest)
+    if _checkExists(dest_machine,fname,path):
+        return "File already exists", 406
     
     #move the file
-    result =_copy(src,src_machine,dest,dest_machine,move=True)
-    if result == FILE_ERROR:
+    try:
+        status, message =_copy(src,src_machine,dest,dest_machine,move=True)
+    except ConnectionManager.ConnectionError as e:
+        return str(e), 500
+
+    if status == FILE_ERROR:
         print("Move failed")
-        return "Move failed", 500
-    if result == NOT_IMPLEMENTED:
-        return "Request not implemented on server", 501
-    elif result == OK:
+        return message, 500
+    if status == NOT_IMPLEMENTED:
+        return message, 501
+    elif status == OK:
         with pny.db_session:
             data=Data[id]
             data.machine = dest_machine
@@ -138,14 +156,22 @@ def copy(id):
     #get the options from the header
     dest_machine = flask.request.form["machine"]
     dest = flask.request.form["dest"]
+
+    path,fname = os.path.split(dest)
+    if _checkExists(dest_machine,fname,path):
+        return "File already exists", 406
     
     #copy the file
-    result =_copy(src,src_machine,dest,dest_machine)
-    if result == FILE_ERROR:
-        return "Copy failed", 500
-    if result == NOT_IMPLEMENTED:
-        return "Request not implemented on server", 501
-    elif result == OK:
+    try:
+        status, message =_copy(src,src_machine,dest,dest_machine)
+    except ConnectionManager.ConnectionError as e:
+        return str(e), 500
+
+    if status == FILE_ERROR:
+        return message, 500
+    if status == NOT_IMPLEMENTED:
+        return message, 501
+    elif status == OK:
         path,fname = os.path.split(dest)
         id =_register(fname,path,dest_machine,description,size,originator,group)
         return id, 201
@@ -165,14 +191,17 @@ def remove(id):
         file = os.path.join(d.path,d.filename)
     
     #delete this file
-    status=_delete(file,machine)
+    try:
+        status, message =_delete(file,machine)
+    except ConnectionManager.ConnectionError as e:
+        return str(e), 500
 
     if status == FILE_ERROR:
         with pny.db_session:
             Data[id].status = "UNKNOWN"
-        return "Deletion failed - file not found?", 500
+        return message, 500
     elif status == NOT_IMPLEMENTED:
-        return "Remote deletion not implemented", 501
+        return message, 501
     else:
         #set the status of this file to "DELETED" in the database
         with pny.db_session:
@@ -209,10 +238,10 @@ def _delete(file,machine):
         print("Deleting %s"%file)
         try:
             os.remove(file)
-        except OSError:
-            return FILE_ERROR
+        except OSError as e:
+            return FILE_ERROR, str(e)
         else:
-            return OK
+            return OK, "deleted"
     else:
         connection = ConnectionManager.RemoteConnection(machine)
         try:
@@ -221,9 +250,9 @@ def _delete(file,machine):
             print("Deletion failed")
             print("%s"%e)
             connection.CloseConnection()
-            return FILE_ERROR
+            return FILE_ERROR, str(e)
         connection.CloseConnection()
-        return OK
+        return OK, "Deleted"
 
         #return NOT_IMPLEMENTED
 
@@ -242,11 +271,11 @@ def _copy(src,src_machine,dest,dest_machine,move=False):
 
         #local copy on the VESTEC server
         if src_machine == "localhost":
-            err = os.system(command)
-            if err == 0:
-                return OK
+            result = subprocess.run(command.split(" "),stdout=subprocess.PIPE, stderr=subprocess.PIPE,text=True)
+            if result.returncode == 0:
+                return OK, "copied"
             else:
-                return FILE_ERROR
+                return FILE_ERROR, result.stderr
         
         #local copy on a remote machine
         else:
@@ -258,11 +287,11 @@ def _copy(src,src_machine,dest,dest_machine,move=False):
             stdout, stderr, code = connection.ExecuteCommand(cmd)
             connection.CloseConnection()
             if code == 0:    
-                return OK
+                return OK, "copied"
             else:
                 print("Error")
                 print(stderr)
-                return FILE_ERROR
+                return FILE_ERROR, stderr
             
     else:
         #copy from VESTEC server to remote machine
@@ -273,15 +302,16 @@ def _copy(src,src_machine,dest,dest_machine,move=False):
             except FileNotFoundError as e:
                 print("Error: %s"%e)
                 connection.CloseConnection()
-                return FILE_ERROR
+                return FILE_ERROR, str(e)
             else:
                 connection.CloseConnection()
                 if move:
-                    result=os.system("rm %s"%src)
-                    if result != 0:
+                    try:
+                        result=os.remove(src)
+                    except OSError as e:
                         print("Error - Unable to remove local file")
-                        return FILE_ERROR
-                return OK
+                        return FILE_ERROR, str(e)
+                return OK, "copied"
 
         #copy from remote machine to VESTEC server
         elif dest_machine == "localhost":
@@ -291,7 +321,7 @@ def _copy(src,src_machine,dest,dest_machine,move=False):
             except FileNotFoundError as e:
                 print("Error: %s"%e)
                 connection.CloseConnection()
-                return FILE_ERROR
+                return FILE_ERROR, str(e)
             else:
                 if move:
                     try:
@@ -300,9 +330,9 @@ def _copy(src,src_machine,dest,dest_machine,move=False):
                         connection.CloseConnection()
                         print('Error: Unable to remove file')
                         print("%s"%e)
-                        return FILE_ERROR
+                        return FILE_ERROR, str(e)
                 connection.CloseConnection()
-                return OK
+                return OK, "copied"
             
         #copy between two remote machines
         else:
@@ -317,7 +347,7 @@ def _copy(src,src_machine,dest,dest_machine,move=False):
                 print("Error")
                 print(stderr)
                 connection.CloseConnection()
-                return FILE_ERROR
+                return FILE_ERROR, stderr
             else:
                 if move:
                     try:
@@ -326,9 +356,9 @@ def _copy(src,src_machine,dest,dest_machine,move=False):
                         print("Error: unable to remove file")
                         print("%s"%e)
                         connection.CloseConnection()
-                        return FILE_ERROR
+                        return FILE_ERROR, str(e)
                 connection.CloseConnection()
-                return OK
+                return OK, "copied"
             
 
 
@@ -343,22 +373,24 @@ def _download(filename,path,machine,url,protocol,options):
             print("Do not know how to deal with non-empty options")
             print(options)
             return NOT_IMPLEMENTED
-        cmd = "curl -o %s %s"%(dest,url)
+        cmd = "curl -f -sS -o %s %s"%(dest,url)
     else:
         print("Do not know how to handle protocols that are not http")
-        return NOT_IMPLEMENTED
+        return NOT_IMPLEMENTED, "'%s' protocol not supported (yet?)"%protocol
 
     if machine == "localhost":
         #run the command locally
-        r=os.system(cmd)
-        if r != 0:
-            print("An error occurred in the download")
-            return FILE_ERROR
+        r=subprocess.run(cmd.split(" "),stdout=subprocess.PIPE,stderr = subprocess.PIPE,text=True)
+        if r.returncode != 0:
+            print("An error occurred in the local download")
+            print(r.stderr)
+            print(r.stdout)
+            return FILE_ERROR, r.stderr
         else:
             #get size of the new file and put this in the options dict
             size=os.path.getsize(dest)
             options["size"]=size
-            return OK
+            return OK, "Downloaded"
     else:
         #run the command remotely
         c = ConnectionManager.RemoteConnection(machine)
@@ -366,13 +398,27 @@ def _download(filename,path,machine,url,protocol,options):
         if exit_code != 0:
             print("Remote download encountered an error:")
             print(stderr)
-            return FILE_ERROR
+            c.CloseConnection()
+            return FILE_ERROR, stderr
         else:
             print("Remote download completed successfully")
             #get the size of the new file and put it in the options dict
             size = c.size(dest)
             options["size"]=size
-            return OK
+            c.CloseConnection()
+            return OK, "Downloaded"
+
+@pny.db_session
+def _checkExists(machine,filename,path):
+    print("Checking for %s, %s, %s"%(machine,filename,path))
+    entries = pny.select(d for d in Data if (d.status!="DELETED" and d.status!="UNKNOWN") and d.machine == machine and d.path==path and d.filename == filename)
+
+    if len(entries)>0:
+        return True
+    else:
+        return False
+    
+
 
 
 if __name__ == "__main__":

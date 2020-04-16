@@ -77,7 +77,6 @@ The Data Manager stores information on all the data objects with a database tabl
 
 - Implement `/archive` and `/activate`
 - Add more functionality to `/getexternal`
-- Check if a file already exists in the database, if so, raise an error
 - Create directories for a filepath if they do not exist?
 - Implement a non-blocking option, so the client does not need to wait for the (possibly large) file transfer to complete. We can either implement:
   - Returning a handle, which can be used to query the progress of the transfer
