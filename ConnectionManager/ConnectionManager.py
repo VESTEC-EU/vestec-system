@@ -12,6 +12,8 @@ f=open(os.path.join(dir,"machines.yaml"),"r")
 machines = yaml.safe_load(f)
 f.close()
 
+class ConnectionError(Exception):
+    pass
 
 
 
@@ -34,11 +36,16 @@ class RemoteConnection:
 
         print("Connecting to %s"%self.host)
 
-        self.connection = fabric.Connection(host=self.host, user=self.user,connect_kwargs=kwargs)
+        try:
 
-        self.active = True
+            self.connection = fabric.Connection(host=self.host, user=self.user,connect_kwargs=kwargs)
 
-        self.sftp = self.connection.sftp()
+            self.active = True
+
+            self.sftp = self.connection.sftp()
+        except socket.gaierror as e:
+            print("Cannot establish connection to %s"%self.host)
+            raise ConnectionError("Cannot establish connection to host '%s'"%self.host) from None
 
         #print("Changing remote working directory to '%s'"%machine["basedir"])
         self.cd(machine["basedir"])
@@ -48,7 +55,7 @@ class RemoteConnection:
         if self.active:
             return
         else:
-            raise Exception("Remote connection no longer active")
+            raise ConnectionError("Remote connection to '%s' no longer active"%self.host)
 
 
 
@@ -58,7 +65,11 @@ class RemoteConnection:
         #we want to cd into the working directory before we execute the command
         cmd = "cd %s ; %s"%(cwd,command)
         #print("Sending command '%s'"%command)
-        result = self.connection.run(cmd,env=env,hide=True,warn=True)
+        try:
+            result = self.connection.run(cmd,env=env,hide=True,warn=True)
+        except socket.gaierror as e:
+            #print("Cannot establish connection to %s"%self.host)
+            raise ConnectionError("Cannot establish connection to host '%s', or connection lost"%self.host) from None
         return result.stdout, result.stderr, result.exited
 
     def CopyToMachine(self,src,dest):
@@ -108,6 +119,11 @@ class RemoteConnection:
     def OpenRemoteFile(self,file,mode):
         self._CheckActive()
         return self.sftp.open(file,mode)
+
+    def size(self,file):
+        self._CheckActive()
+        result=self.sftp.stat(file)
+        return result.st_size
 
     def CloseConnection(self):
         self._CheckActive()
