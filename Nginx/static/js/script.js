@@ -7,8 +7,8 @@ var add_data_dialog;
 $( function() {
     add_data_dialog = $("#add-data-dialog-form").dialog({
     autoOpen: false,
-    height: 600,
-    width: 450,
+    height: 450,
+    width: 500,
     modal: true,
     buttons: {
         "Add data": addProvidedData,

@@ -1,17 +1,13 @@
-<div id="addDataScreen" title="Information screen">
-	<p class="validateTips" class="addDatafieldset">All form fields are required.</p>
- 
+<div id="addDataScreen" title="Information screen">	
   <form id ="addDataToIncidentForm" method="post" enctype="multipart/form-data">
     <fieldset>
-      <label for="filename" class="addDataLabel">Filename</label>
-      <input type="text" name="filename" id="filename" value="" placeholder="The file name" class="addDataText text ui-widget-content ui-corner-all">
+      <label for="fileToUpload" class="addDataLabel">Select File</label>
+	    <input type="file" name="fileToUpload" id="fileToUpload">
       <label for="filetype" class="addDataLabel">Type</label>
-	  <input type="text" name="filetype" id="filetype" value="" placeholder="Type of file" class="addDataText text ui-widget-content ui-corner-all">      
-	  <label for="filecomment" class="addDataLabel">Comment</label>
-	  <input type="text" name="filecomment" id="filecomment" value="" placeholder="Any file comments" class="addDataText text ui-widget-content ui-corner-all">   
-	  <label for="fileToUpload" class="addDataLabel">Select File</label>
-	  <input type="file" name="fileToUpload" id="fileToUpload">
-	  <input type="hidden" id="dataIncidentId" name="dataIncidentId">      
+      <input type="text" name="filetype" id="filetype" value="" placeholder="Type of file" class="addDataText text ui-widget-content ui-corner-all">      
+      <label for="filecomment" class="addDataLabel">Comment</label>
+      <textarea name="filecomment" id="filecomment" value="" placeholder="Any file comments" rows="4" cols="80" class="addDataText text ui-widget-content ui-corner-all"></textarea>      
+      <input type="hidden" id="dataIncidentId" name="dataIncidentId">      
     </fieldset>
   </form>
 </div>
