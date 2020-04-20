@@ -4,6 +4,7 @@
 import sys
 import subprocess
 import os
+import io
 sys.path.append("../")
 import json
 import requests
@@ -21,9 +22,10 @@ from Database.queues import Queue
 from Database.machine import Machine
 from Database.activity import Activity
 from Database.workflow import RegisteredWorkflow
+from Database.localdatastorage import LocalDataStorage
 from WorkflowManager import workflow
 from pony.orm.serialization import to_dict
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
 
 VERSION_PRECLUDE="1.0"
@@ -199,6 +201,19 @@ def activateIncident(incident_uuid):
     else:
         logger.Log(log.LogType.Website, "User %s raised error activating incident %s" % (user, incident_uuid), user=user)
         return jsonify({"status": 401, "msg": "Error retrieving incident."})
+
+@app.route('/flask/data/<data_uuid>', methods=['GET'])
+@pny.db_session
+@fresh_jwt_required
+def downloadData(data_uuid):
+    data_info=requests.get("http://localhost:5000/info/" + data_uuid)
+    file_info=data_info.json()
+    if (file_info["path"]=="vestecDB" and file_info["machine"]=="VESTECSERVER"):
+        data_dump=LocalDataStorage[file_info["filename"]]
+        return send_file(io.BytesIO(data_dump.contents),
+                     attachment_filename=data_dump.filename,
+                     mimetype=data_dump.filetype)
+    return jsonify({"status": 400, "msg" : "Only datasets stored on VESTEC server currently supported"})
 
 
 @app.route('/flask/logs', methods=['GET'])

@@ -15,6 +15,10 @@
   text-decoration: none;
 }
 
+.click_button {
+  cursor: pointer;
+}
+
 /* Change the link color to #111 (black) on hover */
 .navbar .menu_item:hover {
   background-color: #111;

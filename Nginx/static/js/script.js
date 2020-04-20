@@ -374,8 +374,8 @@ function addProvidedData() {
     const reader = new FileReader()
 
     reader.onload = function () {        
-        var wf = {};
-        wf["filename"] = $('#filename').val();
+        var wf = {};        
+        wf["filename"] = $('#fileToUpload').val().split('\\').pop();
         wf["filetype"] = $('#filetype').val();
         wf["filecomment"] = $('#filecomment').val();
         wf["incidentId"] = $('#dataIncidentId').val();
@@ -437,9 +437,9 @@ function loadIncidentDetails(incident) {
 
     if (incident.data_sets.length > 0) {
         incident_html+="<thead><tr><th>Filename</th><th>File type</th><th>Date Created</th><th>Actions</th></tr></thead>";        
-        for (data_set of incident.data_sets) {
-            console.log(data_set.data_sets);
-            incident_html+="<tr><td>"+data_set.name+"</td><td>"+data_set.type+"</td><td>"+data_set.date_created+"</td><td></td></tr>";
+        for (data_set of incident.data_sets) {            
+            incident_html+="<tr><td>"+data_set.name+"</td><td>"+data_set.type+"</td><td>"+data_set.date_created+"</td><td>";
+            incident_html+="<img src='../img/download.png' class='click_button' title='Download dataset' width=26 height=26 onClick=\"downloadData('"+data_set.uuid+"','"+data_set.name+"')\"></td></tr>";            
         }
         incident_html+="</table></div>";
     }
@@ -447,6 +447,26 @@ function loadIncidentDetails(incident) {
     incident_html+="<div id=\"workflow_diagram\" class=\"jobDetails self-center\"><svg id=\"svg-canvas\" style='width: 100%; height: auto;'></svg></div>"    
 
     return incident_html;
+}
+
+function downloadData(data_uuid, filename) {
+    $.ajax({
+        url: "/flask/data/"+data_uuid,
+        type: "GET",
+        dataType: 'binary',
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
+        success: function (data) {            
+            var url = URL.createObjectURL(data);
+            var $a = $('<a />', {
+                'href': url,
+                'download': filename,
+                'text': "click"
+            }).hide().appendTo("body")[0].click(); 
+            setTimeout(function() {
+                URL.revokeObjectURL(url);
+            }, 10000);           
+        }
+    }); 
 }
 
 function cancelIncident(incident_uuid) {

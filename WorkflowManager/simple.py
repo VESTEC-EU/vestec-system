@@ -27,9 +27,10 @@ def external_data_arrival_handler(message):
 def manually_add_data(message):
     file_contents_to_add = json.loads(message["data"]["payload"])
     header, encoded = file_contents_to_add["payload"].split(",", 1)
+    filetype=header.split(":", 1)[1].split(";", 1)[0]
     data = b64decode(encoded)
 
-    new_file = LocalDataStorage(contents=data)
+    new_file = LocalDataStorage(contents=data, filename=file_contents_to_add["filename"], filetype=filetype)
     pny.commit()    
 
     myobj = {'filename': str(new_file.uuid), 'path':'vestecDB', 'machine':'VESTECSERVER', 'description':'manually uploaded', 'size':str(len(data)), 'originator':'manually added','group' : 'none'}
