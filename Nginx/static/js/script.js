@@ -360,9 +360,10 @@ function getIncidentDetails(incident_uuid) {
     });
 }
 
-function addDataForIncident(incidentID) {    
+function addDataForIncident(incidentID, incidentQueueName) {    
     $('#add-data-dialog-contents').load('templates/adddata.html #addDataScreen', function() {
         $('#dataIncidentId').val(incidentID);
+        $('#dataQueue').val(incidentQueueName);        
         add_data_dialog.dialog( "open" );
     });    
 }
@@ -378,7 +379,7 @@ function addProvidedData() {
         wf["incidentId"] = $('#dataIncidentId').val();
         wf["payload"] = reader.result;
         $.ajax({
-            url: "http://vestec.local:5501/EDI/add_data_simple"+$('#dataIncidentId').val(),
+            url: "http://vestec.local:5501/EDI/"+$('#dataQueue').val()+$('#dataIncidentId').val(),
             type: "POST",
             contentType: "application/json",
             data: JSON.stringify(wf),
@@ -424,7 +425,7 @@ function loadIncidentDetails(incident) {
         }
 
         if (incident.status == "ACTIVE" && incident.data_queue_name.length > 0) {
-            incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" onClick=\"addDataForIncident(\'"+incident.uuid+"\')\">Add data</button>";
+            incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" onClick=\"addDataForIncident('"+incident.uuid+"','"+incident.data_queue_name+"')\">Add data</button>";
         }
         
         incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" style=\"float: right;\" onClick=\"getIncidentDetails(\'"+incident.uuid+"\')\">Refresh Status</button></div>";
