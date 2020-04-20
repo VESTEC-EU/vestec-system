@@ -1,0 +1,17 @@
+<div id="addDataScreen" title="Information screen">
+	<p class="validateTips" class="addDatafieldset">All form fields are required.</p>
+ 
+  <form id ="addDataToIncidentForm" method="post" enctype="multipart/form-data">
+    <fieldset>
+      <label for="filename" class="addDataLabel">Filename</label>
+      <input type="text" name="filename" id="filename" value="" class="addDataText text ui-widget-content ui-corner-all">
+      <label for="filetype" class="addDataLabel">Type</label>
+	  <input type="text" name="filetype" id="filetype" value="" class="addDataText text ui-widget-content ui-corner-all">      
+	  <label for="filecomment" class="addDataLabel">Comment</label>
+	  <input type="text" name="filecomment" id="filecomment" value="" class="addDataText text ui-widget-content ui-corner-all">   
+	  <label for="fileToUpload" class="addDataLabel">Select File</label>
+	  <input type="file" name="fileToUpload" id="fileToUpload">
+	  <input type="hidden" id="dataIncidentId" name="dataIncidentId">      
+    </fieldset>
+  </form>
+</div>

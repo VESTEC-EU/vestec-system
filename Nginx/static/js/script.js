@@ -2,6 +2,26 @@ var all_activities = {};
 var user_type=-1;
 var version_number=-1;
 
+var add_data_dialog;
+
+$( function() {
+    add_data_dialog = $("#add-data-dialog-form").dialog({
+    autoOpen: false,
+    height: 600,
+    width: 450,
+    modal: true,
+    buttons: {
+        "Add data": addProvidedData,
+        Cancel: function() {
+            add_data_dialog.dialog( "close" );
+        }
+    },
+    close: function() {        
+        
+    }
+});
+});
+
 function checkAuth() {
     // need to add a check to flask to see if the token in the session is the same as the current user's
     var jwt_token = sessionStorage.getItem("access_token");
@@ -343,6 +363,43 @@ function getIncidentDetails(incident_uuid) {
     });
 }
 
+function addDataForIncident(incidentID) {    
+    $('#add-data-dialog-contents').load('templates/adddata.html #addDataScreen', function() {
+        $('#dataIncidentId').val(incidentID);
+        add_data_dialog.dialog( "open" );
+    });    
+}
+
+function addProvidedData() {
+    const reader = new FileReader()
+
+    reader.onload = function () {        
+        var wf = {};
+        wf["filename"] = $('#filename').val();
+        wf["filetype"] = $('#filetype').val();
+        wf["filecomment"] = $('#filecomment').val();
+        wf["incidentId"] = $('#dataIncidentId').val();
+        wf["payload"] = reader.result;
+        $.ajax({
+            url: "http://vestec.local:5501/EDI/add_data_simple"+$('#dataIncidentId').val(),
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(wf),
+            dataType: "json",
+            success: function(response) {
+                add_data_dialog.dialog( "close" );
+            },
+            error: function(response) {
+                $("#confirmation").html("<span>&#10007</span> Error adding workflow");
+                $("#confirmation").removeClass().addClass("button white-btn red-high-btn self-center");
+                $("#confirmation").show();
+            }
+        });        
+    };
+        
+    reader.readAsDataURL($('#fileToUpload').prop('files')[0])
+}
+
 function loadIncidentDetails(incident) {
     var incident_html = '<div class="jobDetails self-center">';
     incident_html += '<div class="jobLine"><b>UUID: </b><div>' + incident.uuid + '</div></div>';
@@ -366,6 +423,10 @@ function loadIncidentDetails(incident) {
         }
         if (incident.status == "COMPLETE" || incident.status == "CANCELLED") {
             incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" onClick=\"archiveIncident(\'"+incident.uuid+"\')\">Archive Incident</button>";
+        }
+
+        if (incident.status == "ACTIVE" && incident.data_queue_name.length > 0) {
+            incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" onClick=\"addDataForIncident(\'"+incident.uuid+"\')\">Add data</button>";
         }
         
         incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" style=\"float: right;\" onClick=\"getIncidentDetails(\'"+incident.uuid+"\')\">Refresh Status</button></div>";

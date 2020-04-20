@@ -3,6 +3,7 @@ sys.path.append("../")
 import requests
 import datetime
 from flask import Flask, request, jsonify
+from flask_cors import CORS, cross_origin
 import Utils.log as log
 import json
 from apscheduler.schedulers.background import BackgroundScheduler
@@ -11,6 +12,8 @@ from Database import initialiseDatabase
 from WorkflowManager import workflow
 
 app = Flask("External Data Interface")
+cors = CORS(app)
+app.config['CORS_HEADERS'] = 'Content-Type'
 logger = log.VestecLogger("External Data Interface")
 push_registered_handlers={}
 pull_registered_handlers=[]
@@ -100,10 +103,12 @@ def handlePostOfData(source, data, headers):
         logger.Log(log.LogType.Error, "Data posted from '"+source+"' and ignoring as there are no handlers that match")      
         return jsonify({"status": 400, "msg": "No matching handler registered"})
 
+@cross_origin(allow_headers=['Content-Type'])
 @app.route("/EDI", methods=["POST"])
 def post_data_anon():    
     return handlePostOfData(request.remote_addr, request.get_data(), dict(request.headers))    
 
+@cross_origin(allow_headers=['Content-Type'])
 @app.route("/EDI/<sourceid>", methods=["POST"])
 def post_data(sourceid):
     return handlePostOfData(sourceid, request.get_data(), dict(request.headers))

@@ -72,7 +72,7 @@ def generateIncidentDiGraph(incident_uuid):
             G.add_edge(originator,destination)
     return to_agraph(G)
 
-def packageIncident(stored_incident, include_sort_key, include_digraph):
+def packageIncident(stored_incident, include_sort_key, include_digraph, include_manual_data_queuename):
     incident={}
     incident["uuid"]=stored_incident.uuid
     incident["kind"]=stored_incident.kind
@@ -86,7 +86,10 @@ def packageIncident(stored_incident, include_sort_key, include_digraph):
     incident["incident_date"]=stored_incident.incident_date.strftime("%d/%m/%Y, %H:%M:%S")
     if (include_sort_key): incident["srt_key"]=stored_incident.incident_date
     if (include_digraph):
-        incident["digraph"]=str(generateIncidentDiGraph(stored_incident.uuid))        
+        incident["digraph"]=str(generateIncidentDiGraph(stored_incident.uuid))
+    if (include_manual_data_queuename):
+        incident_workflow=RegisteredWorkflow.get(kind=stored_incident.kind)
+        incident["data_queue_name"]=incident_workflow.data_queue_name
     return incident
 
 @pny.db_session
@@ -159,7 +162,7 @@ def retrieveMyIncidentSummary(username, pending_filter, active_filter, completed
     user = User.get(username=username)
     for stored_incident in user.incidents:
         if doesStoredIncidentMatchFilter(stored_incident, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter):
-            incidents.append(packageIncident(stored_incident, True, False))
+            incidents.append(packageIncident(stored_incident, True, False, False))
     sorted_incidents=sorted(incidents, key = lambda i: (i['status'], i['srt_key']),reverse=True)
     for d in sorted_incidents:
         del d['srt_key']
@@ -170,5 +173,5 @@ def retrieveIncident(incident_uuid, username):
     user = User.get(username=username)
     incident = Incident.get(uuid=incident_uuid)
     if checkIfUserCanAccessIncident(incident, user):    
-        return packageIncident(incident, False, True)    
+        return packageIncident(incident, False, True, True)    
     return None
