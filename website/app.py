@@ -137,18 +137,17 @@ def createIncident():
     else:
         return jsonify({"status": 400, "msg": "Incident name or type is missing"})
 
-@app.route('/flask/getincidents', methods=['POST'])
+@app.route('/flask/getincidents', methods=['GET'])
 @pny.db_session
 @fresh_jwt_required
-def getAllMyIncidents():    
+def getAllMyIncidents():
     username = get_jwt_identity()
-    filter_data = request.json
-    pending_filter = filter_data.get("pending", None)
-    active_filter = filter_data.get("active", None)
-    completed_filter = filter_data.get("completed", None)
-    cancelled_filter = filter_data.get("cancelled", None)
-    error_filter = filter_data.get("error", None)
-    archived_filter = filter_data.get("archived", None)
+    pending_filter = request.args.get("pending", "false").lower() == "true"
+    active_filter = request.args.get("active", "false").lower() == "true"
+    completed_filter = request.args.get("completed", "false").lower() == "true"
+    cancelled_filter = request.args.get("cancelled", "false").lower() == "true"
+    error_filter = request.args.get("error", "false").lower() == "true"
+    archived_filter = request.args.get("archived", "false").lower() == "true"
 
     return jsonify({"status": 200, "incidents": json.dumps(incidents.retrieveMyIncidentSummary(username, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter))})
     #return jsonify({"status": 401, "msg": "Error retrieving user incidents."})

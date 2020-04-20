@@ -254,21 +254,18 @@ function getJobsDashboard() {
     archived_filter=getDashboardFilterValue("archived_incidents", false);
     $("#body-container").html("");
 
-    var filter_dict = {};
-    filter_dict["pending"] = pending_filter;
-    filter_dict["active"] = active_filter;
-    filter_dict["completed"] = completed_filter;
-    filter_dict["cancelled"] = cancelled_filter;
-    filter_dict["error"] = error_filter;
-    filter_dict["archived"] = archived_filter;
+    http_args=""
+    if (pending_filter) http_args+="pending=true"
+    if (active_filter) http_args+=(http_args.length > 0 ? "&" : "") + "active=true"
+    if (completed_filter) http_args+=(http_args.length > 0 ? "&" : "") + "completed=true"
+    if (cancelled_filter) http_args+=(http_args.length > 0 ? "&" : "") + "cancelled=true"
+    if (error_filter) http_args+=(http_args.length > 0 ? "&" : "") + "error=true"
+    if (archived_filter) http_args+=(http_args.length > 0 ? "&" : "") + "archived=true"
 
     $.ajax({
-        url: "/flask/getincidents",
-        type: "POST",
-        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
-        contentType: "application/json",
-        data: JSON.stringify(filter_dict),
-        dataType: "json",
+        url: "/flask/getincidents?"+http_args,
+        type: "GET",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
         success: function(response) {
             if (response.status == 200) {
                 all_incidents = JSON.parse(response.incidents);
