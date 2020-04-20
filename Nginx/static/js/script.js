@@ -408,6 +408,7 @@ function loadIncidentDetails(incident) {
     incident_html += '<div class="jobLine"><b>Created On: </b><div>' + incident.incident_date + '</div></div>';
     incident_html += '<div class="jobLine"><b>Created By: </b><div>' + incident.creator + '</div></div>';    
     incident_html += '<div class="jobLine"><b>Status: </b><div>' + incident.status + '</div></div>';
+    incident_html += '<div class="jobLine"><b>Associated datasets: </b><div>' + incident.data_sets.length + '</div></div>';
     if (incident.status == "COMPLETE") {
         incident_html += '<div class="jobLine"><b>Completed On: </b><div>' + incident.date_completed + '</div></div>';
     }
@@ -430,6 +431,17 @@ function loadIncidentDetails(incident) {
         }
         
         incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" style=\"float: right;\" onClick=\"getIncidentDetails(\'"+incident.uuid+"\')\">Refresh Status</button></div>";
+    }
+
+    incident_html+="<div id=\"incident_data\" class=\"jobDetails self-center\"><table id='incidentDataTable' class='self-center displayTable'>";
+
+    if (incident.data_sets.length > 0) {
+        incident_html+="<thead><tr><th>Filename</th><th>File type</th><th>Date Created</th><th>Actions</th></tr></thead>";        
+        for (data_set of incident.data_sets) {
+            console.log(data_set.data_sets);
+            incident_html+="<tr><td>"+data_set.name+"</td><td>"+data_set.type+"</td><td>"+data_set.date_created+"</td><td></td></tr>";
+        }
+        incident_html+="</table></div>";
     }
 
     incident_html+="<div id=\"workflow_diagram\" class=\"jobDetails self-center\"><svg id=\"svg-canvas\" style='width: 100%; height: auto;'></svg></div>"    
