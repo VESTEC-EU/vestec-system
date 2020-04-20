@@ -428,11 +428,10 @@ function loadIncidentDetails(incident) {
         }
         
         incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" style=\"float: right;\" onClick=\"getIncidentDetails(\'"+incident.uuid+"\')\">Refresh Status</button></div>";
-    }
-
-    incident_html+="<div id=\"incident_data\" class=\"jobDetails self-center\"><table id='incidentDataTable' class='self-center displayTable'>";
+    }    
 
     if (incident.data_sets.length > 0) {
+        incident_html+="<div id=\"incident_data\" class=\"jobDetails self-center\"><table id='incidentDataTable' class='self-center displayTable'>";
         incident_html+="<thead><tr><th>Filename</th><th>File type</th><th>Date Created</th><th>Actions</th></tr></thead>";        
         for (data_set of incident.data_sets) {            
             incident_html+="<tr><td>"+data_set.name+"</td><td>"+data_set.type+"</td><td>"+data_set.date_created+"</td><td>";
