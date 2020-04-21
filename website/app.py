@@ -40,10 +40,12 @@ logger = log.VestecLogger("Website")
 
 if "VESTEC_MANAGER_URI" in os.environ:
     JOB_MANAGER_URI = os.environ["VESTEC_MANAGER_URI"]
-    EDI_URL= os.environ["VESTEC_EDI_URI"]
+    EDI_URL = os.environ["VESTEC_EDI_URI"]
+    DATA_MANAGER_URI = os.environ["VESTEC_DM_URI"]
 else:
     JOB_MANAGER_URI = 'http://127.0.0.1:5500/jobs'
     EDI_URL= 'http://127.0.0.1:5501/EDImanager'
+    DATA_MANAGER_URI = 'http://localhost:5000'
 
 # Initialise JWT
 app.config["JWT_SECRET_KEY"] = os.environ["JWT_PASSWD"]
@@ -205,7 +207,7 @@ def activateIncident(incident_uuid):
 @pny.db_session
 @fresh_jwt_required
 def downloadData(data_uuid):
-    data_info=requests.get("http://localhost:5000/info/" + data_uuid)
+    data_info=requests.get(DATA_MANAGER_URI+"/info/" + data_uuid)
     file_info=data_info.json()
     if (file_info["path"]=="vestecDB" and file_info["machine"]=="VESTECSERVER"):
         data_dump=LocalDataStorage[file_info["filename"]]
