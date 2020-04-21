@@ -4,7 +4,7 @@ import flask
 import uuid
 import pony.orm as pny
 from pony.orm.serialization import to_dict
-from db import Data, initialise_database
+from db import Data, DataTransfer, initialise_database
 import datetime
 import os
 import ConnectionManager
@@ -119,7 +119,10 @@ def move(id):
     
     #move the file
     try:
+        date_started = datetime.datetime.now()
         status, message =_copy(src,src_machine,dest,dest_machine,move=True)
+        date_completed = datetime.datetime.now()
+        completion_time = date_completed - date_started
     except ConnectionManager.ConnectionError as e:
         return str(e), 500
 
@@ -135,6 +138,14 @@ def move(id):
             data.path, data.filename = os.path.split(dest)
             data.date_modified=datetime.datetime.now()
             print("Move successful")
+            data_transfer = DataTransfer(id=str(uuid.uuid4()),
+                                         src_id=id,
+                                         dst_id=id,
+                                         src_machine=src_machine,
+                                         dst_machine=dest_machine,
+                                         date_started=date_started,
+                                         date_completed=date_completed,
+                                         completion_time=completion_time)
         return "Move successful", 200
 
 #copies a data entity to a new location, returning the uuid of the copy
@@ -163,7 +174,10 @@ def copy(id):
     
     #copy the file
     try:
+        date_started = datetime.datetime.now()
         status, message =_copy(src,src_machine,dest,dest_machine)
+        date_completed = datetime.datetime.now()
+        completion_time = date_completed - date_started
     except ConnectionManager.ConnectionError as e:
         return str(e), 500
 
@@ -172,9 +186,18 @@ def copy(id):
     if status == NOT_IMPLEMENTED:
         return message, 501
     elif status == OK:
-        path,fname = os.path.split(dest)
-        id =_register(fname,path,dest_machine,description,size,originator,group)
-        return id, 201
+        with pny.db_session:
+            path,fname = os.path.split(dest)
+            new_id =_register(fname,path,dest_machine,description,size,originator,group)
+            data_transfer = DataTransfer(id=str(uuid.uuid4()),
+                                         src_id=id,
+                                         dst_id=id,
+                                         src_machine=src_machine,
+                                         dst_machine=dest_machine,
+                                         date_started=date_started,
+                                         date_completed=date_completed,
+                                         completion_time=completion_time)
+        return new_id, 201
 
 
 
