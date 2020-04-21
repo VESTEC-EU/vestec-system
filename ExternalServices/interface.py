@@ -10,6 +10,7 @@ from ExternalServices import logins
 from flask import Flask, request, jsonify
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
 import managementAPI
+import EDIconnector
 
 # Initialise database
 Database.initialiseDatabase()
@@ -187,6 +188,14 @@ def logout():
     unset_jwt_cookies(response)
     return response
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8000)
+@app.route("/EDI", methods=["POST"])
+def post_edi_data_anon():
+    return EDIconnector.pushDataToEDI()
+
+@app.route("/EDI/<sourceid>", methods=["POST"])
+def post_edi_data(sourceid):    
+    return EDIconnector.pushDataToEDI(sourceid)
+
+if __name__ == '__main__':    
+    app.run(host='0.0.0.0', port=8000)    
 

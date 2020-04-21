@@ -379,7 +379,7 @@ function addProvidedData() {
         wf["incidentId"] = $('#dataIncidentId').val();
         wf["payload"] = reader.result;
         $.ajax({
-            url: "http://vestec.local:5501/EDI/"+$('#dataQueue').val()+$('#dataIncidentId').val(),
+            url: "/EDI/"+$('#dataQueue').val()+$('#dataIncidentId').val(),
             type: "POST",
             contentType: "application/json",
             data: JSON.stringify(wf),
