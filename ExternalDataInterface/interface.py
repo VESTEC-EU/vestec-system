@@ -9,6 +9,7 @@ import json
 from apscheduler.schedulers.background import BackgroundScheduler
 import pony.orm as pny
 from Database import initialiseDatabase
+from Database.edistorage import EDIHandler
 from WorkflowManager import workflow
 
 app = Flask("External Data Interface")
@@ -31,6 +32,18 @@ class DataHandler:
         self.source_endpoint=source_endpoint
         self.pollPeriod=pollPeriod
         self.schedulerevent=None
+        self.dbId=None
+
+    def __init__(self, database_entry):
+        self.queue_name=database_entry.queuename
+        self.incidentId=database_entry.incidentid
+        self.source_endpoint=database_entry.endpoint
+        if (database_entry.pollperiod==""):
+            self.pollPeriod=None
+        else:
+            self.pollPeriod=database_entry.pollperiod
+        self.schedulerevent=None
+        self.dbId=database_entry.id
    
     def isPollHandler(self):
         return self.pollPeriod is not None
@@ -47,6 +60,23 @@ class DataHandler:
             return True
         else:
             return False
+    @pny.db_session
+    def persistToDatabase(self):
+        if (self.pollPeriod is not None):
+            newhandler=EDIHandler(queuename=self.getQueueName(), incidentid=self.getIncidentId(), endpoint=self.getSourceEndpoint(), pollperiod=self.getPollPeriod(), type="PULL")
+        else:
+            newhandler=EDIHandler(queuename=self.getQueueName(), incidentid=self.getIncidentId(), endpoint=self.getSourceEndpoint(), type="PUSH")
+        pny.commit()
+        self.dbId=newhandler.id
+
+    @pny.db_session
+    def removeFromDatabase(self):
+        if (self.dbId is None):
+            print("Error can not remove database entry for handler as no DB id associated")
+        else:
+            EDIHandler[dbId].delete()
+            pny.commit()
+
     def generateJSON(self):
         return {"queuename": self.queue_name, "endpoint": self.source_endpoint, "incidentid": self.incidentId, "pollperiod": self.pollPeriod}
 
@@ -135,7 +165,8 @@ def register_handler():
     handler=generateDataHandler(dict)
     source_endpoint=handler.getSourceEndpoint()
     if handler.isPollHandler():
-        if not isHandlerAlreadyRegistered(handler, pull_registered_handlers):
+        if not isHandlerAlreadyRegistered(handler, pull_registered_handlers):            
+            handler.persistToDatabase()
             pull_registered_handlers.append(handler)
             handler.schedule()
             logger.Log(log.LogType.Activity, "Poll based handler registered for '"+source_endpoint+"' with period "+handler.getPollPeriod()+"s")
@@ -147,6 +178,7 @@ def register_handler():
         if source_endpoint not in push_registered_handlers:
             push_registered_handlers[source_endpoint]=[]
         if not isHandlerAlreadyRegistered(handler, push_registered_handlers[source_endpoint]):
+            handler.persistToDatabase()
             push_registered_handlers[source_endpoint].append(handler)
             logger.Log(log.LogType.Activity, "Push based handler registered for '"+source_endpoint+"'")     
             return jsonify({"status": 200, "msg": "Handler registered"})
@@ -163,7 +195,7 @@ def remove_handler():
     for handler in pull_registered_handlers:
         if remove_handler == handler:
             pull_registered_handlers.remove(handler)
-            handler.cancel()
+            handler.cancel()            
             handler_removed=True
     source_endpoint=remove_handler.getSourceEndpoint()
     if source_endpoint in push_registered_handlers:        
@@ -173,6 +205,7 @@ def remove_handler():
                 handler_removed=True
 
     if handler_removed:
+        handler.removeFromDatabase()
         logger.Log(log.LogType.Activity, "Handler removed for '"+source_endpoint+"'")
         return jsonify({"status": 200, "msg": "Handler removed"})
     else:
@@ -202,7 +235,24 @@ def buildDescriptionOfHandlers(handler_list):
         json_to_return.append(handler.generateJSON())
     return json_to_return
 
+@pny.db_session
+def reloadEDIStateFromDB():
+    listofhandlers=EDIHandler.select()    
+    for handler in listofhandlers:
+        createddatahandler=DataHandler(handler)
+        if createddatahandler.isPollHandler():
+            pull_registered_handlers.append(createddatahandler)
+            createddatahandler.schedule()
+        else:
+            if createddatahandler.getSourceEndpoint() not in push_registered_handlers:
+                push_registered_handlers[createddatahandler.getSourceEndpoint()]=[]
+            push_registered_handlers[createddatahandler.getSourceEndpoint()].append(createddatahandler)
+
+    print("Reinitialised EDI with "+str(len(listofhandlers))+" handlers")
+
+
 if __name__ == "__main__":
     initialiseDatabase()
     poll_scheduler.start()
+    reloadEDIStateFromDB()
     app.run(host="0.0.0.0", port=5501)
