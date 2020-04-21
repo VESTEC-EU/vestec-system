@@ -17,11 +17,11 @@ services:
     networks:
       - vestec
 
-  website:
-    container_name: website
+  externalservices:
+    container_name: externalservices
     build:
       context: ../
-      dockerfile: website/Dockerfile
+      dockerfile: ExternalServices/Dockerfile
     ports:
       - 8000:8000
     environment:
