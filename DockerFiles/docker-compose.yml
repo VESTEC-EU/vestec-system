@@ -94,6 +94,20 @@ services:
       - environment_variables.env
     networks:
       - vestec
+
+  datamanager:
+    container_name: DataManager
+    depends_on:
+      - "maria"
+    build:
+      context: ../
+      dockerfile: DataManager/Dockerfile
+    environment:    
+      VESTEC_EDI_URI: "http://edi:5501/EDImanager"
+    env_file:
+      - environment_variables.env
+    networks:
+      - vestec
     
 
 networks:
