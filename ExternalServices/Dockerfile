@@ -7,4 +7,4 @@ WORKDIR /app/ExternalServices
 RUN apt update
 RUN apt install -y graphviz libgraphviz-dev gcc
 RUN pip install -r /app/ExternalServices/requirements.txt
-CMD gunicorn -b 0.0.0.0:$port app:interface
+CMD gunicorn -b 0.0.0.0:$port interface:app
