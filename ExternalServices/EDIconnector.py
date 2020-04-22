@@ -2,7 +2,7 @@ import os
 from flask import jsonify, request, Response
 import requests
 
-if "EDI_URL" in os.environ:
+if "VESTEC_EDI_URI" in os.environ:
     EDI_URL = os.environ["VESTEC_EDI_URI"]    
 else:    
     EDI_URL= 'http://127.0.0.1:5501/EDImanager'
