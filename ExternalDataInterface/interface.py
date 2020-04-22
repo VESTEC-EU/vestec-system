@@ -29,18 +29,7 @@ class DataHandler:
         self.source_endpoint=source_endpoint
         self.pollPeriod=pollPeriod
         self.schedulerevent=None
-        self.dbId=None
-
-    def __init__(self, database_entry):
-        self.queue_name=database_entry.queuename
-        self.incidentId=database_entry.incidentid
-        self.source_endpoint=database_entry.endpoint
-        if (database_entry.pollperiod==""):
-            self.pollPeriod=None
-        else:
-            self.pollPeriod=database_entry.pollperiod
-        self.schedulerevent=None
-        self.dbId=database_entry.id
+        self.dbId=None    
    
     def isPollHandler(self):
         return self.pollPeriod is not None
@@ -71,7 +60,7 @@ class DataHandler:
         if (self.dbId is None):
             print("Error can not remove database entry for handler as no DB id associated")
         else:
-            EDIHandler[dbId].delete()
+            EDIHandler[self.dbId].delete()
             pny.commit()
 
     def generateJSON(self):
@@ -185,6 +174,8 @@ def register_handler():
 @pny.db_session
 def remove_handler():
     dict = request.get_json()
+    if (dict["pollperiod"]=="null"): dict["pollperiod"]=None
+    print(dict)
     remove_handler=generateDataHandler(dict)
     handler_removed=False
     for handler in pull_registered_handlers:
@@ -230,11 +221,20 @@ def buildDescriptionOfHandlers(handler_list):
         json_to_return.append(handler.generateJSON())
     return json_to_return
 
+def createDataHandlerFromDB(database_entry):
+    if (database_entry.pollperiod==""): 
+        pollPeriod=None
+    else:
+        pollPeriod=database_entry.pollperiod
+    dh=DataHandler(database_entry.queuename, database_entry.incidentid, database_entry.endpoint, pollPeriod)
+    dh.dbId=database_entry.id
+    return dh
+
 @pny.db_session
 def reloadEDIStateFromDB():
     listofhandlers=EDIHandler.select()    
     for handler in listofhandlers:
-        createddatahandler=DataHandler(handler)
+        createddatahandler=createDataHandlerFromDB(handler)
         if createddatahandler.isPollHandler():
             pull_registered_handlers.append(createddatahandler)
             createddatahandler.schedule()
