@@ -2,6 +2,104 @@ var all_activities = {};
 var user_type=-1;
 var version_number=-1;
 
+var add_data_dialog;
+var edit_data_dialog;
+
+const ConfirmationTypeEnum = Object.freeze({"DELETEEDIHANDLER":1, "DELETEDATAITEM":2});
+var confirmation_box_type=null;
+var confirmation_box_data={};
+
+$( function() {
+    add_data_dialog = $("#add-data-dialog-form").dialog({
+    autoOpen: false,
+    height: 450,
+    width: 500,
+    modal: true,
+    buttons: {
+        "Add data": addProvidedData,
+        Cancel: function() {
+            add_data_dialog.dialog( "close" );
+        }
+    },
+    close: function() {        
+        
+    }
+    });
+
+    edit_data_dialog = $("#edit-data-dialog-form").dialog({
+        autoOpen: false,
+        height: 450,
+        width: 500,
+        modal: true,
+        buttons: {
+            "Edit data": editProvidedData,
+            Cancel: function() {
+                edit_data_dialog.dialog( "close" );
+            }
+        },
+        close: function() {        
+            
+        }
+        });
+   
+        $( "#dialog-confirm" ).dialog({
+          resizable: false,
+          autoOpen: false,
+          height: "auto",
+          width: 400,
+          modal: true,
+          buttons: {
+            "OK": function() {
+              $( this ).dialog( "close" );
+              if (confirmation_box_type == ConfirmationTypeEnum.DELETEEDIHANDLER) {
+                performHandlerDeletion();
+              } else if (confirmation_box_type == ConfirmationTypeEnum.DELETEDATAITEM) {
+                performDataSetDeletion();
+              }
+            },
+            Cancel: function() {
+              $( this ).dialog( "close" );
+            }
+          }
+        });
+    });
+
+
+
+function performDataSetDeletion() {
+    url_append="data_uuid="+confirmation_box_data["data_uuid"]+"&incident_uuid="+confirmation_box_data["incident_uuid"];
+    $.ajax({
+        url: "/flask/data?"+url_append,
+        type: "DELETE",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
+        success: function(response) {
+            getIncidentDetails(confirmation_box_data["incident_uuid"]);
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> User edit failed");
+        }
+    });
+}
+
+function performHandlerDeletion() {
+    $.ajax({
+        url: "/flask/deleteedihandler",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(confirmation_box_data),
+        dataType: "json",
+        success: function(response) {
+            getEDIInfo();
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> User edit failed");
+        }
+    });
+}
+
 function checkAuth() {
     // need to add a check to flask to see if the token in the session is the same as the current user's
     var jwt_token = sessionStorage.getItem("access_token");
@@ -216,6 +314,7 @@ function generateAdminDropdown() {
   admin_html+="<div class=\"admin_item\" onClick=\"getSystemHealth()\">System health</div>";
   admin_html+="<div class=\"admin_item\" onClick=\"getWorkflows()\">Workflows</div>";
   admin_html+="<div class=\"admin_item\" onClick=\"getUsers()\">Users</div>";
+  admin_html+="<div class=\"admin_item\" onClick=\"getEDIInfo()\">EDI</div>";
   admin_html+="</div></div>";
   return admin_html;
 }
@@ -234,21 +333,18 @@ function getJobsDashboard() {
     archived_filter=getDashboardFilterValue("archived_incidents", false);
     $("#body-container").html("");
 
-    var filter_dict = {};
-    filter_dict["pending"] = pending_filter;
-    filter_dict["active"] = active_filter;
-    filter_dict["completed"] = completed_filter;
-    filter_dict["cancelled"] = cancelled_filter;
-    filter_dict["error"] = error_filter;
-    filter_dict["archived"] = archived_filter;
+    http_args=""
+    if (pending_filter) http_args+="pending=true"
+    if (active_filter) http_args+=(http_args.length > 0 ? "&" : "") + "active=true"
+    if (completed_filter) http_args+=(http_args.length > 0 ? "&" : "") + "completed=true"
+    if (cancelled_filter) http_args+=(http_args.length > 0 ? "&" : "") + "cancelled=true"
+    if (error_filter) http_args+=(http_args.length > 0 ? "&" : "") + "error=true"
+    if (archived_filter) http_args+=(http_args.length > 0 ? "&" : "") + "archived=true"
 
     $.ajax({
-        url: "/flask/getincidents",
-        type: "POST",
-        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
-        contentType: "application/json",
-        data: JSON.stringify(filter_dict),
-        dataType: "json",
+        url: "/flask/getincidents?"+http_args,
+        type: "GET",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
         success: function(response) {
             if (response.status == 200) {
                 all_incidents = JSON.parse(response.incidents);
@@ -343,6 +439,44 @@ function getIncidentDetails(incident_uuid) {
     });
 }
 
+function addDataForIncident(incidentID, incidentQueueName) {    
+    $('#add-data-dialog-contents').load('templates/adddata.html #addDataScreen', function() {
+        $('#dataIncidentId').val(incidentID);
+        $('#dataQueue').val(incidentQueueName);        
+        add_data_dialog.dialog( "open" );
+    });    
+}
+
+function addProvidedData() {
+    const reader = new FileReader()
+
+    reader.onload = function () {        
+        var wf = {};        
+        wf["filename"] = $('#fileToUpload').val().split('\\').pop();
+        wf["filetype"] = $('#filetype').val();
+        wf["filecomment"] = $('#filecomment').val();
+        wf["incidentId"] = $('#dataIncidentId').val();
+        wf["payload"] = reader.result;
+        $.ajax({
+            url: "/EDI/"+$('#dataQueue').val()+$('#dataIncidentId').val(),
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify(wf),
+            dataType: "json",
+            success: function(response) {
+                add_data_dialog.dialog( "close" );
+            },
+            error: function(response) {
+                $("#confirmation").html("<span>&#10007</span> Error adding workflow");
+                $("#confirmation").removeClass().addClass("button white-btn red-high-btn self-center");
+                $("#confirmation").show();
+            }
+        });        
+    };
+        
+    reader.readAsDataURL($('#fileToUpload').prop('files')[0])
+}
+
 function loadIncidentDetails(incident) {
     var incident_html = '<div class="jobDetails self-center">';
     incident_html += '<div class="jobLine"><b>UUID: </b><div>' + incident.uuid + '</div></div>';
@@ -351,6 +485,7 @@ function loadIncidentDetails(incident) {
     incident_html += '<div class="jobLine"><b>Created On: </b><div>' + incident.incident_date + '</div></div>';
     incident_html += '<div class="jobLine"><b>Created By: </b><div>' + incident.creator + '</div></div>';    
     incident_html += '<div class="jobLine"><b>Status: </b><div>' + incident.status + '</div></div>';
+    incident_html += '<div class="jobLine"><b>Associated datasets: </b><div>' + incident.data_sets.length + '</div></div>';
     if (incident.status == "COMPLETE") {
         incident_html += '<div class="jobLine"><b>Completed On: </b><div>' + incident.date_completed + '</div></div>';
     }
@@ -367,13 +502,103 @@ function loadIncidentDetails(incident) {
         if (incident.status == "COMPLETE" || incident.status == "CANCELLED") {
             incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" onClick=\"archiveIncident(\'"+incident.uuid+"\')\">Archive Incident</button>";
         }
+
+        if (incident.status == "ACTIVE" && incident.data_queue_name.length > 0) {
+            incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" onClick=\"addDataForIncident('"+incident.uuid+"','"+incident.data_queue_name+"')\">Add data</button>";
+        }
         
         incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" style=\"float: right;\" onClick=\"getIncidentDetails(\'"+incident.uuid+"\')\">Refresh Status</button></div>";
+    }    
+
+    if (incident.data_sets.length > 0) {
+        incident_html+="<div id=\"incident_data\" class=\"jobDetails self-center\"><table id='incidentDataTable' class='self-center displayTable'>";
+        incident_html+="<thead><tr><th>Filename</th><th>File type</th><th>Date Created</th><th>Actions</th></tr></thead>";        
+        for (data_set of incident.data_sets) {            
+            incident_html+="<tr><td>"+data_set.name+"</td><td>"+data_set.type+"</td><td>"+data_set.date_created+"</td><td>";
+            incident_html+="<img src='../img/download.png' class='click_button' title='Download dataset' width=26 height=26 onClick=\"downloadData('"+data_set.uuid+"','"+data_set.name+"')\">";
+            incident_html+="&nbsp;&nbsp;&nbsp;";
+            incident_html+="<img src='../img/edit.png' class='click_button' width=26 height=26 onClick=\"editDataItem('"+data_set.uuid+"','"+incident.uuid+"')\">";
+            incident_html+="&nbsp;&nbsp;&nbsp;";
+            incident_html+="<img src='../img/cross.png' class='click_button' width=26 height=26 onClick=\"deleteDataItem('"+data_set.uuid+"','"+incident.uuid+"')\">";
+            incident_html+="</td></tr>";
+        }
+        incident_html+="</table></div>";
     }
 
     incident_html+="<div id=\"workflow_diagram\" class=\"jobDetails self-center\"><svg id=\"svg-canvas\" style='width: 100%; height: auto;'></svg></div>"    
 
     return incident_html;
+}
+
+function editDataItem(data_uuid, incident_uuid) {
+    $.ajax({
+        url: "/flask/metadata?data_uuid="+data_uuid+"&incident_uuid="+incident_uuid,
+        type: "GET",
+        contentType: "application/json",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
+        success: function (response) {    
+            meta_data = response.metadata;        
+            $('#edit-data-dialog-contents').load('templates/editdata.html #editDataScreen', function() {
+                $('#incidentId').val(incident_uuid);
+                $('#dataId').val(data_uuid);
+                $('#filetype').val(meta_data.type);
+                $('#filecomment').val(meta_data.comment);
+                edit_data_dialog.dialog( "open" );
+            });  
+        }
+    });    
+}
+
+function editProvidedData() {
+    var data_description = {};
+    data_description["incident_uuid"] = $("#incidentId").val();
+    data_description["data_uuid"] = $("#dataId").val();
+    data_description["type"] = $("#filetype").val();
+    data_description["comments"] = $("#filecomment").val();
+    $.ajax({
+        url: "/flask/metadata",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(data_description),
+        dataType: "json",
+        success: function(response) {
+            edit_data_dialog.dialog( "close" );
+            getIncidentDetails($("#incidentId").val());
+        },
+        error: function(response) {
+            $("#confirmation").html("<span>&#10007</span> Error adding workflow");
+            $("#confirmation").removeClass().addClass("button white-btn red-high-btn self-center");
+            $("#confirmation").show();
+        }
+    });
+}
+
+function deleteDataItem(data_uuid, incident_uuid) {
+    confirmation_box_type=ConfirmationTypeEnum.DELETEDATAITEM;
+    confirmation_box_data={"data_uuid" : data_uuid, "incident_uuid" : incident_uuid};
+    $("#dialog-confirm-text").text("Are you sure you want to delete this data set?");
+    $( "#dialog-confirm" ).dialog("open");
+}
+
+function downloadData(data_uuid, filename) {
+    $.ajax({
+        url: "/flask/data/"+data_uuid,
+        type: "GET",
+        dataType: 'binary',
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
+        success: function (data) {            
+            var url = URL.createObjectURL(data);
+            var $a = $('<a />', {
+                'href': url,
+                'download': filename,
+                'text': "click"
+            }).hide().appendTo("body")[0].click(); 
+            setTimeout(function() {
+                URL.revokeObjectURL(url);
+            }, 10000);           
+        }
+    }); 
 }
 
 function cancelIncident(incident_uuid) {
@@ -430,7 +655,8 @@ function activateIncident(incident_uuid) {
 function createWorkflow() {
     var wf = {};
     wf["kind"] = $("#workflowname").val();
-    wf["queuename"] = $("#workflowqueuename").val();
+    wf["initqueuename"] = $("#workflowqueuename").val();
+    wf["dataqueuename"] = $("#manualdataqueuename").val();
     $.ajax({
         url: "/flask/addworkflow",
         type: "POST",
@@ -489,8 +715,9 @@ function getWorkflows() {
                 var wf_entry = "<tr>";
                 item = workflows[item];
                 wf_entry += "<td>" + item.kind + "</td>";
-                wf_entry += "<td>" + item.queuename + "</td>";
-                wf_entry += "<td><img src='../img/cross.png' width=32 height=32 onClick=\"deleteWorkflow('"+item.kind+"')\"></td>";
+                wf_entry += "<td>" + item.initqueuename + "</td>";
+                wf_entry += "<td>" + item.dataqueuename + "</td>";
+                wf_entry += "<td><img src='../img/cross.png' class='click_button' width=32 height=32 onClick=\"deleteWorkflow('"+item.kind+"')\"></td>";
                 
                 wf_entry += "</tr>";
 
@@ -504,6 +731,55 @@ function getWorkflows() {
         }
     });
     });
+}
+
+function getEDIInfo() {
+    checkAuthStillValid();
+    $("#nav-home").removeClass("blue");
+    $("#nav-dash").removeClass("blue");
+    $("#nav-logout").removeClass("blue");
+    $("#body-container").load("../templates/ediinfo.html");   
+
+
+    $.ajax({
+        url: "/flask/getediinfo",
+        type: "GET",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
+        success: function(response) {            
+            var edi_handlers = response.handlers;
+            $("#EDIInfotable").append("<tbody>");
+
+            for (edi_handler in edi_handlers) {
+                var handler_entry = "<tr>";
+                item = edi_handlers[edi_handler];
+                handler_entry += "<td>"+item.endpoint + "</td>";                
+                if (item.pollperiod == null) {
+                    handler_entry += "<td>PUSH</td>";
+                } else {
+                    handler_entry += "<td>PULL ("+item.pollperiod+")</td>";
+                }
+                handler_entry += "<td>" + item.incidentid + "</td>";
+                handler_entry += "<td>" + item.queuename + "</td>";
+                
+                handler_entry += "<td><img src='../img/cross.png' class='click_button' width=26 height=26 onClick=\"deleteEDIHandler('"+item.queuename+"','"+item.endpoint+"','"+item.incidentid+"','"+item.pollperiod+"')\"></td>";
+                
+                handler_entry += "</tr>";
+
+                $("#EDIInfotable").append(handler_entry);
+            }
+            $("#EDIInfotable").append("</tbody>");
+        },
+        error: function(xhr) {
+            console.log({"status": 500, "msg": "Sorry, there seems to be a problem with our system."});
+        }
+    });
+}
+
+function deleteEDIHandler(queuename, endpoint, incidentid, pollperiod) {
+    confirmation_box_type=ConfirmationTypeEnum.DELETEEDIHANDLER;
+    confirmation_box_data={"queuename": queuename, "endpoint":endpoint, "incidentid": incidentid, "pollperiod" : pollperiod};
+    $("#dialog-confirm-text").text("Are you sure you want to delete this handler?");
+    $( "#dialog-confirm" ).dialog("open");
 }
 
 function getUsers() {
