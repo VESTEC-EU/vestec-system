@@ -191,7 +191,7 @@ def copy(id):
             new_id =_register(fname,path,dest_machine,description,size,originator,group)
             data_transfer = DataTransfer(id=str(uuid.uuid4()),
                                          src_id=id,
-                                         dst_id=id,
+                                         dst_id=new_id,
                                          src_machine=src_machine,
                                          dst_machine=dest_machine,
                                          date_started=date_started,
