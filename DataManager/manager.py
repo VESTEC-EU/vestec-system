@@ -54,7 +54,7 @@ def register():
 
     if _checkExists(machine,fname,path):
         return "File already exists", 406
-    
+
     #register this with the database and return its UUID
     id=_register(fname,path,machine,description,size,originator,group)
     return id, 201
@@ -91,7 +91,7 @@ def GetExternal():
         return message, 501
     elif status==FILE_ERROR:
         return message, 500
-    
+
 
 #Moves a data entity from one location to another
 @app.route("/move/<id>",methods=["POST"])
@@ -108,28 +108,43 @@ def move(id):
         size = data.size
         originator = data.originator
         group = data.group
-    
+
     #get the options from the header
     dest_machine = flask.request.form["machine"]
     dest = flask.request.form["dest"]
 
+    with pny.db_session:
+        transfer_id = str(uuid.uuid4())
+        data_transfer = DataTransfer(id=transfer_id,
+                                     src_id=id,
+                                     src_machine=src_machine,
+                                     dst_machine=dest_machine,
+                                     date_started=datetime.datetime.now(),
+                                     status="STARTED")
+
     path,fname = os.path.split(dest)
     if _checkExists(dest_machine,fname,path):
+        with pny.db_session:
+            DataTransfer[transfer_id].status = "FAILED"
         return "File already exists", 406
-    
+
     #move the file
     try:
-        date_started = datetime.datetime.now()
         status, message =_copy(src,src_machine,dest,dest_machine,move=True)
         date_completed = datetime.datetime.now()
-        completion_time = date_completed - date_started
     except ConnectionManager.ConnectionError as e:
+        with pny.db_session:
+            DataTransfer[transfer_id].status = "FAILED"
         return str(e), 500
 
     if status == FILE_ERROR:
         print("Move failed")
+        with pny.db_session:
+            DataTransfer[transfer_id].status = "FAILED"
         return message, 500
     if status == NOT_IMPLEMENTED:
+        with pny.db_session:
+            DataTransfer[transfer_id].status = "FAILED"
         return message, 501
     elif status == OK:
         with pny.db_session:
@@ -137,15 +152,13 @@ def move(id):
             data.machine = dest_machine
             data.path, data.filename = os.path.split(dest)
             data.date_modified=datetime.datetime.now()
+            data_transfer = DataTransfer[transfer_id]
+            data_transfer.status = "COMPLETED"
+            data_transfer.dst_id = id
+            data_transfer.date_completed = date_completed
+            data_transfer.completion_time = (data_transfer.date_completed -
+                                             data_transfer.date_started)
             print("Move successful")
-            data_transfer = DataTransfer(id=str(uuid.uuid4()),
-                                         src_id=id,
-                                         dst_id=id,
-                                         src_machine=src_machine,
-                                         dst_machine=dest_machine,
-                                         date_started=date_started,
-                                         date_completed=date_completed,
-                                         completion_time=completion_time)
         return "Move successful", 200
 
 #copies a data entity to a new location, returning the uuid of the copy
@@ -163,40 +176,53 @@ def copy(id):
         size = data.size
         originator = data.originator
         group = data.group
-    
+
     #get the options from the header
     dest_machine = flask.request.form["machine"]
     dest = flask.request.form["dest"]
 
+    with pny.db_session:
+        transfer_id = str(uuid.uuid4())
+        data_transfer = DataTransfer(id=transfer_id,
+                                     src_id=id,
+                                     src_machine=src_machine,
+                                     dst_machine=dest_machine,
+                                     date_started=datetime.datetime.now(),
+                                     status="STARTED")
+
     path,fname = os.path.split(dest)
     if _checkExists(dest_machine,fname,path):
+        with pny.db_session:
+            DataTransfer[transfer_id].status = "FAILED"
         return "File already exists", 406
-    
+
     #copy the file
     try:
-        date_started = datetime.datetime.now()
         status, message =_copy(src,src_machine,dest,dest_machine)
         date_completed = datetime.datetime.now()
-        completion_time = date_completed - date_started
     except ConnectionManager.ConnectionError as e:
+        with pny.db_session:
+            DataTransfer[transfer_id].status = "FAILED"
         return str(e), 500
 
     if status == FILE_ERROR:
+        with pny.db_session:
+            DataTransfer[transfer_id].status = "FAILED"
         return message, 500
     if status == NOT_IMPLEMENTED:
+        with pny.db_session:
+            DataTransfer[transfer_id].status = "FAILED"
         return message, 501
     elif status == OK:
         with pny.db_session:
             path,fname = os.path.split(dest)
             new_id =_register(fname,path,dest_machine,description,size,originator,group)
-            data_transfer = DataTransfer(id=str(uuid.uuid4()),
-                                         src_id=id,
-                                         dst_id=new_id,
-                                         src_machine=src_machine,
-                                         dst_machine=dest_machine,
-                                         date_started=date_started,
-                                         date_completed=date_completed,
-                                         completion_time=completion_time)
+            data_transfer = DataTransfer[transfer_id]
+            data_transfer.status = "COMPLETED"
+            data_transfer.dst_id = new_id
+            data_transfer.date_completed = date_completed
+            data_transfer.completion_time = (data_transfer.date_completed -
+                                             data_transfer.date_started)
         return new_id, 201
 
 
@@ -212,7 +238,7 @@ def remove(id):
             return "Data object not found", 404
         machine=d.machine
         file = os.path.join(d.path,d.filename)
-    
+
     #delete this file
     try:
         status, message =_delete(file,machine)
@@ -299,7 +325,7 @@ def _copy(src,src_machine,dest,dest_machine,move=False):
                 return OK, "copied"
             else:
                 return FILE_ERROR, result.stderr
-        
+
         #local copy on a remote machine
         else:
             connection=ConnectionManager.RemoteConnection(src_machine)
@@ -309,13 +335,13 @@ def _copy(src,src_machine,dest,dest_machine,move=False):
                 cmd = "cp %s %s"%(src,dest)
             stdout, stderr, code = connection.ExecuteCommand(cmd)
             connection.CloseConnection()
-            if code == 0:    
+            if code == 0:
                 return OK, "copied"
             else:
                 print("Error")
                 print(stderr)
                 return FILE_ERROR, stderr
-            
+
     else:
         #copy from VESTEC server to remote machine
         if src_machine == "localhost":
@@ -356,7 +382,7 @@ def _copy(src,src_machine,dest,dest_machine,move=False):
                         return FILE_ERROR, str(e)
                 connection.CloseConnection()
                 return OK, "copied"
-            
+
         #copy between two remote machines
         else:
             connection = ConnectionManager.RemoteConnection(src_machine)
@@ -382,14 +408,14 @@ def _copy(src,src_machine,dest,dest_machine,move=False):
                         return FILE_ERROR, str(e)
                 connection.CloseConnection()
                 return OK, "copied"
-            
+
 
 
 #downloads a file to a (possibly remote) location
 def _download(filename,path,machine,url,protocol,options):
-    #get the filename (with path ) of the file we want created 
+    #get the filename (with path ) of the file we want created
     dest = os.path.join(path,filename)
-    
+
     #deterine the command we wish to run to download the file
     if protocol == "http":
         if options:
@@ -440,7 +466,7 @@ def _checkExists(machine,filename,path):
         return True
     else:
         return False
-    
+
 
 
 

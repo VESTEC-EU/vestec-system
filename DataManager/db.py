@@ -22,13 +22,14 @@ class DataTranfers(db.Entity):
     """ Database entity for data transfers """
     id = pny.PrimaryKey(str)
     src_id = pny.Required(str) # allows to get file size from database
-    dst_id = pny.Required(str) # might be different from src_id on copy
+    dst_id = pny.Optional(str) # might be different from src_id on copy
     src_machine = pny.Required(str)
     dst_machine = pny.Required(str)
     #date_submitted = pny.Required(datetime.datetime) # might be necessary for non-blocking data transfer
     date_started = pny.Required(datetime.datetime)
     date_completed = pny.Optional(datetime.datetime)
     completion_time = pny.Optional(datetime.timedelta)
+    status = pny.Required(str)
 
 
 def initialise_database():
