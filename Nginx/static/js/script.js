@@ -4,6 +4,10 @@ var version_number=-1;
 
 var add_data_dialog;
 
+const ConfirmationTypeEnum = Object.freeze({"DELETEEDIHANDLER":1});
+var confirmation_box_type=null;
+var confirmation_box_data={};
+
 $( function() {
     add_data_dialog = $("#add-data-dialog-form").dialog({
     autoOpen: false,
@@ -19,7 +23,43 @@ $( function() {
     close: function() {        
         
     }
-});
+    });
+
+    $( function() {
+        $( "#dialog-confirm" ).dialog({
+          resizable: false,
+          autoOpen: false,
+          height: "auto",
+          width: 400,
+          modal: true,
+          buttons: {
+            "OK": function() {
+              $( this ).dialog( "close" );
+              if (confirmation_box_type == ConfirmationTypeEnum.DELETEEDIHANDLER) {
+                $.ajax({
+                    url: "/flask/deleteedihandler",
+                    type: "POST",
+                    headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+                    contentType: "application/json",
+                    data: JSON.stringify(confirmation_box_data),
+                    dataType: "json",
+                    success: function(response) {
+                        getEDIInfo();
+                    },
+                    error: function(xhr) {
+                        $("#confirmation").removeClass().addClass("button red self-center");
+                        $("#confirmation").html("<span>&#10007</span> User edit failed");
+                    }
+                });
+              }
+            },
+            Cancel: function() {
+              $( this ).dialog( "close" );
+            }
+          }
+        });
+    } );
+
 });
 
 function checkAuth() {
@@ -236,6 +276,7 @@ function generateAdminDropdown() {
   admin_html+="<div class=\"admin_item\" onClick=\"getSystemHealth()\">System health</div>";
   admin_html+="<div class=\"admin_item\" onClick=\"getWorkflows()\">Workflows</div>";
   admin_html+="<div class=\"admin_item\" onClick=\"getUsers()\">Users</div>";
+  admin_html+="<div class=\"admin_item\" onClick=\"getEDIInfo()\">EDI</div>";
   admin_html+="</div></div>";
   return admin_html;
 }
@@ -582,7 +623,7 @@ function getWorkflows() {
                 wf_entry += "<td>" + item.kind + "</td>";
                 wf_entry += "<td>" + item.initqueuename + "</td>";
                 wf_entry += "<td>" + item.dataqueuename + "</td>";
-                wf_entry += "<td><img src='../img/cross.png' width=32 height=32 onClick=\"deleteWorkflow('"+item.kind+"')\"></td>";
+                wf_entry += "<td><img src='../img/cross.png' class='click_button' width=32 height=32 onClick=\"deleteWorkflow('"+item.kind+"')\"></td>";
                 
                 wf_entry += "</tr>";
 
@@ -596,6 +637,55 @@ function getWorkflows() {
         }
     });
     });
+}
+
+function getEDIInfo() {
+    checkAuthStillValid();
+    $("#nav-home").removeClass("blue");
+    $("#nav-dash").removeClass("blue");
+    $("#nav-logout").removeClass("blue");
+    $("#body-container").load("../templates/ediinfo.html");   
+
+
+    $.ajax({
+        url: "/flask/getediinfo",
+        type: "GET",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
+        success: function(response) {            
+            var edi_handlers = response.handlers;
+            $("#EDIInfotable").append("<tbody>");
+
+            for (edi_handler in edi_handlers) {
+                var handler_entry = "<tr>";
+                item = edi_handlers[edi_handler];
+                handler_entry += "<td>"+item.endpoint + "</td>";                
+                if (item.pollperiod == null) {
+                    handler_entry += "<td>PUSH</td>";
+                } else {
+                    handler_entry += "<td>PULL ("+item.pollperiod+")</td>";
+                }
+                handler_entry += "<td>" + item.incidentid + "</td>";
+                handler_entry += "<td>" + item.queuename + "</td>";
+                
+                handler_entry += "<td><img src='../img/cross.png' class='click_button' width=26 height=26 onClick=\"deleteEDIHandler('"+item.queuename+"','"+item.endpoint+"','"+item.incidentid+"','"+item.pollperiod+"')\"></td>";
+                
+                handler_entry += "</tr>";
+
+                $("#EDIInfotable").append(handler_entry);
+            }
+            $("#EDIInfotable").append("</tbody>");
+        },
+        error: function(xhr) {
+            console.log({"status": 500, "msg": "Sorry, there seems to be a problem with our system."});
+        }
+    });
+}
+
+function deleteEDIHandler(queuename, endpoint, incidentid, pollperiod) {
+    confirmation_box_type=ConfirmationTypeEnum.DELETEEDIHANDLER;
+    confirmation_box_data={"queuename": queuename, "endpoint":endpoint, "incidentid": incidentid, "pollperiod" : pollperiod};
+    $("#dialog-confirm-text").text("Are you sure you want to delete this handler?");
+    $( "#dialog-confirm" ).dialog("open");
 }
 
 function getUsers() {

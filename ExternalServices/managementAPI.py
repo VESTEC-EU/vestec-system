@@ -21,7 +21,7 @@ from Database.workflow import RegisteredWorkflow
 from Database.localdatastorage import LocalDataStorage
 from WorkflowManager import workflow
 from pony.orm.serialization import to_dict
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, Response
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
 
 logger = log.VestecLogger("Website")
@@ -186,6 +186,14 @@ def getComponentHealths():
     component_healths.append(_getHealthOfComponent(EDI_URL, "External data interface"))    
     component_healths.append(_getHealthOfComponent(JOB_MANAGER_URI, "Simulation manager"))    
     return json.dumps(component_healths)
+
+def getEDIInfo():
+    edi_info = requests.get(EDI_URL + '/list')    
+    return jsonify({"status": 200, "handlers": edi_info.json()})
+
+def deleteEDIHandler(retrieved_data):    
+    deleted_info = requests.post(EDI_URL + '/remove', json=retrieved_data)    
+    return Response(deleted_info.content, deleted_info.status_code)
 
 @pny.db_session
 def deleteWorkflow(retrieved_data):

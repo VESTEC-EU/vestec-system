@@ -182,6 +182,20 @@ def addUserToWorkflow():
 def removeUserFromWorkflow():    
    return managementAPI.removeUserFromWorkflow(request.json)
 
+@app.route('/flask/getediinfo', methods=['GET'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def getEDIInfo():    
+   return managementAPI.getEDIInfo()
+
+@app.route('/flask/deleteedihandler', methods=['POST'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def deleteEDIHandler():    
+   return managementAPI.deleteEDIHandler(request.json)
+
 @app.route("/flask/logout", methods=["DELETE"])
 def logout():
     response = jsonify({"status": 200, "msg": "User logged out."})
