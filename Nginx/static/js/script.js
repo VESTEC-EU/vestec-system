@@ -4,7 +4,7 @@ var version_number=-1;
 
 var add_data_dialog;
 
-const ConfirmationTypeEnum = Object.freeze({"DELETEEDIHANDLER":1});
+const ConfirmationTypeEnum = Object.freeze({"DELETEEDIHANDLER":1, "DELETEDATAITEM":2});
 var confirmation_box_type=null;
 var confirmation_box_data={};
 
@@ -36,21 +36,9 @@ $( function() {
             "OK": function() {
               $( this ).dialog( "close" );
               if (confirmation_box_type == ConfirmationTypeEnum.DELETEEDIHANDLER) {
-                $.ajax({
-                    url: "/flask/deleteedihandler",
-                    type: "POST",
-                    headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
-                    contentType: "application/json",
-                    data: JSON.stringify(confirmation_box_data),
-                    dataType: "json",
-                    success: function(response) {
-                        getEDIInfo();
-                    },
-                    error: function(xhr) {
-                        $("#confirmation").removeClass().addClass("button red self-center");
-                        $("#confirmation").html("<span>&#10007</span> User edit failed");
-                    }
-                });
+                performHandlerDeletion();
+              } else if (confirmation_box_type == ConfirmationTypeEnum.DELETEDATAITEM) {
+                performDataSetDeletion();
               }
             },
             Cancel: function() {
@@ -59,8 +47,41 @@ $( function() {
           }
         });
     } );
-
 });
+
+function performDataSetDeletion() {
+    url_append="data_uuid="+confirmation_box_data["data_uuid"]+"&incident_uuid="+confirmation_box_data["incident_uuid"];
+    $.ajax({
+        url: "/flask/data?"+url_append,
+        type: "DELETE",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
+        success: function(response) {
+            getIncidentDetails(confirmation_box_data["incident_uuid"]);
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> User edit failed");
+        }
+    });
+}
+
+function performHandlerDeletion() {
+    $.ajax({
+        url: "/flask/deleteedihandler",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(confirmation_box_data),
+        dataType: "json",
+        success: function(response) {
+            getEDIInfo();
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> User edit failed");
+        }
+    });
+}
 
 function checkAuth() {
     // need to add a check to flask to see if the token in the session is the same as the current user's
@@ -477,7 +498,10 @@ function loadIncidentDetails(incident) {
         incident_html+="<thead><tr><th>Filename</th><th>File type</th><th>Date Created</th><th>Actions</th></tr></thead>";        
         for (data_set of incident.data_sets) {            
             incident_html+="<tr><td>"+data_set.name+"</td><td>"+data_set.type+"</td><td>"+data_set.date_created+"</td><td>";
-            incident_html+="<img src='../img/download.png' class='click_button' title='Download dataset' width=26 height=26 onClick=\"downloadData('"+data_set.uuid+"','"+data_set.name+"')\"></td></tr>";            
+            incident_html+="<img src='../img/download.png' class='click_button' title='Download dataset' width=26 height=26 onClick=\"downloadData('"+data_set.uuid+"','"+data_set.name+"')\">";
+            incident_html+="&nbsp;&nbsp;&nbsp;";
+            incident_html+="<img src='../img/cross.png' class='click_button' width=26 height=26 onClick=\"deleteDataItem('"+data_set.uuid+"','"+incident.uuid+"')\">";
+            incident_html+="</td></tr>";
         }
         incident_html+="</table></div>";
     }
@@ -485,6 +509,13 @@ function loadIncidentDetails(incident) {
     incident_html+="<div id=\"workflow_diagram\" class=\"jobDetails self-center\"><svg id=\"svg-canvas\" style='width: 100%; height: auto;'></svg></div>"    
 
     return incident_html;
+}
+
+function deleteDataItem(data_uuid, incident_uuid) {
+    confirmation_box_type=ConfirmationTypeEnum.DELETEDATAITEM;
+    confirmation_box_data={"data_uuid" : data_uuid, "incident_uuid" : incident_uuid};
+    $("#dialog-confirm-text").text("Are you sure you want to delete this data set?");
+    $( "#dialog-confirm" ).dialog("open");
 }
 
 function downloadData(data_uuid, filename) {

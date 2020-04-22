@@ -103,6 +103,12 @@ def packageIncident(stored_incident, include_sort_key, include_digraph, include_
     return incident
 
 @pny.db_session
+def removeDataFromIncident(data_uuid, incident_uuid):
+    incident = Incident[incident_uuid]
+    for stored_ds in incident.associated_datasets:
+        if stored_ds.uuid==data_uuid: stored_ds.delete()    
+
+@pny.db_session
 def cancelIncident(incident_uuid, username):
     incident = Incident[incident_uuid]
     user = User.get(username=username)

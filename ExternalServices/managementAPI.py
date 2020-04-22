@@ -151,6 +151,16 @@ def downloadData(data_uuid):
     return jsonify({"status": 400, "msg" : "Only datasets stored on VESTEC server currently supported"})
 
 @pny.db_session
+def deleteData(data_uuid, incident_uuid):
+    data_info=requests.get(DATA_MANAGER_URI+"/info/" + data_uuid)
+    file_info=data_info.json()
+    if (file_info["path"]=="vestecDB" and file_info["machine"]=="VESTECSERVER"):
+        LocalDataStorage[file_info["filename"]].delete()
+    requests.delete(DATA_MANAGER_URI+"/remove/" + data_uuid)
+    incidents.removeDataFromIncident(data_uuid, incident_uuid)
+    return jsonify({"status": 200, "msg": "Data deleted"}) 
+
+@pny.db_session
 def getLogs():
     logs = []
     log_records = pny.select(l for l in log.DBLog)[:]

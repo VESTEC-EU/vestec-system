@@ -111,6 +111,13 @@ def activateIncident(incident_uuid):
 def downloadData(data_uuid):
     return managementAPI.downloadData(data_uuid)
 
+@app.route('/flask/data', methods=['DELETE'])
+@pny.db_session
+@fresh_jwt_required
+def deleteData():
+    data_uuid = request.args.get("data_uuid", None)
+    incident_uuid = request.args.get("incident_uuid", None)    
+    return managementAPI.deleteData(data_uuid, incident_uuid)
 
 @app.route('/flask/logs', methods=['GET'])
 @pny.db_session
