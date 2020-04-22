@@ -4,7 +4,7 @@ import flask
 import uuid
 import pony.orm as pny
 from pony.orm.serialization import to_dict
-from db import Data, initialise_database
+from Database import db, initialiseDatabase, Data
 import datetime
 import os
 import ConnectionManager
@@ -422,5 +422,5 @@ def _checkExists(machine,filename,path):
 
 
 if __name__ == "__main__":
-    initialise_database()
+    initialiseDatabase()
     app.run()
