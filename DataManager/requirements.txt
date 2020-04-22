@@ -1,0 +1,6 @@
+pony
+uuid
+pyYAML
+pymysql
+fabric
+flask
