@@ -36,7 +36,7 @@ if "VESTEC_MANAGER_URI" in os.environ:
 else:
     JOB_MANAGER_URI = 'http://127.0.0.1:5500/jobs'
     EDI_URL= 'http://127.0.0.1:5501/EDImanager'
-    DATA_MANAGER_URI = 'http://localhost:5000'
+    DATA_MANAGER_URI = 'http://localhost:5000/DM'
 
 def version():
     return jsonify({"status": 200, "version": version_number})

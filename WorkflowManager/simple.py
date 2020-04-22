@@ -16,7 +16,7 @@ if "VESTEC_EDI_URI" in os.environ:
     DATA_MANAGER_URI = os.environ["VESTEC_DM_URI"]
 else:    
     EDI_URL= 'http://localhost:5501/EDImanager'
-    DATA_MANAGER_URI = 'http://localhost:5000'
+    DATA_MANAGER_URI = 'http://localhost:5000/DM'
 
 # we now want to define some handlers
 @workflow.handler
