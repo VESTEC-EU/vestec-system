@@ -140,6 +140,25 @@ def activateIncident(incident_uuid, username):
         logger.Log(log.LogType.Website, "User %s raised error activating incident %s" % (username, incident_uuid), user=username)
         return jsonify({"status": 401, "msg": "Error retrieving incident."})
 
+def updateDataMetadata(username):
+    incident_request = request.json    
+    data_uuid=incident_request.get("data_uuid", None)
+    incident_uuid=incident_request.get("incident_uuid", None)
+    data_type=incident_request.get("type", None)
+    data_comments=incident_request.get("comments", None)
+    success=incidents.updateDataMetaData(data_uuid, incident_uuid, data_type, data_comments, username)
+    if success:
+        return jsonify({"status": 200, "msg": "Metadata updated"})
+    else:
+        return jsonify({"status": 401, "msg": "Metadata update failed, no incident data-set that you can edit"})         
+
+def getDataMetadata(data_uuid, incident_uuid, username):
+    meta_data=incidents.retrieveDataMetaData(data_uuid, incident_uuid, username)
+    if (meta_data is None):
+        return jsonify({"status": 401, "msg": "Error can not find matching incident dataset."})
+    else:
+        return jsonify({"status": 200, "metadata": meta_data}) 
+
 def downloadData(data_uuid):
     data_info=requests.get(DATA_MANAGER_URI+"/info/" + data_uuid)
     file_info=data_info.json()
@@ -151,14 +170,17 @@ def downloadData(data_uuid):
     return jsonify({"status": 400, "msg" : "Only datasets stored on VESTEC server currently supported"})
 
 @pny.db_session
-def deleteData(data_uuid, incident_uuid):
-    data_info=requests.get(DATA_MANAGER_URI+"/info/" + data_uuid)
-    file_info=data_info.json()
-    if (file_info["path"]=="vestecDB" and file_info["machine"]=="VESTECSERVER"):
-        LocalDataStorage[file_info["filename"]].delete()
-    requests.delete(DATA_MANAGER_URI+"/remove/" + data_uuid)
-    incidents.removeDataFromIncident(data_uuid, incident_uuid)
-    return jsonify({"status": 200, "msg": "Data deleted"}) 
+def deleteData(data_uuid, incident_uuid, username):
+    success=incidents.removeDataFromIncident(data_uuid, incident_uuid, username)
+    if success:
+        data_info=requests.get(DATA_MANAGER_URI+"/info/" + data_uuid)
+        file_info=data_info.json()
+        if (file_info["path"]=="vestecDB" and file_info["machine"]=="VESTECSERVER"):
+            LocalDataStorage[file_info["filename"]].delete()
+        requests.delete(DATA_MANAGER_URI+"/remove/" + data_uuid)    
+        return jsonify({"status": 200, "msg": "Data deleted"}) 
+    else:
+        return jsonify({"status": 401, "msg": "Data deletion failed, no incident data set that you can edit"}) 
 
 @pny.db_session
 def getLogs():

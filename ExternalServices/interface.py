@@ -105,6 +105,22 @@ def activateIncident(incident_uuid):
     username = get_jwt_identity()
     return managementAPI.activateIncident(incident_uuid, username)
 
+@app.route('/flask/metadata', methods=['GET'])
+@pny.db_session
+@fresh_jwt_required
+def getDataMetadata():
+    username = get_jwt_identity()
+    data_uuid = request.args.get("data_uuid", None)
+    incident_uuid = request.args.get("incident_uuid", None)
+    return managementAPI.getDataMetadata(data_uuid, incident_uuid, username)
+
+@app.route('/flask/metadata', methods=['POST'])
+@pny.db_session
+@fresh_jwt_required
+def updateDataMetadata():
+    username = get_jwt_identity()
+    return managementAPI.updateDataMetadata(username)
+
 @app.route('/flask/data/<data_uuid>', methods=['GET'])
 @pny.db_session
 @fresh_jwt_required
@@ -116,8 +132,9 @@ def downloadData(data_uuid):
 @fresh_jwt_required
 def deleteData():
     data_uuid = request.args.get("data_uuid", None)
-    incident_uuid = request.args.get("incident_uuid", None)    
-    return managementAPI.deleteData(data_uuid, incident_uuid)
+    incident_uuid = request.args.get("incident_uuid", None)
+    username = get_jwt_identity()  
+    return managementAPI.deleteData(data_uuid, incident_uuid, username)
 
 @app.route('/flask/logs', methods=['GET'])
 @pny.db_session

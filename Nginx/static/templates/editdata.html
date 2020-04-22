@@ -1,0 +1,12 @@
+<div id="editDataScreen" title="Information screen">	
+  <form id ="editDataToIncidentForm" method="post" enctype="multipart/form-data">
+    <fieldset>      
+      <label for="filetype" class="addDataLabel">Type</label>
+      <input type="text" name="filetype" id="filetype" value="" placeholder="Type of file" class="addDataText text ui-widget-content ui-corner-all">      
+      <label for="filecomment" class="addDataLabel">Comment</label>
+      <textarea name="filecomment" id="filecomment" value="" placeholder="Any file comments" rows="4" cols="80" class="addDataText text ui-widget-content ui-corner-all"></textarea>      
+      <input type="hidden" id="incidentId" name="dataIncidentId">
+      <input type="hidden" id="dataId" name="dataIncidentId">
+    </fieldset>
+  </form>
+</div>

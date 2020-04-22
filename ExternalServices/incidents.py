@@ -103,10 +103,43 @@ def packageIncident(stored_incident, include_sort_key, include_digraph, include_
     return incident
 
 @pny.db_session
-def removeDataFromIncident(data_uuid, incident_uuid):
+def updateDataMetaData(data_uuid, incident_uuid, type, comments, username):
     incident = Incident[incident_uuid]
-    for stored_ds in incident.associated_datasets:
-        if stored_ds.uuid==data_uuid: stored_ds.delete()    
+    user = User.get(username=username)
+    if checkIfUserCanAccessIncident(incident, user):
+        for stored_ds in incident.associated_datasets:
+            if stored_ds.uuid==data_uuid:
+                stored_ds.type=type
+                stored_ds.comment=comments
+                return True
+    return False
+
+@pny.db_session
+def retrieveDataMetaData(data_uuid, incident_uuid, username):
+    incident = Incident[incident_uuid]
+    user = User.get(username=username)
+    if checkIfUserCanAccessIncident(incident, user):
+        for stored_ds in incident.associated_datasets:
+            if stored_ds.uuid==data_uuid: 
+                stored_ds_dict={}
+                stored_ds_dict["uuid"]=stored_ds.uuid
+                stored_ds_dict["name"]=stored_ds.name
+                stored_ds_dict["type"]=stored_ds.type
+                stored_ds_dict["comment"]=stored_ds.comment
+                stored_ds_dict["date_created"]=stored_ds.date_created.strftime("%d/%m/%Y, %H:%M:%S")
+                return stored_ds_dict
+    return None
+
+@pny.db_session
+def removeDataFromIncident(data_uuid, incident_uuid, username):
+    incident = Incident[incident_uuid]
+    user = User.get(username=username)
+    if checkIfUserCanAccessIncident(incident, user):
+        for stored_ds in incident.associated_datasets:
+            if stored_ds.uuid==data_uuid: 
+                stored_ds.delete()
+                return True
+    return False
 
 @pny.db_session
 def cancelIncident(incident_uuid, username):

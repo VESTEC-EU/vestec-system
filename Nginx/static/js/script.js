@@ -3,6 +3,7 @@ var user_type=-1;
 var version_number=-1;
 
 var add_data_dialog;
+var edit_data_dialog;
 
 const ConfirmationTypeEnum = Object.freeze({"DELETEEDIHANDLER":1, "DELETEDATAITEM":2});
 var confirmation_box_type=null;
@@ -25,7 +26,22 @@ $( function() {
     }
     });
 
-    $( function() {
+    edit_data_dialog = $("#edit-data-dialog-form").dialog({
+        autoOpen: false,
+        height: 450,
+        width: 500,
+        modal: true,
+        buttons: {
+            "Edit data": editProvidedData,
+            Cancel: function() {
+                edit_data_dialog.dialog( "close" );
+            }
+        },
+        close: function() {        
+            
+        }
+        });
+   
         $( "#dialog-confirm" ).dialog({
           resizable: false,
           autoOpen: false,
@@ -46,8 +62,9 @@ $( function() {
             }
           }
         });
-    } );
-});
+    });
+
+
 
 function performDataSetDeletion() {
     url_append="data_uuid="+confirmation_box_data["data_uuid"]+"&incident_uuid="+confirmation_box_data["incident_uuid"];
@@ -500,6 +517,8 @@ function loadIncidentDetails(incident) {
             incident_html+="<tr><td>"+data_set.name+"</td><td>"+data_set.type+"</td><td>"+data_set.date_created+"</td><td>";
             incident_html+="<img src='../img/download.png' class='click_button' title='Download dataset' width=26 height=26 onClick=\"downloadData('"+data_set.uuid+"','"+data_set.name+"')\">";
             incident_html+="&nbsp;&nbsp;&nbsp;";
+            incident_html+="<img src='../img/edit.png' class='click_button' width=26 height=26 onClick=\"editDataItem('"+data_set.uuid+"','"+incident.uuid+"')\">";
+            incident_html+="&nbsp;&nbsp;&nbsp;";
             incident_html+="<img src='../img/cross.png' class='click_button' width=26 height=26 onClick=\"deleteDataItem('"+data_set.uuid+"','"+incident.uuid+"')\">";
             incident_html+="</td></tr>";
         }
@@ -509,6 +528,50 @@ function loadIncidentDetails(incident) {
     incident_html+="<div id=\"workflow_diagram\" class=\"jobDetails self-center\"><svg id=\"svg-canvas\" style='width: 100%; height: auto;'></svg></div>"    
 
     return incident_html;
+}
+
+function editDataItem(data_uuid, incident_uuid) {
+    $.ajax({
+        url: "/flask/metadata?data_uuid="+data_uuid+"&incident_uuid="+incident_uuid,
+        type: "GET",
+        contentType: "application/json",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
+        success: function (response) {    
+            meta_data = response.metadata;        
+            $('#edit-data-dialog-contents').load('templates/editdata.html #editDataScreen', function() {
+                $('#incidentId').val(incident_uuid);
+                $('#dataId').val(data_uuid);
+                $('#filetype').val(meta_data.type);
+                $('#filecomment').val(meta_data.comment);
+                edit_data_dialog.dialog( "open" );
+            });  
+        }
+    });    
+}
+
+function editProvidedData() {
+    var data_description = {};
+    data_description["incident_uuid"] = $("#incidentId").val();
+    data_description["data_uuid"] = $("#dataId").val();
+    data_description["type"] = $("#filetype").val();
+    data_description["comments"] = $("#filecomment").val();
+    $.ajax({
+        url: "/flask/metadata",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(data_description),
+        dataType: "json",
+        success: function(response) {
+            edit_data_dialog.dialog( "close" );
+            getIncidentDetails($("#incidentId").val());
+        },
+        error: function(response) {
+            $("#confirmation").html("<span>&#10007</span> Error adding workflow");
+            $("#confirmation").removeClass().addClass("button white-btn red-high-btn self-center");
+            $("#confirmation").show();
+        }
+    });
 }
 
 function deleteDataItem(data_uuid, incident_uuid) {
