@@ -22,6 +22,14 @@ class MessageLog(db.Entity):
     src_tag = pny.Optional(str) #optional name for the sender (for workflow graph visualisation)
     dest_tag = pny.Optional(str) #optional name for the reciever (for workflow graph visualisation)
 
+class StoredDataset(db.Entity):
+    uuid = pny.PrimaryKey(str)
+    name = pny.Optional(str)
+    type = pny.Optional(str)
+    comment = pny.Optional(str)
+    incident = pny.Required("Incident")
+    date_created = pny.Optional(datetime.datetime)
+
 class Incident(db.Entity):
     uuid = pny.PrimaryKey(str)
     kind = pny.Required(str)
@@ -38,6 +46,8 @@ class Incident(db.Entity):
     parameters = pny.Optional(str)
 
     simulations = pny.Set("Simulation")
+
+    associated_datasets = pny.Set(StoredDataset)
 
 #Stores records of simulations submitted to HPC machines
 class Simulation(db.Entity):
@@ -68,4 +78,5 @@ class HandlerLog(db.Entity):
 class RegisteredWorkflow(db.Entity):
 	kind=pny.Required(str)
 	init_queue_name=pny.Required(str)
+	data_queue_name=pny.Optional(str)
 	users = pny.Set("User")

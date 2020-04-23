@@ -4,7 +4,7 @@ import flask
 import uuid
 import pony.orm as pny
 from pony.orm.serialization import to_dict
-from db import Data, DataTransfer, initialise_database
+from Database import db, initialiseDatabase, Data, DataTransfer
 import datetime
 import os
 import ConnectionManager
@@ -18,8 +18,8 @@ FILE_ERROR=1
 NOT_IMPLEMENTED = 2
 
 #Returns the information for all data entities, or for a specified entity
-@app.route("/info")
-@app.route("/info/<id>")
+@app.route("/DM/info")
+@app.route("/DM/info/<id>")
 def info(id=None):
     with pny.db_session:
         #get list of all entries and turn them into a list of dictionaries
@@ -41,7 +41,7 @@ def info(id=None):
 
 
 #registers a data entity with the DataManager, and returns its uuid
-@app.route("/register",methods=["PUT"])
+@app.route("/DM/register",methods=["PUT"])
 def register():
     #get the info from the request
     fname = flask.request.form["filename"]
@@ -60,7 +60,7 @@ def register():
     return id, 201
 
 #instructs the data manager to download data from the internet onto a specified machine. Returns a uuid for that data entity
-@app.route("/getexternal",methods=["PUT"])
+@app.route("/DM/getexternal",methods=["PUT"])
 def GetExternal():
     #get required fields from the header
     fname = flask.request.form["filename"]
@@ -94,7 +94,7 @@ def GetExternal():
 
 
 #Moves a data entity from one location to another
-@app.route("/move/<id>",methods=["POST"])
+@app.route("/DM/move/<id>",methods=["POST"])
 def move(id):
     #get details of the data object
     with pny.db_session:
@@ -162,7 +162,7 @@ def move(id):
         return "Move successful", 200
 
 #copies a data entity to a new location, returning the uuid of the copy
-@app.route("/copy/<id>",methods=["POST"])
+@app.route("/DM/copy/<id>",methods=["POST"])
 def copy(id):
     #get details of the data object
     with pny.db_session:
@@ -228,7 +228,7 @@ def copy(id):
 
 
 #deletes a data entity. This marks the entity as "DELETED" in the database and deletes the file
-@app.route("/remove/<id>",methods=["DELETE"])
+@app.route("/DM/remove/<id>",methods=["DELETE"])
 def remove(id):
     #get info about the file, namely what machine it is on and its path
     with pny.db_session:
@@ -260,12 +260,12 @@ def remove(id):
 
 
 #moves the data entity to a long term file storage location and marks it as archived
-@app.route("/archive/<id>",methods=["PUT"])
+@app.route("/DM/archive/<id>",methods=["PUT"])
 def archive(id):
     return "Not Implemented", 501
 
 #moves the data entity from long term storage onto a machine and marks it as active
-@app.route("/activate/<id>",methods=["PUT"])
+@app.route("/DM/activate/<id>",methods=["PUT"])
 def activate(id):
     return "Not Implemented", 501
 
@@ -471,5 +471,5 @@ def _checkExists(machine,filename,path):
 
 
 if __name__ == "__main__":
-    initialise_database()
-    app.run()
+    initialiseDatabase()
+    app.run(host='0.0.0.0', port=5000)

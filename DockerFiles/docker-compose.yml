@@ -13,20 +13,21 @@ services:
       - /var/vestec/certs:/var/vestec/certs
       - ../Nginx/static/:/var/www/
     links:
-      - website:website
+      - externalservices:externalservices
     networks:
       - vestec
 
-  website:
-    container_name: website
+  externalservices:
+    container_name: externalservices
     build:
       context: ../
-      dockerfile: website/Dockerfile
+      dockerfile: ExternalServices/Dockerfile
     ports:
       - 8000:8000
     environment:
       VESTEC_MANAGER_URI: "http://manager:5500/jobs"
       VESTEC_EDI_URI: "http://edi:5501/EDImanager"
+      VESTEC_DM_URI : "http://datamanager:5000/DM"
       JWT_PASSWD: "SECRET"  # to be replaced by docker secrets
     env_file:
       - environment_variables.env
@@ -88,6 +89,21 @@ services:
     build:
       context: ../
       dockerfile: WorkflowManager/Dockerfile
+    environment:    
+      VESTEC_EDI_URI: "http://edi:5501/EDImanager"
+      VESTEC_DM_URI : "http://datamanager:5000/DM"
+    env_file:
+      - environment_variables.env
+    networks:
+      - vestec
+
+  datamanager:
+    container_name: DataManager
+    depends_on:
+      - "maria"
+    build:
+      context: ../
+      dockerfile: DataManager/Dockerfile
     environment:    
       VESTEC_EDI_URI: "http://edi:5501/EDImanager"
     env_file:

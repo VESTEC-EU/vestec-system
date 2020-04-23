@@ -415,7 +415,7 @@ def FlushMessages():
                 originator=caller,
                 destination=queue,
                 incident_id=incident,
-                message=msg,
+                message=(msg[:200] + '..') if len(msg) > 200 else msg,
                 src_tag=src_tag,
                 dest_tag=dest_tag
             )
