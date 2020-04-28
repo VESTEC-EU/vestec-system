@@ -30,7 +30,7 @@ class Tasks(db.Entity):
     t_end = pny.Optional(datetime.datetime) #time this task was finished
     result = pny.Optional(str) # a message from the handler. This could be an error message, or the UUID of the completed file object
 
-class DataTranfers(db.Entity):
+class DataTransfer(db.Entity):
     """ Database entity for data transfers """
     id = pny.PrimaryKey(str)
     src_id = pny.Required(str) # allows to get file size from database
