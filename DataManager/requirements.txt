@@ -4,3 +4,4 @@ pyYAML
 pymysql
 fabric
 flask
+pika

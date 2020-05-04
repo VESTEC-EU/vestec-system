@@ -6,5 +6,5 @@ from .activity import Activity, ActivityStatus
 from .users import User
 from .localdatastorage import LocalDataStorage
 from .edistorage import EDIHandler
-from .DataManager import Data, DataTransfer
+from .DataManager import Data, DataTransfer, DMTasks
 from .workflow import Incident, MessageLog

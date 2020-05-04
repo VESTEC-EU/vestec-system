@@ -20,7 +20,7 @@ class Data(db.Entity):
     modifylock = pny.Required(int,default=0) #a lock for if something is being modified (e.g. if we are in the process of moving an object, we don't want to be able to copy it at the same time)
 
 # table for non-blocking tasks
-class Tasks(db.Entity):
+class DMTasks(db.Entity):
     id = pny.PrimaryKey(str)
     status = pny.Required(str,default="QUEUED") #options are QUEUED, RUNNING, COMPLETE, ERROR(, CANCELLED?)
     metadata = pny.Required(str) #The info required to carry out the operation
@@ -29,6 +29,7 @@ class Tasks(db.Entity):
     t_start = pny.Optional(datetime.datetime) #time this task was started
     t_end = pny.Optional(datetime.datetime) #time this task was finished
     result = pny.Optional(str) # a message from the handler. This could be an error message, or the UUID of the completed file object
+    exit_code = pny.Optional(int) #the return code of the task
 
 class DataTransfer(db.Entity):
     """ Database entity for data transfers """
