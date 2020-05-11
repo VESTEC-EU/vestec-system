@@ -85,6 +85,7 @@ def add_user(username, name, email, password):
 @pny.db_session
 def verify_user(username, password):
     user = User.get(username=username)
+    if user is None: return False
     if not user.enabled: return False
     verified = False
 
