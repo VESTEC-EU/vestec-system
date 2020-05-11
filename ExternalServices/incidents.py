@@ -119,6 +119,24 @@ def updateDataMetaData(data_uuid, incident_uuid, type, comments, username):
     return False
 
 @pny.db_session
+def retrieveMatchingDatasets(data_type, incident_uuid, username):
+    incident = Incident[incident_uuid]
+    user = User.get(username=username)
+    if checkIfUserCanAccessIncident(incident, user):
+        returned_dataitems=[]
+        for stored_ds in incident.associated_datasets:
+            if stored_ds.type.lower() == data_type.lower():
+                stored_ds_dict={}
+                stored_ds_dict["uuid"]=stored_ds.uuid
+                stored_ds_dict["name"]=stored_ds.name
+                stored_ds_dict["type"]=stored_ds.type
+                stored_ds_dict["comment"]=stored_ds.comment
+                stored_ds_dict["date_created"]=stored_ds.date_created.strftime("%d/%m/%Y, %H:%M:%S")
+                returned_dataitems.append(stored_ds_dict)
+        return returned_dataitems
+    return None
+
+@pny.db_session
 def retrieveDataMetaData(data_uuid, incident_uuid, username):
     incident = Incident[incident_uuid]
     user = User.get(username=username)

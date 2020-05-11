@@ -152,7 +152,14 @@ def updateDataMetadata(username):
     if success:
         return jsonify({"status": 200, "msg": "Metadata updated"})
     else:
-        return jsonify({"status": 401, "msg": "Metadata update failed, no incident data-set that you can edit"})         
+        return jsonify({"status": 401, "msg": "Metadata update failed, no incident data-set that you can edit"})       
+
+def getDataSets(data_type, incident_uuid, username):
+    datasets=incidents.retrieveMatchingDatasets(data_type, incident_uuid, username)
+    if (datasets is None):
+        return jsonify({"status": 401, "msg": "Error no matching datasets found"})
+    else:
+        return jsonify({"status": 200, "datasets": datasets})
 
 def getDataMetadata(data_uuid, incident_uuid, username):
     meta_data=incidents.retrieveDataMetaData(data_uuid, incident_uuid, username)

@@ -105,6 +105,15 @@ def activateIncident(incident_uuid):
     username = get_jwt_identity()
     return managementAPI.activateIncident(incident_uuid, username)
 
+@app.route('/flask/datasets', methods=['GET'])
+@pny.db_session
+@fresh_jwt_required
+def getMatchingDatasets():
+    username = get_jwt_identity()
+    data_type = request.args.get("type", None)
+    incident_uuid = request.args.get("incident_uuid", None)
+    return managementAPI.getDataSets(data_type, incident_uuid, username)
+
 @app.route('/flask/metadata', methods=['GET'])
 @pny.db_session
 @fresh_jwt_required
