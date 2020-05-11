@@ -3,6 +3,10 @@
         <h2>Create a new incident</h2>
         <select id="incidentType"></select>  
         <input type="text" id="incidentName" placeholder="Enter name of incident">      
+	<div>
+        <input type="text" id="upperRightLatlong" placeholder="Upper right Lat/Long (optional)" style="float:left; width: 48%;">      
+        <input type="text" id="lowerLeftLatlong" placeholder="Lower left Lat/Long (optional)" style="float:right; width: 48%;">      
+	</div>
         
         <div class="inline">
             <button id="submitJob" class="button blue self-center" onClick="submitJob()">Create incident</button>

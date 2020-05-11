@@ -16,9 +16,9 @@ def checkIfUserCanAccessIncident(incident, user):
     return False
 
 @pny.db_session
-def createIncident(incident_name, incident_kind, username):
+def createIncident(incident_name, incident_kind, username, incident_upper_right_latlong, incident_lower_left_latlong):
     user_id = User.get(username=username)
-    job_id = workflow.CreateIncident(incident_name, incident_kind, user_id=user_id)
+    job_id = workflow.CreateIncident(incident_name, incident_kind, user_id=user_id, upper_right_latlong=incident_upper_right_latlong, lower_left_latlong=incident_lower_left_latlong)
 
     return job_id
 
@@ -84,6 +84,10 @@ def packageIncident(stored_incident, include_sort_key, include_digraph, include_
     if (stored_incident.date_completed is not None):
         incident["date_completed"]=stored_incident.date_completed.strftime("%d/%m/%Y, %H:%M:%S")
     incident["incident_date"]=stored_incident.incident_date.strftime("%d/%m/%Y, %H:%M:%S")
+    if (stored_incident.upper_right_latlong is not ""):
+        incident["upper_right_latlong"]=stored_incident.upper_right_latlong
+    if (stored_incident.lower_left_latlong is not ""):
+        incident["lower_left_latlong"]=stored_incident.lower_left_latlong
     if (include_sort_key): incident["srt_key"]=stored_incident.incident_date
     if (include_digraph):
         incident["digraph"]=str(generateIncidentDiGraph(stored_incident.uuid))
