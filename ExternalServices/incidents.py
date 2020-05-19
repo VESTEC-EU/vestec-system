@@ -16,7 +16,7 @@ def checkIfUserCanAccessIncident(incident, user):
     return False
 
 @pny.db_session
-def createIncident(incident_name, incident_kind, username, incident_upper_right_latlong, incident_lower_left_latlong):
+def createIncident(incident_name, incident_kind, username, incident_upper_right_latlong="", incident_lower_left_latlong=""):
     user_id = User.get(username=username)
     job_id = workflow.CreateIncident(incident_name, incident_kind, user_id=user_id, upper_right_latlong=incident_upper_right_latlong, lower_left_latlong=incident_lower_left_latlong)
 
@@ -193,6 +193,9 @@ def activateIncident(incident_uuid, username):
         user = User.get(username=username)
         if checkIfUserCanAccessIncident(incident, user): 
             incident_workflow=RegisteredWorkflow.get(kind=incident.kind)
+            if incident_workflow == None:
+                print("Warning: 'incident_workflow' not defined")
+                return False
             msg = {}
             msg["IncidentID"]=incident_uuid
 
@@ -202,8 +205,11 @@ def activateIncident(incident_uuid, username):
             workflow.CloseConnection()
             return True
         else:
+            print("Warning: User cannot access incident")
             return False
-    except pny.core.ObjectNotFound as e:        
+    except pny.core.ObjectNotFound as e:
+        print("Warning: 'ObjectNotFound' error. Incident not found")
+        print(e)
         return False
 
 def doesStoredIncidentMatchFilter(stored_incident, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter):

@@ -11,239 +11,269 @@ from Database import initialiseDatabase
 from Database.edistorage import EDIHandler
 from WorkflowManager import workflow
 
+from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
+
 app = Flask("External Data Interface")
 logger = log.VestecLogger("External Data Interface")
-push_registered_handlers={}
-pull_registered_handlers=[]
-poll_scheduler=BackgroundScheduler()
 
-def isHandlerAlreadyRegistered(handlerToAdd, existingList):
-    for handler in existingList:
-        if handler == handlerToAdd: return True
-    return False
+#rabbitMQ is not threadsafe so we only want one worker thread else we get funny crashes
+poll_scheduler=BackgroundScheduler(executors={"default": ThreadPoolExecutor(1)})
 
-class DataHandler:
-    def __init__(self, queue_name, incidentID, source_endpoint, pollPeriod=None):
-        self.queue_name=queue_name
-        self.incidentId=incidentID
-        self.source_endpoint=source_endpoint
-        self.pollPeriod=pollPeriod
-        self.schedulerevent=None
-        self.dbId=None    
-   
-    def isPollHandler(self):
-        return self.pollPeriod is not None
-    def getQueueName(self):
-        return self.queue_name
-    def getIncidentId(self):
-        return self.incidentId
-    def getSourceEndpoint(self):
-        return self.source_endpoint
-    def getPollPeriod(self):
-        return self.pollPeriod
-    def __eq__(self, other):
-        if self.queue_name == other.getQueueName() and self.incidentId == other.getIncidentId() and self.source_endpoint == other.getSourceEndpoint() and self.pollPeriod == other.getPollPeriod():            
-            return True
-        else:
-            return False
-    @pny.db_session
-    def persistToDatabase(self):
-        if (self.pollPeriod is not None):
-            newhandler=EDIHandler(queuename=self.getQueueName(), incidentid=self.getIncidentId(), endpoint=self.getSourceEndpoint(), pollperiod=self.getPollPeriod(), type="PULL")
-        else:
-            newhandler=EDIHandler(queuename=self.getQueueName(), incidentid=self.getIncidentId(), endpoint=self.getSourceEndpoint(), type="PUSH")
-        pny.commit()
-        self.dbId=newhandler.id
 
-    @pny.db_session
-    def removeFromDatabase(self):
-        if (self.dbId is None):
-            print("Error can not remove database entry for handler as no DB id associated")
-        else:
-            EDIHandler[self.dbId].delete()
-            pny.commit()
 
-    def generateJSON(self):
-        return {"queuename": self.queue_name, "endpoint": self.source_endpoint, "incidentid": self.incidentId, "pollperiod": self.pollPeriod}
+#schedule a handler. Pass in its EDIHandler id and pollperiod in seconds
+def scheduleHandler(id, seconds):
+    id = str(id)
+    poll_scheduler.add_job(pollDataSource, 'interval',args=[id], seconds=seconds, id = id)
+    print("Scheduled pull handler with ID %s"%id)
 
-    def schedule(self):
-        self.schedulerevent=poll_scheduler.add_job(self.pollDataSource, 'interval', seconds=self.getPollPeriod())
+#cancel a handler. Pass in its EDIHandler id
+def cancelScheduledHandler(id):
+    id = str(id)
+    print("Cancelling scheduled job with ID %s"%id)
+    poll_scheduler.remove_job(id)
 
-    def cancel(self):
-        if self.schedulerevent is not None:            
-            self.schedulerevent.remove()
-            self.schedulerevent=None
+#This is called by a poll handler (see scheduleHandler above for how it is scheduled)
+@pny.db_session
+def pollDataSource(id):
+    #get the EDIHandler associated with this id
+    handler = EDIHandler.get(id = int(id))
+    
+    #Check to see if the handler's incident is still active. If not, stop this scheduled poll, and delete the hander from the database
+    if not workflow._IsActive(handler.incidentid):
+        print("Incident no longer active: Cancelling this background handler")
+        cancelScheduledHandler(id)
+        handler.delete()
+        return
+    
+    #get the header from the endpoint, and send it off to the workflow
+    x = requests.head(handler.endpoint, allow_redirects=True)
+    if x.ok:
+        data_packet=generateDataPacket(x.headers, "pull",handler.endpoint,handler.incidentid)
+        data_packet["status_code"]=x.status_code
+        print("Got datapacket from '%s'"%handler.endpoint)
+        sendMessageToWorkflowEngine(data_packet,handler.queuename,handler.incidentid)
+        logger.Log(log.LogType.Activity, "Forwarded pulled data from '"+handler.endpoint+"' to queue '"+handler.queuename+"'")            
 
-    def generateDataPacket(self, headers, type):
+
+#Takes a request header and packages it up into a dict for sending to the workflow
+def generateDataPacket(headers, type, endpoint,incidentid):
         data_packet={}
-        data_packet["source"]=self.source_endpoint
+        data_packet["source"]=endpoint
         data_packet["timestamp"]=int(datetime.datetime.timestamp(datetime.datetime.now()))
-        data_packet["headers"]=headers
+        #requests outputs a CaseInsensitiveDict which cannot be jsonified so we need do convert this to a regular dict
+        data_packet["headers"]=dict(headers) 
         data_packet["type"]=type
-        data_packet["incidentid"]=self.incidentId
+        data_packet["incidentid"]=incidentid
         return data_packet
 
-    def pollDataSource(self):
-        x = requests.head(self.source_endpoint, allow_redirects=True)
-        if x.ok:
-            data_packet=self.generateDataPacket(x.headers, "pull")
-            data_packet["status_code"]=x.status_code
-            self.sendMessageToWorkflowEngine(data_packet)
-            logger.Log(log.LogType.Activity, "Forwarded pulled data from '"+self.source_endpoint+"' to queue '"+self.queue_name+"'")            
 
-    def forwardToQueue(self, data, headers):
-        data_packet=self.generateDataPacket(headers, "push")        
-        data_packet["payload"]=data.decode('ascii')
-        self.sendMessageToWorkflowEngine(data_packet)
-        logger.Log(log.LogType.Activity, "Forwarded posted data from '"+self.source_endpoint+"' to queue '"+self.queue_name+"'")           
 
-    def sendMessageToWorkflowEngine(self, data_packet):
-        workflow.OpenConnection()
-        msg={}
-        if self.incidentId is None:
-            msg["IncidentID"] =  workflow.CreateIncident(name="test fire", kind="FIRE")
-        else:
-            msg["IncidentID"] = self.incidentId
-        msg["data"]=data_packet
-        workflow.send(message=msg, queue=self.queue_name)
-        workflow.FlushMessages()
-        workflow.CloseConnection()
+##### NEED TO FIX THIS FOR THREAD SAFTY##############
+def sendMessageToWorkflowEngine(data_packet, queue, incidentId):
+    workflow.OpenConnection()
+    msg={}
+    if incidentId is None:
+        raise Exception("IncidentID Cannot be None")
+    else:
+        msg["IncidentID"] = incidentId
+    msg["data"]=data_packet
+    workflow.send(message=msg, queue=queue)
+    workflow.FlushMessages()
+    workflow.CloseConnection()
 
-def handlePostOfData(source, data, headers):    
-    if source in push_registered_handlers:  
-        logger.Log(log.LogType.Activity, "Data posted from '"+source+"' actioning with atleast one handler that matches")      
-        for handler in push_registered_handlers[source]:
-            handler.forwardToQueue(data, headers)
+
+ #Send the data and header to the workflow system
+def forwardToQueue(data, headers, endpoint, queue,incidentid):
+    data_packet=generateDataPacket(headers, "push",endpoint,incidentid)        
+    data_packet["payload"]=data.decode('ascii')
+    sendMessageToWorkflowEngine(data_packet, queue,incidentid)
+    logger.Log(log.LogType.Activity, "Forwarded posted data from '"+ endpoint +"' to queue '"+queue+"'")
+
+
+#handles when data is posted (pushed) to the system
+@pny.db_session
+def handlePostOfData(endpoint, data, headers):    
+    handlers = EDIHandler.select(lambda h: h.endpoint==endpoint and h.type == "PUSH")
+    if len(handlers) > 0:
+        logger.Log(log.LogType.Activity, "Data posted from '"+endpoint+"' actioning with at least one handler that matches") 
+
+        for handler in handlers:
+            forwardToQueue(data,headers,endpoint,handler.queuename, handler.incidentid)
+
         return jsonify({"status": 200, "msg": "Data received"}) 
     else:
-        logger.Log(log.LogType.Error, "Data posted from '"+source+"' and ignoring as there are no handlers that match")      
+        logger.Log(log.LogType.Error, "Data posted from '"+endpoint+"' and ignoring as there are no handlers that match")      
         return jsonify({"status": 400, "msg": "No matching handler registered"})
 
+#if we register a remote host (e.g. www.website.com) as an endpoint and this pushes
+#useful for data which is not necessarily incident specific but which should be pushed
+#like notification of new weather data which could be of use to many different incidents
 @app.route("/EDImanager", methods=["POST"])
-def post_data_anon():    
+def post_data_anon():
+    print("anonymous data posted")
+    print("posted by ",request.remote_addr)
+    print("Data =", request.get_data())
+    print("Header=", request.headers)
     return handlePostOfData(request.remote_addr, request.get_data(), dict(request.headers))    
 
+#way to push data to the EDI, giving the endpoint
 @app.route("/EDImanager/<sourceid>", methods=["POST"])
 def post_data(sourceid):
+    print("Data posted to %s"%sourceid)
+    print("Data =", request.get_data())
+    print("Header=", request.headers)
     return handlePostOfData(sourceid, request.get_data(), dict(request.headers))
 
-def generateDataHandler(dict):
-    dict = request.get_json()
-    queue_name = dict["queuename"]
-    incident_ID = dict["incidentid"]
-    source_endpoint = dict["endpoint"]
-    if "pollperiod" in dict:
-        pollperiod = dict["pollperiod"]
-    else:
-        pollperiod=None
-    return DataHandler(queue_name, incident_ID, source_endpoint, pollperiod)
 
 @app.route("/EDImanager/health", methods=["GET"])
 def get_health():
     return jsonify({"status": 200})
 
-@app.route("/EDImanager/register", methods=["POST"])
+#register a handler
+@app.route("/EDImanager/register",methods=["POST"])
 @pny.db_session
-def register_handler():
-    dict = request.get_json()
-    handler=generateDataHandler(dict)
-    source_endpoint=handler.getSourceEndpoint()
-    if handler.isPollHandler():
-        if not isHandlerAlreadyRegistered(handler, pull_registered_handlers):            
-            handler.persistToDatabase()
-            pull_registered_handlers.append(handler)
-            handler.schedule()
-            logger.Log(log.LogType.Activity, "Poll based handler registered for '"+source_endpoint+"' with period "+handler.getPollPeriod()+"s")
-            return jsonify({"status": 200, "msg": "Handler registered"})
+def register():
+    #parse the request header for the info we need
+    d = request.get_json()
+    try:
+        queuename = d["queuename"]
+        incidentid = d["incidentid"]
+        endpoint = d["endpoint"]
+        if "pollperiod" in d:
+            pollperiod = d["pollperiod"]
         else:
-            logger.Log(log.LogType.Error, "Attempted to register poll based handler for '"+source_endpoint+"' but already registered")
-            return jsonify({"status": 400, "msg": "Handler already registered for polling"})
-    else:
-        if source_endpoint not in push_registered_handlers:
-            push_registered_handlers[source_endpoint]=[]
-        if not isHandlerAlreadyRegistered(handler, push_registered_handlers[source_endpoint]):
-            handler.persistToDatabase()
-            push_registered_handlers[source_endpoint].append(handler)
-            logger.Log(log.LogType.Activity, "Push based handler registered for '"+source_endpoint+"'")     
-            return jsonify({"status": 200, "msg": "Handler registered"})
-        else:
-            logger.Log(log.LogType.Error, "Attempted to register push based handler for '"+source_endpoint+"' but already registered")
-            return jsonify({"status": 400, "msg": "Handler already registered for push"})
+            pollperiod=None
+    except KeyError:
+        return jsonify({"status": 400, "msg": "The request header does not contain the required fields"}), 400
+    
+    #See if this handler already exists. If so, do nothing and return a 400
+    handlers = EDIHandler.select(lambda d: d.queuename==queuename
+                             and d.incidentid==incidentid 
+                             and d.endpoint==endpoint 
+                             and d.pollperiod==pollperiod)
+    if len(handlers) >0:
+        return jsonify({"status":400, "msg": "Handler already registered"}), 400
 
+
+    if pollperiod is None:
+        handlertype = "PUSH"
+    else:
+        handlertype= "PULL"
+
+
+    handler = EDIHandler(queuename=queuename,
+                        incidentid=incidentid,
+                        endpoint=endpoint,
+                        type = handlertype,
+                        pollperiod=pollperiod)
+    #ensure we commit this so we get an ID back for the handler
+    pny.commit()
+
+    
+    if handlertype=="PUSH":
+        logger.Log(log.LogType.Activity, "Push based handler registered for '"+endpoint+"'")     
+    
+    else:
+        scheduleHandler(id = handler.id, seconds = pollperiod)
+        logger.Log(log.LogType.Activity, "Poll based handler registered for '"+endpoint+"' with period "+str(pollperiod)+"s")
+    
+    return jsonify({"status": 200, "msg": "Handler registered"}), 200
+        
+
+#Remove a handler
 @app.route("/EDImanager/remove", methods=["POST"])
 @pny.db_session
-def remove_handler():
-    dict = request.get_json()
-    if (dict["pollperiod"]=="null"): dict["pollperiod"]=None
-    print(dict)
-    remove_handler=generateDataHandler(dict)
-    handler_removed=False
-    for handler in pull_registered_handlers:
-        if remove_handler == handler:
-            pull_registered_handlers.remove(handler)
-            handler.cancel()            
-            handler_removed=True
-    source_endpoint=remove_handler.getSourceEndpoint()
-    if source_endpoint in push_registered_handlers:        
-        for handler in push_registered_handlers[source_endpoint]:
-            if (remove_handler == handler):
-                push_registered_handlers[source_endpoint].remove(handler)
-                handler_removed=True
+def remove():
+    #parse the request header for the info we need
+    d = request.get_json()
+    try:
+        queuename = d["queuename"]
+        incidentid = d["incidentid"]
+        endpoint = d["endpoint"]
+        if "pollperiod" in d:
+            pollperiod = d["pollperiod"]
+        else:
+            pollperiod=None
+    except KeyError:
+        return jsonify({"status": 400, "msg": "The request header does not contain the required fields"}), 400
+    
+    #get any handlers that match this
+    handlers = EDIHandler.select(lambda d: d.queuename==queuename
+                            and d.incidentid==incidentid 
+                            and d.endpoint==endpoint 
+                            and d.pollperiod==pollperiod)
+    
+    print("endpoint = ", endpoint)
+    
+    #if there are no such handlers, return an error
+    if len(handlers) == 0:
+        logger.Log(log.LogType.Error, "No handler found for removal for '"+endpoint+"'")
+        return jsonify({"status": 400, "msg": "No existing handler registered"}), 400
 
-    if handler_removed:
-        handler.removeFromDatabase()
-        logger.Log(log.LogType.Activity, "Handler removed for '"+source_endpoint+"'")
-        return jsonify({"status": 200, "msg": "Handler removed"})
-    else:
-        logger.Log(log.LogType.Error, "No handler found for removal for '"+source_endpoint+"'")
-        return jsonify({"status": 400, "msg": "No existing handler registered"})
+    
+    #loop through handlers (should just be one...) and delete them
+    for handler in handlers:
+        if handler.type == "PULL":
+            print("REMOVED PULL HANDLER")
+            cancelScheduledHandler(handler.id)
+        else:
+            print("REMOVED PUSH HANDLER")
 
+        handler.delete()
+
+        logger.Log(log.LogType.Activity, "Handler removed for '"+endpoint+"'")
+
+    return jsonify({"status": 200, "msg": "Handler removed"}), 200
+
+
+
+#gets info on the requested endpoint
 @app.route("/EDImanager/list/<endpoint>", methods=["GET"])
+@pny.db_session
 def list_handlers_withep(endpoint):
-    built_up_json_src=[]
-    for handler in pull_registered_handlers:
-        if handler.getSourceEndpoint==endpoint:
-            built_up_json_src.extend(handler.generateJSON())
-    if endpoint in push_registered_handlers:
-        built_up_json_src.extend(buildDescriptionOfHandlers(push_registered_handlers[endpoint]))
-    return json.dumps(built_up_json_src)    
+    l=[]
+    for handler in EDIHandler.select(lambda h: h.endpoint == endpoint):
+        l.append(handler.to_dict(exclude=["id"]))
+    return json.dumps(l)
 
+#gets info on all endpoints registered
 @app.route("/EDImanager/list", methods=["GET"])
-def list_handlers():
-    built_up_json_src=buildDescriptionOfHandlers(pull_registered_handlers)    
-    for value in push_registered_handlers.values():
-        built_up_json_src.extend(buildDescriptionOfHandlers(value))
-    return json.dumps(built_up_json_src)
+@pny.db_session
+def list_handlers(): 
+    l=[]
+    for handler in EDIHandler.select():
+        l.append(handler.to_dict(exclude=["id"]))
+    return json.dumps(l)
 
-def buildDescriptionOfHandlers(handler_list):
-    json_to_return=[]
-    for handler in handler_list:
-        json_to_return.append(handler.generateJSON())
-    return json_to_return
 
-def createDataHandlerFromDB(database_entry):
-    if (database_entry.pollperiod==""): 
-        pollPeriod=None
-    else:
-        pollPeriod=database_entry.pollperiod
-    dh=DataHandler(database_entry.queuename, database_entry.incidentid, database_entry.endpoint, pollPeriod)
-    dh.dbId=database_entry.id
-    return dh
-
+#reload handlers from the database
 @pny.db_session
 def reloadEDIStateFromDB():
-    listofhandlers=EDIHandler.select()    
-    for handler in listofhandlers:
-        createddatahandler=createDataHandlerFromDB(handler)
-        if createddatahandler.isPollHandler():
-            pull_registered_handlers.append(createddatahandler)
-            createddatahandler.schedule()
-        else:
-            if createddatahandler.getSourceEndpoint() not in push_registered_handlers:
-                push_registered_handlers[createddatahandler.getSourceEndpoint()]=[]
-            push_registered_handlers[createddatahandler.getSourceEndpoint()].append(createddatahandler)
+    handlers=EDIHandler.select()
+    numpull = 0
+    numpush = 0
+    
+    #check to see if any of the handlers are for incidents that no longer exist
+    todelete=[]
+    for handler in handlers:
+        if not workflow._IsActive(handler.incidentid):
+            todelete.append(handler)
 
-    print("Reinitialised EDI with "+str(len(listofhandlers))+" handlers")
+    #delete obsolete handlers
+    for handler in todelete:
+        handler.delete()
+        print('Deleting handler for inactive incident')
+
+    #Now re-create the remaining handlers
+    for handler in handlers:
+        if handler.type == "PULL":
+            scheduleHandler(handler.id,handler.pollperiod)
+            numpull +=1
+        else:
+            numpush +=1
+
+    print("Reinitialised EDI with %d push handlers and %d pull handlers"%(numpush,numpull))
 
 
 if __name__ == "__main__":
@@ -251,3 +281,6 @@ if __name__ == "__main__":
     poll_scheduler.start()
     reloadEDIStateFromDB()
     app.run(host="0.0.0.0", port=5501)
+    
+    print("Closing Thread pool")
+    poll_scheduler.shutdown()
