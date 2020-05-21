@@ -24,7 +24,10 @@ poll_scheduler=BackgroundScheduler(executors={"default": ThreadPoolExecutor(1)})
 #schedule a handler. Pass in its EDIHandler id and pollperiod in seconds
 def scheduleHandler(id, seconds):
     id = str(id)
-    poll_scheduler.add_job(pollDataSource, 'interval',args=[id], seconds=seconds, id = id)
+    # start this 5 seconds from now
+    runon = datetime.datetime.now()+ datetime.timedelta(seconds=5)
+    poll_scheduler.add_job(pollDataSource, 'interval',args=[id], seconds=seconds, id = id, next_run_time = runon)
+    
     print("Scheduled pull handler with ID %s"%id)
 
 #cancel a handler. Pass in its EDIHandler id

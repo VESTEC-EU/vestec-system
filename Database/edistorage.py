@@ -8,5 +8,5 @@ class EDIHandler(db.Entity):
     incidentid=pny.Required(str)
     endpoint=pny.Required(str)
     type=pny.Required(str)
-    pollperiod=pny.Optional(str)    
+    pollperiod=pny.Optional(float)    
     
