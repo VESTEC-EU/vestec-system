@@ -4,9 +4,12 @@ uuid
 PyYAML
 pymysql
 fabric
+fiona
 numpy
 matplotlib
 numba
 networkx
 pygraphviz
+pyproj
 requests==2.21.0
+shapely
