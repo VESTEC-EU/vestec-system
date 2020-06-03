@@ -287,6 +287,18 @@ def getUserDetails(retrieved_data):
     return json.dumps(user_details) 
 
 @pny.db_session
+def deleteUser(retrieved_data):
+    username = retrieved_data.get("username", None)
+    stored_user=User.get(username=username)
+    if (stored_user is not None):        
+        stored_user.delete()
+        pny.commit()    
+        return jsonify({"status": 200, "msg": "User edited"})
+    else:
+        return jsonify({"status": 401, "msg": "User deletion failed"})
+
+
+@pny.db_session
 def editUserDetails(retrieved_data):
     username = retrieved_data.get("username", None)
     stored_user=User.get(username=username)

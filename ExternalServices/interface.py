@@ -208,6 +208,13 @@ def getUserDetails():
 def editUserDetails():    
     return managementAPI.editUserDetails(request.json)
 
+@app.route('/flask/deleteuser', methods=['POST'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def deleteUser():    
+    return managementAPI.deleteUser(request.json)
+
 @app.route('/flask/addusertoworkflow', methods=['POST'])
 @pny.db_session
 @fresh_jwt_required

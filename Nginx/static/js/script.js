@@ -6,7 +6,7 @@ var add_data_dialog;
 var edit_data_dialog;
 var edit_user_dialog;
 
-const ConfirmationTypeEnum = Object.freeze({"DELETEEDIHANDLER":1, "DELETEDATAITEM":2});
+const ConfirmationTypeEnum = Object.freeze({"DELETEEDIHANDLER":1, "DELETEDATAITEM":2, "DELETEUSER":3});
 var confirmation_box_type=null;
 var confirmation_box_data={};
 
@@ -56,6 +56,8 @@ $( function() {
                 performHandlerDeletion();
               } else if (confirmation_box_type == ConfirmationTypeEnum.DELETEDATAITEM) {
                 performDataSetDeletion();
+              } else if (confirmation_box_type == ConfirmationTypeEnum.DELETEUSER) {
+                performUserDeletion();
               }
             },
             Cancel: function() {
@@ -955,6 +957,33 @@ function manageUser(username) {
             }
             edit_user_dialog.dialog( "open" );
         }); 
+    });
+}
+
+function deleteUser() {
+    confirmation_box_type=ConfirmationTypeEnum.DELETEUSER;    
+    $("#dialog-confirm-text").text("Are you sure you want to delete this user?");
+    $( "#dialog-confirm" ).dialog("open");
+}
+
+function performUserDeletion() {
+    var wf = {};
+    wf["username"] = $("#username").val();
+    $.ajax({
+        url: "/flask/deleteuser",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(wf),
+        dataType: "json",
+        success: function(response) {
+            edit_user_dialog.dialog( "close" );
+            getUsers();
+        },
+        error: function(xhr) {
+            $("#userEditErrorMessage").removeClass().addClass("red self-center");
+            $("#userEditErrorMessage").html("<span>&#10007</span> Deletion of user failed");
+        }
     });
 }
 
