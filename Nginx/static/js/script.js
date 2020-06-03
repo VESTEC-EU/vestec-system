@@ -726,34 +726,33 @@ function getWorkflows() {
     $("#nav-dash").removeClass("blue");
     $("#nav-logout").removeClass("blue");
     $("#body-container").load("../templates/workflows.html", function() {
+        $.ajax({
+            url: "/flask/workflowinfo",
+            type: "GET",
+            headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+            success: function(response) {
+                var workflows = JSON.parse(response);
+                $("#workflowTable").append("<tbody>");
 
-    $.ajax({
-        url: "/flask/workflowinfo",
-        type: "GET",
-        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
-        success: function(response) {
-            var workflows = JSON.parse(response);
-            $("#workflowTable").append("<tbody>");
+                for (item in workflows) {
+                    var wf_entry = "<tr>";
+                    item = workflows[item];
+                    wf_entry += "<td>" + item.kind + "</td>";
+                    wf_entry += "<td>" + item.initqueuename + "</td>";
+                    wf_entry += "<td>" + item.dataqueuename + "</td>";
+                    wf_entry += "<td><img src='../img/cross.png' class='click_button' width=32 height=32 onClick=\"deleteWorkflow('"+item.kind+"')\"></td>";
+                    
+                    wf_entry += "</tr>";
 
-            for (item in workflows) {
-                var wf_entry = "<tr>";
-                item = workflows[item];
-                wf_entry += "<td>" + item.kind + "</td>";
-                wf_entry += "<td>" + item.initqueuename + "</td>";
-                wf_entry += "<td>" + item.dataqueuename + "</td>";
-                wf_entry += "<td><img src='../img/cross.png' class='click_button' width=32 height=32 onClick=\"deleteWorkflow('"+item.kind+"')\"></td>";
-                
-                wf_entry += "</tr>";
-
-                $("#workflowTable").append(wf_entry);
+                    $("#workflowTable").append(wf_entry);
+                }
+                $("#workflowTable").append("</tbody>");
+            },
+            error: function(xhr) {
+                $("#confirmation").removeClass().addClass("button red self-center");
+                $("#confirmation").html("<span>&#10007</span> Workflow retrieval failed");
             }
-            $("#workflowTable").append("</tbody>");
-        },
-        error: function(xhr) {
-            $("#confirmation").removeClass().addClass("button red self-center");
-            $("#confirmation").html("<span>&#10007</span> Workflow retrieval failed");
-        }
-    });
+        });
     });
 }
 
@@ -762,40 +761,39 @@ function getEDIInfo() {
     $("#nav-home").removeClass("blue");
     $("#nav-dash").removeClass("blue");
     $("#nav-logout").removeClass("blue");
-    $("#body-container").load("../templates/ediinfo.html");   
+    $("#body-container").load("../templates/ediinfo.html", function() { 
+        $.ajax({
+            url: "/flask/getediinfo",
+            type: "GET",
+            headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
+            success: function(response) {            
+                var edi_handlers = response.handlers;
+                $("#EDIInfotable").append("<tbody>");
 
+                for (edi_handler in edi_handlers) {
+                    var handler_entry = "<tr>";
+                    item = edi_handlers[edi_handler];
+                    handler_entry += "<td>"+item.endpoint + "</td>";                
+                    if (item.pollperiod == null) {
+                        handler_entry += "<td>PUSH</td>";
+                    } else {
+                        handler_entry += "<td>PULL ("+item.pollperiod+")</td>";
+                    }
+                    handler_entry += "<td>" + item.incidentid + "</td>";
+                    handler_entry += "<td>" + item.queuename + "</td>";
+                    
+                    handler_entry += "<td><img src='../img/cross.png' class='click_button' width=26 height=26 onClick=\"deleteEDIHandler('"+item.queuename+"','"+item.endpoint+"','"+item.incidentid+"','"+item.pollperiod+"')\"></td>";
+                    
+                    handler_entry += "</tr>";
 
-    $.ajax({
-        url: "/flask/getediinfo",
-        type: "GET",
-        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
-        success: function(response) {            
-            var edi_handlers = response.handlers;
-            $("#EDIInfotable").append("<tbody>");
-
-            for (edi_handler in edi_handlers) {
-                var handler_entry = "<tr>";
-                item = edi_handlers[edi_handler];
-                handler_entry += "<td>"+item.endpoint + "</td>";                
-                if (item.pollperiod == null) {
-                    handler_entry += "<td>PUSH</td>";
-                } else {
-                    handler_entry += "<td>PULL ("+item.pollperiod+")</td>";
+                    $("#EDIInfotable").append(handler_entry);
                 }
-                handler_entry += "<td>" + item.incidentid + "</td>";
-                handler_entry += "<td>" + item.queuename + "</td>";
-                
-                handler_entry += "<td><img src='../img/cross.png' class='click_button' width=26 height=26 onClick=\"deleteEDIHandler('"+item.queuename+"','"+item.endpoint+"','"+item.incidentid+"','"+item.pollperiod+"')\"></td>";
-                
-                handler_entry += "</tr>";
-
-                $("#EDIInfotable").append(handler_entry);
+                $("#EDIInfotable").append("</tbody>");
+            },
+            error: function(xhr) {
+                console.log({"status": 500, "msg": "Sorry, there seems to be a problem with our system."});
             }
-            $("#EDIInfotable").append("</tbody>");
-        },
-        error: function(xhr) {
-            console.log({"status": 500, "msg": "Sorry, there seems to be a problem with our system."});
-        }
+        });
     });
 }
 
@@ -811,44 +809,44 @@ function getUsers() {
     $("#nav-home").removeClass("blue");
     $("#nav-dash").removeClass("blue");
     $("#nav-logout").removeClass("blue");
-    $("#body-container").load("../templates/users.html");   
+    $("#body-container").load("../templates/users.html", function() {
+        $.ajax({
+            url: "/flask/getallusers",
+            type: "GET",
+            headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+            success: function(response) {
+                var users = JSON.parse(response);
+                $("#userTable").append("<tbody>");
 
-    $.ajax({
-        url: "/flask/getallusers",
-        type: "GET",
-        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
-        success: function(response) {
-            var users = JSON.parse(response);
-            $("#userTable").append("<tbody>");
+                for (item in users) {
+                    var user_entry = "<tr>";
+                    item = users[item];
+                    user_entry += "<td>"+item.username+"   <i>(<span class=\"link\" onclick=\"manageUser('"+item.username+"');\">click here to edit</span>)</i></td>";
+                    user_entry += "<td>" + item.name + "</td>";
+                    user_entry += "<td>" + item.email + "</td>";
+                    if (item.access_rights == 0) {
+                        user_entry += "<td>user</td>";
+                    } else if (item.access_rights == 1) {
+                        user_entry += "<td>administrator</td>";
+                    }
+                    
+                    if (item.enabled) {
+                        user_entry += "<td>Yes</td>";
+                    } else {
+                        user_entry += "<td>No</td>";
+                    }
+                    
+                    user_entry += "</tr>";
 
-            for (item in users) {
-                var user_entry = "<tr>";
-                item = users[item];
-                user_entry += "<td>"+item.username+"   <i>(<span class=\"link\" onclick=\"manageUser('"+item.username+"');\">click here to edit</span>)</i></td>";
-                user_entry += "<td>" + item.name + "</td>";
-                user_entry += "<td>" + item.email + "</td>";
-                if (item.access_rights == 0) {
-                    user_entry += "<td>user</td>";
-                } else if (item.access_rights == 1) {
-                    user_entry += "<td>administrator</td>";
+                    $("#userTable").append(user_entry);
                 }
-                
-                if (item.enabled) {
-                    user_entry += "<td>Yes</td>";
-                } else {
-                    user_entry += "<td>No</td>";
-                }
-                
-                user_entry += "</tr>";
-
-                $("#userTable").append(user_entry);
+                $("#userTable").append("</tbody>");
+            },
+            error: function(xhr) {
+                $("#confirmation").removeClass().addClass("button red self-center");
+                $("#confirmation").html("<span>&#10007</span> User retrieval failed");
             }
-            $("#userTable").append("</tbody>");
-        },
-        error: function(xhr) {
-            $("#confirmation").removeClass().addClass("button red self-center");
-            $("#confirmation").html("<span>&#10007</span> User retrieval failed");
-        }
+        });
     });
 }
 
