@@ -88,6 +88,18 @@ def login():
 
     logger.Log(log.LogType.Website, str(request), user=username)
 
+def changePassword():
+    login = request.json
+    username = login.get("username", None)
+    password = login.get("password", None)
+    
+    if username and password:
+        success=logins.change_user_password(username, password)
+        if (success):
+            return jsonify({"status": 200, "msg": "Password changed"})
+    
+    return jsonify({"status": 400, "msg": "Can not change password"})
+
 def getMyWorkflows(username):
     allowed_workflows=logins.get_allowed_workflows(username)
     return json.dumps(allowed_workflows) 

@@ -43,6 +43,13 @@ def getUserType():
 def login():
     return managementAPI.login()
 
+@app.route('/flask/changepassword', methods=['POST'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def changePassword():
+    return managementAPI.changePassword()    
+
 @app.route("/flask/authorised", methods=["GET"])
 @fresh_jwt_required
 def authorised():

@@ -1,0 +1,47 @@
+<div id="editUserScreen" title="Information screen">	         
+      <label for="name" class="addDataLabel">Name</label>
+      <input type="text" name="name" id="name" class="addDataText text ui-widget-content ui-corner-all">      
+
+      <label for="email" class="addDataLabel">Email</label>
+      <input type="text" name="email" id="email" class="addDataText text ui-widget-content ui-corner-all"> 
+      
+      <div style="width: 100%; overflow: hidden;">
+        <div style="float: right;">
+          <label for="enabled" class="addDataLabel" style="display: inline-block;">Enabled</label>
+          <input type="checkbox" id="enabled" name="enabled" value="enabled">
+        </div>
+        
+        <div style="float: left;">
+          <label for="type" class="addDataLabel" style="display: inline-block;">User type</label>
+          <select id="type">        
+            <option value="user">User</option>
+            <option value="administrator">Administrator</option>                
+          </select>
+        </div>      
+      </div>
+
+      <button style=" float:right; clear: both; display: block;" class="button blue self-center" onClick="editUser()">Update details</button>
+
+      <hr style="clear: both; margin-top:4px;">
+      
+      <div style="width: 100%; overflow: hidden;">
+        <button id="removeWorkflowFromUser" style="float:right;" class="button blue self-center" onClick="removeWorkflowFromUser()">Remove Workflow</button>
+        <select id="registeredworkflows_users" multiple style="float:left; width:50%;"></select>        
+      </div>
+
+      <div style="width: 100%; overflow: hidden; margin-top:5px; ">
+        <button id="addWorkflowUser" style="float:right;" class="button blue self-center" onClick="addWorkflowToUser()">Add Workflow</button>
+        <select id="all_registeredworkflows"  style="float:left; width:50%;"></select>        
+      </div>
+
+      <hr style="clear: both; margin-top:4px;">
+      <label for="password" class="addDataLabel">New Password</label>
+      <input type="text" name="password" id="password" class="addDataText text ui-widget-content ui-corner-all">
+      
+      <div>      
+      <button style=" float:right; clear: both; display: block;" class="button blue self-center" onClick="changePassword()">Change password</button>
+      <label id="userEditErrorMessage" style="float:left;" class="addDataLabel"></label>
+      </div>
+      
+      <input type="hidden" id="username" name="username">
+</div>

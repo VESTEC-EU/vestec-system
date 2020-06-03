@@ -4,6 +4,7 @@ var version_number=-1;
 
 var add_data_dialog;
 var edit_data_dialog;
+var edit_user_dialog;
 
 const ConfirmationTypeEnum = Object.freeze({"DELETEEDIHANDLER":1, "DELETEDATAITEM":2});
 var confirmation_box_type=null;
@@ -62,6 +63,21 @@ $( function() {
             }
           }
         });
+
+        edit_user_dialog = $("#edit-user-dialog-form").dialog({
+            autoOpen: false,
+            height: 720,
+            width: 500,
+            modal: true,
+            buttons: {                
+                Cancel: function() {
+                    edit_user_dialog.dialog( "close" );
+                }
+            },
+            close: function() {        
+                
+            }
+            });            
     });
 
 
@@ -808,7 +824,7 @@ function getUsers() {
             for (item in users) {
                 var user_entry = "<tr>";
                 item = users[item];
-                user_entry += "<td><span class=\"link\" onclick=\"manageUser('"+item.username+"');\">" + item.username + "</span></td>";
+                user_entry += "<td>"+item.username+"   <i>(<span class=\"link\" onclick=\"manageUser('"+item.username+"');\">click here to edit</span>)</i></td>";
                 user_entry += "<td>" + item.name + "</td>";
                 user_entry += "<td>" + item.email + "</td>";
                 if (item.access_rights == 0) {
@@ -817,14 +833,17 @@ function getUsers() {
                     user_entry += "<td>administrator</td>";
                 }
                 
-                user_entry += "<td></td>";
+                if (item.enabled) {
+                    user_entry += "<td>Yes</td>";
+                } else {
+                    user_entry += "<td>No</td>";
+                }
                 
                 user_entry += "</tr>";
 
                 $("#userTable").append(user_entry);
             }
             $("#userTable").append("</tbody>");
-            $("#userDetails").hide();
         },
         error: function(xhr) {
             $("#confirmation").removeClass().addClass("button red self-center");
@@ -835,7 +854,7 @@ function getUsers() {
 
 function addWorkflowToUser() {
     var data = {};
-    var username=$('#usernameh2').text();
+    var username=$('#username').val();
     data["username"] = username;
     data["workflow"] = $('#all_registeredworkflows').val();
     $.ajax({
@@ -845,19 +864,20 @@ function addWorkflowToUser() {
         contentType: "application/json",
         data: JSON.stringify(data),
         dataType: "json",
-        success: function(response) {
-            manageUser(username);
+        success: function(response) {            
+            $("#registeredworkflows_users").append($('<option>', {value:data["workflow"], text: data["workflow"]}))
+            $('#all_registeredworkflows').children('option[value="'+data["workflow"]+'"]').remove();
         },
         error: function(xhr) {
-            $("#confirmation").removeClass().addClass("button red self-center");
-            $("#confirmation").html("<span>&#10007</span> User edit failed");
+            $("#userEditErrorMessage").removeClass().addClass("red self-center");
+            $("#userEditErrorMessage").html("<span>&#10007</span> Adding workflow to user failed");
         }
     });
 }
 
-function removeWorkflowFromUser() {
+function removeWorkflowFromUser() {    
     var data = {};
-    var username=$('#usernameh2').text();
+    var username=$('#username').val();
     data["username"] = username;
     data["workflow"] = $('#registeredworkflows_users').val();
     $.ajax({
@@ -868,11 +888,12 @@ function removeWorkflowFromUser() {
         data: JSON.stringify(data),
         dataType: "json",
         success: function(response) {
-            manageUser(username);
+            $('#registeredworkflows_users').children('option[value="'+data["workflow"]+'"]').remove();
+            $("#all_registeredworkflows").append($('<option>', {value:data["workflow"], text: data["workflow"]}))
         },
         error: function(xhr) {
-            $("#confirmation").removeClass().addClass("button red self-center");
-            $("#confirmation").html("<span>&#10007</span> User edit failed");
+            $("#userEditErrorMessage").removeClass().addClass("red self-center");
+            $("#userEditErrorMessage").html("<span>&#10007</span> Removing workflow from user failed");
         }
     });
 }
@@ -908,34 +929,62 @@ function manageUser(username) {
         }
     })
     ).then(function() {
-        user=users[0]
-        $('#usernameh2').text(user.username);
-        $('#name').val(user.name)
-        $('#email').val(user.email)
-        if (user.access_rights == 0) {
-            $('#type').val("user");
-        } else if (user.access_rights == 1) {
-            $('#type').val("administrator");
+
+        $('#edit-user-dialog-contents').load('templates/edituser.html #editUserScreen', function() {
+            user=users[0]
+            $('#username').val(user.username);
+            $('#name').val(user.name);
+            $('#email').val(user.email);
+            if (user.access_rights == 0) {
+                $('#type').val("user");
+            } else if (user.access_rights == 1) {
+                $('#type').val("administrator");
+            }
+            $('#enabled').prop('checked', user.enabled);
+            $("#registeredworkflows_users").empty();
+            var usersWorkflows = []
+            for (wf in user.workflows) {
+                wf=user.workflows[wf];
+                usersWorkflows.push(wf);
+                $("#registeredworkflows_users").append($('<option>', {value:wf, text: wf}))
+            }
+            $("#all_registeredworkflows").empty();
+            for (wf in workflows) {
+                wf=workflows[wf].kind;
+                if (!usersWorkflows.includes(wf)) {
+                    $("#all_registeredworkflows").append("<option value='"+wf+"'>"+wf+"</option>");
+                }
+            }
+            edit_user_dialog.dialog( "open" );
+        }); 
+    });
+}
+
+function changePassword() {
+    var wf = {};
+    wf["username"] = $("#username").val();
+    wf["password"] = $("#password").val();
+    $.ajax({
+        url: "/flask/changepassword",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(wf),
+        dataType: "json",
+        success: function(response) {
+            edit_user_dialog.dialog( "close" );
+            getUsers();
+        },
+        error: function(xhr) {
+            $("#userEditErrorMessage").removeClass().addClass("red self-center");
+            $("#userEditErrorMessage").html("<span>&#10007</span> Changing user password failed");
         }
-        $('#enabled').prop('checked', user.enabled);
-        $("#registeredworkflows_users").empty();
-        for (wf in user.workflows) {
-            wf=user.workflows[wf];
-            $("#registeredworkflows_users").append($('<option>', {value:wf, text: wf}))
-        }
-        $("#all_registeredworkflows").empty();
-        for (wf in workflows) {
-            wf=workflows[wf].kind;
-            $("#all_registeredworkflows").append("<option value='"+wf+"'>"+wf+"</option>");
-        }
-        $("#userTable").hide();
-        $("#userDetails").show();
     });
 }
 
 function editUser() {
     var wf = {};
-    wf["username"] = $("#usernameh2").text();
+    wf["username"] = $("#username").val();
     wf["name"] = $("#name").val();
     wf["email"] = $("#email").val();
     wf["type"] = $("#type").val();
@@ -948,11 +997,12 @@ function editUser() {
         data: JSON.stringify(wf),
         dataType: "json",
         success: function(response) {
+            edit_user_dialog.dialog( "close" );
             getUsers();
         },
         error: function(xhr) {
-            $("#confirmation").removeClass().addClass("button red self-center");
-            $("#confirmation").html("<span>&#10007</span> User edit failed");
+            $("#userEditErrorMessage").removeClass().addClass("red self-center");
+            $("#userEditErrorMessage").html("<span>&#10007</span> User edit failed");
         }
     });
 }

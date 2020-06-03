@@ -83,6 +83,18 @@ def add_user(username, name, email, password):
         return 0
 
 @pny.db_session
+def change_user_password(username, password):
+    user = User.get(username=username)
+    if user is None: 
+        return False
+    else:
+        password_hash = sha256.hash(password)
+        user.password_hash=password_hash
+        pny.commit()
+        return True
+
+
+@pny.db_session
 def verify_user(username, password):
     user = User.get(username=username)
     if user is None: return False
