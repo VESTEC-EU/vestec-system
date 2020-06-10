@@ -80,6 +80,24 @@ $( function() {
                 
             }
             });            
+
+        edit_machine_dialog = $("#edit-machine-dialog-form").dialog({
+                autoOpen: false,
+                height: "auto",
+                width: 500,
+                modal: true,
+                buttons: {     
+                    "OK": function() {
+                        performAddMachine();                        
+                    },
+                    Cancel: function() {
+                        edit_machine_dialog.dialog( "close" );
+                    }
+                },
+                close: function() {        
+                    
+                }
+                }); 
     });
 
 
@@ -335,6 +353,7 @@ function generateAdminDropdown() {
   admin_html+="<div class=\"admin_item\" onClick=\"getWorkflows()\">Workflows</div>";
   admin_html+="<div class=\"admin_item\" onClick=\"getUsers()\">Users</div>";
   admin_html+="<div class=\"admin_item\" onClick=\"getEDIInfo()\">EDI</div>";
+  admin_html+="<div class=\"admin_item\" onClick=\"getMachineInfo()\">Machines</div>";
   admin_html+="</div></div>";
   return admin_html;
 }
@@ -755,6 +774,75 @@ function getWorkflows() {
                 $("#confirmation").html("<span>&#10007</span> Workflow retrieval failed");
             }
         });
+    });
+}
+
+function getMachineInfo() {
+    checkAuthStillValid();
+    $("#nav-home").removeClass("blue");
+    $("#nav-dash").removeClass("blue");
+    $("#nav-logout").removeClass("blue");
+    $("#body-container").load("../templates/machineinfo.html", function() {
+        $.ajax({
+            url: "/flask/getmachinestatuses",
+            type: "GET",
+            headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
+            success: function(response) {
+                var machine_infos = response.machine_statuses;
+                $("#MachineInfotable").append("<tbody>");
+
+                for (machine_info in machine_infos) {
+                    var handler_entry = "<tr>";
+                    item = machine_infos[machine_info];
+                    handler_entry += "<td>"+item.name + "</td>";
+                    handler_entry += "<td>"+item.host_name + "</td>";
+                    handler_entry += "<td>"+item.scheduler + "</td>";
+                    handler_entry += "<td>"+parseInt(item.nodes) * parseInt(parseInt(item.cores_per_node)) + "</td>";
+                    handler_entry += "<td>";
+                    if (item.enabled) {
+                        handler_entry+="enabled";
+                    } else {
+                        handler_entry+="disabled";
+                    }
+                    handler_entry += "</td>";
+                    handler_entry += "</tr>";
+                    $("#MachineInfotable").append(handler_entry);
+                }
+                $("#MachineInfotable").append("</tbody>");
+            }
+        });
+    });
+}
+
+function showAddMachine() {
+    $('#edit-machine-dialog-contents').load('templates/addmachine.html #addMachineScreen', function() {
+        edit_machine_dialog.dialog( "open" );
+    }); 
+}
+
+function performAddMachine() {
+    var data = {};    
+    data["machine_name"] = $('#machinename').val();
+    data["host_name"] = $('#hostname').val();
+    data["scheduler"] = $('#scheduler').val();
+    data["num_nodes"] = $('#number_nodes').val();
+    data["cores_per_node"] = $('#number_cores').val();
+    data["base_work_dir"] = $('#basedir').val();
+    $.ajax({
+        url: "/flask/addmachine",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(data),
+        dataType: "json",
+        success: function(response) {
+            edit_machine_dialog.dialog( "close" );
+            getMachineInfo();
+        },
+        error: function(xhr) {
+            //$("#userEditErrorMessage").removeClass().addClass("red self-center");
+            //$("#userEditErrorMessage").html("<span>&#10007</span> User edit failed");
+        }
     });
 }
 

@@ -257,6 +257,21 @@ def post_edi_data_anon():
 def post_edi_data(sourceid):    
     return EDIconnector.pushDataToEDI(sourceid)
 
+@app.route('/flask/getmachinestatuses', methods=['GET'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def getMachineStatuses():    
+   return managementAPI.retrieveMachineStatuses()
+
+@app.route("/flask/addmachine", methods=["POST"])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def add_new_machine():    
+    print("A")
+    return managementAPI.addNewMachine(request.json)
+
 if __name__ == '__main__':    
     app.run(host='0.0.0.0', port=8000)    
 

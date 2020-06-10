@@ -32,10 +32,12 @@ version_number=VERSION_PRECLUDE+"."+VERSION_POSTFIX
 if "VESTEC_MANAGER_URI" in os.environ:
     JOB_MANAGER_URI = os.environ["VESTEC_MANAGER_URI"]
     EDI_URL = os.environ["VESTEC_EDI_URI"]
+    MSM_URL = os.environ["VESTEC_MSM_URI"]
     DATA_MANAGER_URI = os.environ["VESTEC_DM_URI"]
 else:
     JOB_MANAGER_URI = 'http://127.0.0.1:5500/jobs'
     EDI_URL= 'http://127.0.0.1:5501/EDImanager'
+    MSM_URL= 'http://127.0.0.1:5502/MSM'
     DATA_MANAGER_URI = 'http://localhost:5000/DM'
 
 def version():
@@ -247,6 +249,14 @@ def getEDIInfo():
 def deleteEDIHandler(retrieved_data):    
     deleted_info = requests.post(EDI_URL + '/remove', json=retrieved_data)    
     return Response(deleted_info.content, deleted_info.status_code)
+
+def retrieveMachineStatuses():
+    machine_statuses=requests.get(MSM_URL + '/machinestatuses')
+    return jsonify({"status": 200, "machine_statuses": machine_statuses.json()})
+
+def addNewMachine(retrieved_data):
+    created_info = requests.post(MSM_URL + '/add', json=retrieved_data)    
+    return Response(created_info.content, created_info.status_code)
 
 @pny.db_session
 def deleteWorkflow(retrieved_data):
