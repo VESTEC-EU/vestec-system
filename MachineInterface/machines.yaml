@@ -1,0 +1,9 @@
+amqp:
+    hostname: localhost
+
+machines:
+    test:
+        type: dummy
+
+    ARCHER:
+       type: dummy
