@@ -258,6 +258,14 @@ def addNewMachine(retrieved_data):
     created_info = requests.post(MSM_URL + '/add', json=retrieved_data)    
     return Response(created_info.content, created_info.status_code)
 
+def enableMachine(machine_id):
+    enabled_info = requests.post(MSM_URL + '/enable/'+machine_id)    
+    return Response(enabled_info.content, enabled_info.status_code)
+
+def disableMachine(machine_id):
+    disabled_info = requests.post(MSM_URL + '/disable/'+machine_id)    
+    return Response(disabled_info.content, disabled_info.status_code)
+
 @pny.db_session
 def deleteWorkflow(retrieved_data):
     workflow_kind = retrieved_data.get("kind", None)

@@ -268,9 +268,22 @@ def getMachineStatuses():
 @pny.db_session
 @fresh_jwt_required
 @logins.admin_required
-def add_new_machine():    
-    print("A")
+def add_new_machine():        
     return managementAPI.addNewMachine(request.json)
+
+@app.route("/flask/enablemachine/<machineid>", methods=["POST"])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def enable_machine(machineid):
+    return managementAPI.enableMachine(machineid)
+
+@app.route("/flask/disablemachine/<machineid>", methods=["POST"])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def disable_machine(machineid):
+    return managementAPI.disableMachine(machineid)
 
 if __name__ == '__main__':    
     app.run(host='0.0.0.0', port=8000)    

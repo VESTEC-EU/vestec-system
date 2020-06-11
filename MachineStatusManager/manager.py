@@ -21,6 +21,24 @@ logger = log.VestecLogger("Machine Status Manager")
 def get_health():
     return jsonify({"status": 200})
 
+@app.route("/MSM/enable/<machine_id>", methods=["POST"])
+@pny.db_session
+def enable_machine(machine_id):
+    stored_machine=Machine.get(machine_id=machine_id)
+    if (stored_machine is not None):        
+        stored_machine.enabled=True
+        pny.commit()
+    return jsonify({"status": 200})
+
+@app.route("/MSM/disable/<machine_id>", methods=["POST"])
+@pny.db_session
+def disable_machine(machine_id):
+    stored_machine=Machine.get(machine_id=machine_id)
+    if (stored_machine is not None):        
+        stored_machine.enabled=False
+        pny.commit()
+    return jsonify({"status": 200})
+
 @app.route("/MSM/add", methods=["POST"])
 @pny.db_session
 def add_machine():
@@ -44,6 +62,7 @@ def get_machine_status():
     for machine in machines:
         if not machine == None:
             machine_info={}
+            machine_info["uuid"]=machine.machine_id
             machine_info["name"]=machine.machine_name
             machine_info["host_name"]=machine.host_name
             machine_info["scheduler"]=machine.scheduler
