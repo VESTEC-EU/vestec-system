@@ -799,6 +799,16 @@ function getMachineInfo() {
                     handler_entry += "<td>"+item.scheduler + "</td>";
                     handler_entry += "<td>"+parseInt(item.nodes) * parseInt(parseInt(item.cores_per_node)) + "</td>";
                     handler_entry += "<td>";
+
+                    if ("status" in item && "status_last_checked" in item) {
+                        handler_entry += item.status+"<i>&nbsp;&nbsp;("+item.status_last_checked+")</i>";
+                    } else if ("status" in item) {
+                        handler_entry += item.status;
+                    } else {
+                        handler_entry += "unknown";                    
+                    }
+
+                    handler_entry += "</td><td>";                    
                     if (item.enabled) {
                         handler_entry += "<img src='../img/enabled_icon.png' onclick=\"disableMachine('"+item.uuid+"')\" height='24' title='Disable machine' style='cursor: pointer;'>";
                     } else {
