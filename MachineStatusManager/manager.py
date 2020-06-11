@@ -1,11 +1,13 @@
 from __future__ import print_function
 import sys
 sys.path.append("../")
+sys.path.append("../MachineInterface")
 from flask import Flask, request, jsonify
 import threading
 import time
 import json
 import pony.orm as pny
+import requests
 from Database import initialiseDatabase
 from Database.machine import Machine
 import datetime
@@ -13,6 +15,14 @@ from uuid import uuid4
 import ConnectionManager
 import Templating
 import Utils.log as log
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
+
+from mproxy.client import Client
+import asyncio
+import aio_pika
+
+poll_scheduler=BackgroundScheduler(executors={"default": ThreadPoolExecutor(1)})
 
 app = Flask("Machine Status Manager")
 logger = log.VestecLogger("Machine Status Manager")
@@ -72,11 +82,31 @@ def get_machine_status():
             if (machine.status is not None):
                 machine_info["status"]=machine.status
             if (machine.status_last_checked is not None):
-                machine_info["status_last_checked"]=machine.status_last_checked
+                machine_info["status_last_checked"]=machine.status_last_checked.strftime("%d/%m/%Y, %H:%M:%S")
             machine_descriptions.append(machine_info)         
     
     return json.dumps(machine_descriptions)
 
+@pny.db_session
+def poll_machine_statuses():
+    machines=pny.select(machine for machine in Machine)
+    for machine in machines:
+        if not machine == None and machine.enabled: 
+            status=asyncio.run(retrieve_machine_status())
+            machine.status=status
+            machine.status_last_checked=datetime.datetime.now()
+            pny.commit()
+
+async def retrieve_machine_status():    
+    connection = await aio_pika.connect(host="localhost")
+    client = await Client.create("test", connection)
+    status = await client.getstatus()
+    return status
+            
 if __name__ == "__main__":
     initialiseDatabase()    
-    app.run(host="0.0.0.0", port=5502)
+    poll_scheduler.start()
+    runon = datetime.datetime.now()+ datetime.timedelta(seconds=5)
+    poll_scheduler.add_job(poll_machine_statuses, 'interval', seconds=360, next_run_time = runon)
+    app.run(host="0.0.0.0", port=5502)    
+    poll_scheduler.shutdown()
