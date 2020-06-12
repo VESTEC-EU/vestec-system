@@ -78,7 +78,8 @@ class HandlerLog(db.Entity):
     data = pny.Required(str)
 
 class RegisteredWorkflow(db.Entity):
-	kind=pny.Required(str)
-	init_queue_name=pny.Required(str)
-	data_queue_name=pny.Optional(str)
-	users = pny.Set("User")
+    kind=pny.Required(str)
+    init_queue_name=pny.Required(str)
+    data_queue_name=pny.Optional(str)
+    test_workflow = pny.Required(bool, default=False, sql_default='0')
+    users = pny.Set("User")

@@ -291,7 +291,8 @@ def addWorkflow(retrieved_data):
     workflow_kind = retrieved_data.get("kind", None)
     init_queue_name = retrieved_data.get("initqueuename", None)
     data_queue_name = retrieved_data.get("dataqueuename", None)
-    newwf = RegisteredWorkflow(kind=workflow_kind, init_queue_name=init_queue_name, data_queue_name=data_queue_name)
+    istestWorkflow = retrieved_data.get("testworkflow", None)    
+    newwf = RegisteredWorkflow(kind=workflow_kind, init_queue_name=init_queue_name, data_queue_name=data_queue_name, test_workflow=istestWorkflow)
 
     pny.commit()    
     return jsonify({"status": 200, "msg": "Workflow added"})

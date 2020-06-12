@@ -702,6 +702,7 @@ function createWorkflow() {
     wf["kind"] = $("#workflowname").val();
     wf["initqueuename"] = $("#workflowqueuename").val();
     wf["dataqueuename"] = $("#manualdataqueuename").val();
+    wf["testworkflow"] = $("#test_workflow").is(':checked');
     $.ajax({
         url: "/flask/addworkflow",
         type: "POST",
