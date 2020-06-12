@@ -42,6 +42,11 @@ class FabricMachineConnection(ThrottlableMixin):
             return dest.getvalue()
 
     @throttle
+    def submitJob(self, num_nodes, requested_walltime, executable):
+        log.info("%s.getstatus()", self.name)
+        return "Q123456"
+
+    @throttle
     def cd(self, dir):
         self.sftp.chdir(dir)
 

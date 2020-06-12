@@ -31,6 +31,10 @@ class API:
         pass
 
     @rpcmethod
+    def submitJob(num_nodes: int, requested_walltime:int, executable: str) -> str:
+        pass
+
+    @rpcmethod
     def ls(dirname: str = ".") -> list:
         pass
 

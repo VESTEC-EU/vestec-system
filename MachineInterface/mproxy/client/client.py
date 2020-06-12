@@ -40,6 +40,7 @@ class Client:
     rmdir = proxy(API.rmdir)
     mv = proxy(API.mv)
     getstatus = proxy(API.getstatus)
+    submitJob = proxy(API.submitJob)
 
     @classmethod
     async def create(cls, name, connection, exchange_name=None):
