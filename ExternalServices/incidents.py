@@ -81,6 +81,9 @@ def packageIncident(stored_incident, include_sort_key, include_digraph, include_
     incident["comment"]=stored_incident.comment         
     incident["creator"]=stored_incident.user_id.username
     incident["date_started"]=stored_incident.date_started.strftime("%d/%m/%Y, %H:%M:%S")    
+    
+    incident_workflow=RegisteredWorkflow.get(kind=stored_incident.kind)
+    incident["test_workflow"]=incident_workflow.test_workflow
     if (stored_incident.date_completed is not None):
         incident["date_completed"]=stored_incident.date_completed.strftime("%d/%m/%Y, %H:%M:%S")
     incident["incident_date"]=stored_incident.incident_date.strftime("%d/%m/%Y, %H:%M:%S")
@@ -91,8 +94,7 @@ def packageIncident(stored_incident, include_sort_key, include_digraph, include_
     if (include_sort_key): incident["srt_key"]=stored_incident.incident_date
     if (include_digraph):
         incident["digraph"]=str(generateIncidentDiGraph(stored_incident.uuid))
-    if (include_manual_data_queuename):
-        incident_workflow=RegisteredWorkflow.get(kind=stored_incident.kind)
+    if (include_manual_data_queuename):        
         incident["data_queue_name"]=incident_workflow.data_queue_name
     if (include_associated_data):
         incident["data_sets"]=[]

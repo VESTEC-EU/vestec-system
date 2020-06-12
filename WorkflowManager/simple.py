@@ -45,7 +45,10 @@ def manually_add_data(message):
         comment=file_contents_to_add["filecomment"],         
         date_created=datetime.datetime.now())    
     pny.commit()
-        
+
+@workflow.handler
+def test_workflow(message):
+    print("Test called!")
 
 @workflow.handler
 def initialise_simple(message):
@@ -57,10 +60,15 @@ def initialise_simple(message):
     myobj = {'queuename': 'add_data_simple', 'incidentid':message["IncidentID"], 'endpoint':'add_data_simple'+message["IncidentID"]}
     x = requests.post(EDI_URL+"/register", json = myobj)
     print("EDI response for manually add data" + x.text)
+
+    myobj = {'queuename': 'test_workflow_simple', 'incidentid':message["IncidentID"], 'endpoint':'test_stage_'+message["IncidentID"]}
+    x = requests.post(EDI_URL+"/register", json = myobj)     
+
     workflow.setIncidentActive(message["IncidentID"])
 
 # we have to register them with the workflow system
 def RegisterHandlers():
     workflow.RegisterHandler(external_data_arrival_handler, "external_data_arrival")
     workflow.RegisterHandler(manually_add_data, "add_data_simple")
+    workflow.RegisterHandler(test_workflow, "test_workflow_simple")
     workflow.RegisterHandler(initialise_simple, "initialise_simple")

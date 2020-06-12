@@ -516,6 +516,28 @@ function addProvidedData() {
     reader.readAsDataURL($('#fileToUpload').prop('files')[0])
 }
 
+function testIncident(incidentID) {
+    var wf = {}; 
+    wf["data"]="Test from the web-UI"
+    $.ajax({
+        url: "/EDI/test_stage_"+incidentID,
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify(wf),
+        dataType: "json",
+        success: function(response) {
+            $('#test_workflow').prop('disabled', true);
+            $('#test_workflow').removeClass('blue');
+            setTimeout(function() {
+                $('#test_workflow').prop('disabled', false);
+                $('#test_workflow').addClass('blue');
+            }, 5000);
+        },
+        error: function(response) {            
+        }
+    }); 
+}
+
 function loadIncidentDetails(incident) {
     var incident_html = '<div class="jobDetails self-center">';
     incident_html += '<div class="jobLine"><b>UUID: </b><div>' + incident.uuid + '</div></div>';
@@ -550,6 +572,10 @@ function loadIncidentDetails(incident) {
 
         if (incident.status == "ACTIVE" && incident.data_queue_name.length > 0) {
             incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" onClick=\"addDataForIncident('"+incident.uuid+"','"+incident.data_queue_name+"')\">Add data</button>";
+        }
+
+        if (incident.status == "ACTIVE" && incident.test_workflow) {
+            incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button id=\"test_workflow\" class=\"button blue self-center\" onClick=\"testIncident('"+incident.uuid+"')\">Initiate test stage</button>";
         }
         
         incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" style=\"float: right;\" onClick=\"getIncidentDetails(\'"+incident.uuid+"\')\">Refresh Status</button></div>";
