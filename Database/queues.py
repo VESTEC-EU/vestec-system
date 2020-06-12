@@ -12,4 +12,4 @@ class Queue(db.Entity):
     max_walltime = pny.Required(int)
     default = pny.Required(bool)
 
-    jobs = pny.Set("Job")
+#    jobs = pny.Set("Job")

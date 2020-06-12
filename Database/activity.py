@@ -20,7 +20,7 @@ class Activity(db.Entity):
     location = pny.Required(str)
     user_id = pny.Required(User)
 
-    jobs = pny.Set("Job", cascade_delete=True)
+#    jobs = pny.Set("Job", cascade_delete=True)
 
     def setStatus(self, status):
         self.status = status
