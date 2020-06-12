@@ -84,6 +84,20 @@ def packageIncident(stored_incident, include_sort_key, include_digraph, include_
     
     incident_workflow=RegisteredWorkflow.get(kind=stored_incident.kind)
     incident["test_workflow"]=incident_workflow.test_workflow
+
+    incident["simulations"]=[]
+    for sim in stored_incident.simulations:
+        simulation_dict={}
+        simulation_dict["uuid"]=sim.uuid
+        simulation_dict["status"]=sim.status
+        simulation_dict["created"]=sim.date_created.strftime("%d/%m/%Y, %H:%M:%S")
+        simulation_dict["walltime"]=sim.walltime
+        simulation_dict["num_nodes"]=sim.num_nodes
+        simulation_dict["requested_walltime"]=sim.requested_walltime
+        if sim.machine is not None:
+            simulation_dict["machine"]=sim.machine.machine_name        
+        incident["simulations"].append(simulation_dict)
+
     if (stored_incident.date_completed is not None):
         incident["date_completed"]=stored_incident.date_completed.strftime("%d/%m/%Y, %H:%M:%S")
     incident["incident_date"]=stored_incident.incident_date.strftime("%d/%m/%Y, %H:%M:%S")

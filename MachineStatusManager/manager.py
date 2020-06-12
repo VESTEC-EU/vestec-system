@@ -64,6 +64,14 @@ def add_machine():
     pny.commit()
     return jsonify({"status": 200})
 
+@app.route("/MSM/matchmachine", methods=["GET"])
+@pny.db_session
+def get_appropriate_machine():
+    requested_walltime = request.args.get("walltime", None)
+    requested_num_nodes = request.args.get("num_nodes", None)
+    stored_machine=Machine.get(machine_name="test")
+    return jsonify({"status": 200, "machine_id":stored_machine.machine_id})
+
 @app.route("/MSM/machinestatuses", methods=["GET"])
 @pny.db_session
 def get_machine_status():    

@@ -579,7 +579,26 @@ function loadIncidentDetails(incident) {
         }
         
         incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" style=\"float: right;\" onClick=\"getIncidentDetails(\'"+incident.uuid+"\')\">Refresh Status</button></div>";
-    }    
+    }
+
+    if (incident.simulations.length > 0) {
+        incident_html+="<div id=\"incident_data\" class=\"jobDetails self-center\"><table id='incidentSimulationsTable' class='self-center displayTable'>";
+        incident_html+="<thead><tr><th>Created</th><th>Status</th><th>Walltime</th><th>Number nodes</th><th>Machine</th></tr></thead>";
+        for (sim of incident.simulations) {    
+            incident_html+="<td>"+sim.created+"</td><td>"+sim.status+"</td><td>";            
+            if (sim.walltime != null) {
+                incident_html+=sim.walltime;
+            } else {
+                incident_html+=sim.requested_walltime;
+            }
+            incident_html+="</td><td>"+sim.num_nodes+"</td><td>";
+            if ("machine" in sim) {
+                incident_html+=sim.machine;
+            }
+            incident_html+="</td></tr>";
+        }
+        incident_html+="</table></div>";
+    }
 
     if (incident.data_sets.length > 0) {
         incident_html+="<div id=\"incident_data\" class=\"jobDetails self-center\"><table id='incidentDataTable' class='self-center displayTable'>";

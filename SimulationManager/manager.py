@@ -11,113 +11,45 @@ from Database.generate_db import initialiseStaticInformation
 from Database.machine import Machine
 from Database.queues import Queue
 from Database.users import User
-from Database.workflow import RegisteredWorkflow
-from Database.job import Job, JobStatus
-from Database.activity import Activity, ActivityStatus
+from Database.workflow import RegisteredWorkflow, Simulation
 import datetime
 from uuid import uuid4
-import ConnectionManager
-import Templating
 import Utils.log as log
+import requests
 
+MSM_URL= 'http://127.0.0.1:5502/MSM'
 
 app = Flask("Simulation Manager")
 logger = log.VestecLogger("Simulation Manager")
 
-@app.route("/jobs/health", methods=["GET"])
+@app.route("/SM/health", methods=["GET"])
 def get_health():
     return jsonify({"status": 200})
 
-@app.route("/jobs/<activity_id>", methods=["POST"])
+@app.route("/SM/status/<simulation_id>", methods=["GET"])
 @pny.db_session
-def create_activity(activity_id):    
-    data = dict = request.get_json()
-    name = data["incidentName"]
-    creator = data["creator"]
+def retrieve_simulation_status(simulation_id):
+    pass
 
-    activity_creation = ""
-
-    try:        
-        user = User.get(username=creator)
-        user.activities.create(activity_id=activity_id, activity_name=name,
-                               date_submitted=datetime.datetime.now(), activity_type="to be developed",
-                               location="to be developed")
-
-        pny.commit()
-
-        #kick off a thread to "manage" this job. In reality it just changes the status a few times and exits
-        thread = threading.Thread(target=task, args=(activity_id,), name=activity_id)
-        thread.start()
-
-        return jsonify({"status": 201, "msg": "Incident successfully created."})
-    except Exception as e:
-        logger.Log(type=log.LogType.Activity, comment=str(e)[:200], user=creator)
-        return jsonify({"status": 400, "msg": "Incident details incorrect."})
-
-
-# Displays a simple HTML page with the currently active threads
-@app.route("/threads")
-def thread_info():
-    logger.Log(type=log.LogType.Query, comment=str(request)[:200])
-    string = "<h1> Active threads </h1>"
-
-    for t in threading.enumerate():
-        string += "\n <p> %s </p>" % t.name
-
-    return string
-
-
-# task to be run in a thread for each job. Currently just changes the job status then exits
+@app.route("/SM/create", methods=["POST"])
 @pny.db_session
-def task(activity_id):
-    activity = Activity.get(activity_id=activity_id)
-    logger.Log(type=log.LogType.Activity, comment="Creating job for activity %s with id %s" % (activity.activity_name, activity_id))
+def create_job():    
+    data = request.get_json()
 
-    queue = Queue.get(queue_name="standard")
-    logger.Log(type=log.LogType.Activity, comment="Selected queue %s for activity %s" % (queue.queue_id, activity.activity_name))
+    uuid=str(uuid4())
+    incident_id = data["incident_id"]    
+    num_nodes = data["num_nodes"]
+    requested_walltime = data["requested_walltime"]
+    executable = data["executable"]    
 
-    time.sleep(3)
-    job_id = str(uuid4()) 
-
-    try:
-        job = Job(job_id=job_id, activity_id=activity, queue_id=queue, no_nodes=1, walltime=300, submit_time=datetime.datetime.now(), executable="test.exe", work_directory="/work/files")
-        activity.jobs.add(job)
-        queue.jobs.add(job)
-        activity.setStatus("ACTIVE")
-        pny.commit()
-
-        start_time = time.time()
-        logger.Log(type=log.LogType.Job, comment="Created job %s for activity %s on queue %s" % (job_id, activity.activity_name, queue.queue_id))
-    except Exception as e:
-        activity.setStatus("ERROR")
-        logger.Log(type=log.LogType.Job, comment=("Job creation failed: " + str(e))[:200])
-
-    time.sleep(10)
-    job.setStatus("RUNNING")
-    logger.Log(type=log.LogType.Job, comment="Job %s running for activity %s" % (job_id, activity_id))
+    simulation = Simulation(uuid=uuid, incident=incident_id, date_created=datetime.datetime.now(), num_nodes=num_nodes, requested_walltime=requested_walltime, executable=executable)
     pny.commit()
 
-    time.sleep(10)
-    job.setStatus("COMPLETED")
-    job.setRunTime(datetime.timedelta(seconds=start_time - time.time()))
-    job.setEndTime(datetime.datetime.now())
-    logger.Log(type=log.LogType.Job, comment="Job %s completed for activity %s" % (job_id, activity_id))
-    activity.setStatus("COMPLETED")
-    logger.Log(type=log.LogType.Activity, comment="Activity %s completed" % (activity_id))
+    matched_machine=requests.get(MSM_URL + '/matchmachine?walltime='+str(requested_walltime)+'&num_nodes='+str(num_nodes))
+    print(matched_machine.json())
 
-    return
-
-
-@pny.db_session
-def generate_database():
-    machine = pny.count(m for m in Machine)
-    queues = pny.count(q for q in Queue)
-
-    if (machine == 0) or (queues == 0):
-        initialiseStaticInformation()
-
+    return jsonify({"status": 201, "simulation_id": uuid})
 
 if __name__ == "__main__":
-    initialiseDatabase()
-    generate_database()
-    app.run(host="0.0.0.0", port=5500)
+    initialiseDatabase()    
+    app.run(host="0.0.0.0", port=5505)

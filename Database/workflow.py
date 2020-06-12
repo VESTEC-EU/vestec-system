@@ -47,7 +47,7 @@ class Incident(db.Entity):
 
     parameters = pny.Optional(str)
 
-    simulations = pny.Set("Simulation")
+    simulations = pny.Set("Simulation")    
 
     associated_datasets = pny.Set(StoredDataset)
 
@@ -55,15 +55,17 @@ class Incident(db.Entity):
 class Simulation(db.Entity):
     uuid = pny.PrimaryKey(str)
     incident = pny.Required(Incident)
+    date_created = pny.Required(datetime.datetime)
     status = pny.Required(str,default="NOT SUBMITTED")
-    machine = pny.Optional(str)
+    machine = pny.Optional("Machine")
     queue = pny.Optional(str)
     jobID = pny.Optional(str)
     wkdir = pny.Optional(str)
+    executable = pny.Required(str)
     results_handler = pny.Optional(str)
+    requested_walltime = pny.Optional(int)
     walltime = pny.Optional(datetime.timedelta)
-    nodes = pny.Optional(int)
-
+    num_nodes = pny.Optional(int)
 
 #lock for workflow handlers
 class Lock(db.Entity):
