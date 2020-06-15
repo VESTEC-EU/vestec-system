@@ -35,10 +35,23 @@ logger = log.VestecLogger("Simulation Manager")
 def get_health():
     return jsonify({"status": 200})
 
-@app.route("/SM/status/<simulation_id>", methods=["GET"])
+@app.route("/SM/simulation/<simulation_id>", methods=["DELETE"])
 @pny.db_session
-def retrieve_simulation_status(simulation_id):
-    pass
+def cancel_simulation(simulation_id):
+    sim=Simulation[simulation_id]
+    if (sim is not None):
+        asyncio.run(delete_simulation_job(sim.machine.machine_name, sim.jobID))
+        sim.status="CANCELLED"
+        sim.status_updated=datetime.datetime.now()
+        pny.commit()
+        return jsonify({"status": 201})
+    else:
+        return jsonify({"status": 401})
+
+async def delete_simulation_job(machine_name, queue_id):    
+    connection = await aio_pika.connect(host="localhost")
+    client = await Client.create(machine_name, connection)
+    await client.cancelJob(queue_id)    
 
 @app.route("/SM/create", methods=["POST"])
 @pny.db_session

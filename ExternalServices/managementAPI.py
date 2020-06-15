@@ -34,11 +34,13 @@ if "VESTEC_MANAGER_URI" in os.environ:
     EDI_URL = os.environ["VESTEC_EDI_URI"]
     MSM_URL = os.environ["VESTEC_MSM_URI"]
     DATA_MANAGER_URI = os.environ["VESTEC_DM_URI"]
+    SM_URL= os.environ["VESTEC_SM_URI"]
 else:
     JOB_MANAGER_URI = 'http://127.0.0.1:5500/jobs'
     EDI_URL= 'http://127.0.0.1:5501/EDImanager'
     MSM_URL= 'http://127.0.0.1:5502/MSM'
     DATA_MANAGER_URI = 'http://localhost:5000/DM'
+    SM_URL = 'http://localhost:5505/SM'
 
 def version():
     return jsonify({"status": 200, "version": version_number})
@@ -204,6 +206,11 @@ def deleteData(data_uuid, incident_uuid, username):
         return jsonify({"status": 200, "msg": "Data deleted"}) 
     else:
         return jsonify({"status": 401, "msg": "Data deletion failed, no incident data set that you can edit"}) 
+
+@pny.db_session
+def cancelSimulation(sim_uuid, username):
+    returned_info = requests.delete(SM_URL + '/simulation/'+sim_uuid)    
+    return Response(returned_info.content, returned_info.status_code)
 
 @pny.db_session
 def getLogs():

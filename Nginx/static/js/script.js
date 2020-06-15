@@ -6,7 +6,7 @@ var add_data_dialog;
 var edit_data_dialog;
 var edit_user_dialog;
 
-const ConfirmationTypeEnum = Object.freeze({"DELETEEDIHANDLER":1, "DELETEDATAITEM":2, "DELETEUSER":3});
+const ConfirmationTypeEnum = Object.freeze({"DELETEEDIHANDLER":1, "DELETEDATAITEM":2, "DELETEUSER":3, "CANCELSIMULATION":4});
 var confirmation_box_type=null;
 var confirmation_box_data={};
 
@@ -58,6 +58,8 @@ $( function() {
                 performDataSetDeletion();
               } else if (confirmation_box_type == ConfirmationTypeEnum.DELETEUSER) {
                 performUserDeletion();
+              } else if (confirmation_box_type == ConfirmationTypeEnum.CANCELSIMULATION) {
+                performSimulationCancel();
               }
             },
             Cancel: function() {
@@ -583,7 +585,7 @@ function loadIncidentDetails(incident) {
 
     if (incident.simulations.length > 0) {
         incident_html+="<div id=\"incident_data\" class=\"jobDetails self-center\"><table id='incidentSimulationsTable' class='self-center displayTable'>";
-        incident_html+="<thead><tr><th>Created</th><th>Status</th><th>Walltime</th><th>Number nodes</th><th>Machine</th></tr></thead>";
+        incident_html+="<thead><tr><th>Created</th><th>Status</th><th>Walltime</th><th>Number nodes</th><th>Machine</th><th>Actions</th></tr></thead>";
         for (sim of incident.simulations) {    
             incident_html+="<td>"+sim.created+"</td><td>"+sim.status+" <i>("+sim.status_updated+")</i></td><td>";            
             if (sim.walltime != null) {
@@ -594,6 +596,10 @@ function loadIncidentDetails(incident) {
             incident_html+="</td><td>"+sim.num_nodes+"</td><td>";
             if ("machine" in sim) {
                 incident_html+=sim.machine;
+            }
+            incident_html+="</td><td>";
+            if (sim.status=="QUEUED" || sim.status=="RUNNING" || sim.status=="PENDING") {
+                incident_html+="<img src='../img/cross.png' class='click_button' width=26 height=26 onClick=\"cancelSimulation('"+sim.uuid+"','"+incident.uuid+"')\">";
             }
             incident_html+="</td></tr>";
         }
@@ -618,6 +624,28 @@ function loadIncidentDetails(incident) {
     incident_html+="<div id=\"workflow_diagram\" class=\"jobDetails self-center\"><svg id=\"svg-canvas\" style='width: 100%; height: auto;'></svg></div>"    
 
     return incident_html;
+}
+
+function cancelSimulation(sim_uuid, incident_uuid) {
+    confirmation_box_type=ConfirmationTypeEnum.CANCELSIMULATION;
+    confirmation_box_data={"sim_uuid" : sim_uuid, "incident_uuid" : incident_uuid};
+    $("#dialog-confirm-text").text("Are you sure you want to cancel this simulation?");
+    $( "#dialog-confirm" ).dialog("open");
+}
+
+function performSimulationCancel() {    
+    $.ajax({
+        url: "/flask/simulation?sim_uuid="+confirmation_box_data["sim_uuid"],
+        type: "DELETE",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
+        success: function(response) {
+            getIncidentDetails(confirmation_box_data["incident_uuid"]);
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> Simulation cancel failed");
+        }
+    });   
 }
 
 function editDataItem(data_uuid, incident_uuid) {

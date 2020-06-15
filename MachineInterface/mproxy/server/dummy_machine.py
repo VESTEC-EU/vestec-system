@@ -74,6 +74,11 @@ class DummyMachineConnection(ThrottlableMixin):
             return "UNKNOWN"
 
     @throttle
+    def cancelJob(self, queue_id):
+        if (queue_id in dummy_jobs):
+            dummy_jobs[queue_id]="CANCELLED"
+
+    @throttle
     def ls(self, dirname="."):
         log.info("%s.ls(%s)", self.name, dirname)
         return self._ls

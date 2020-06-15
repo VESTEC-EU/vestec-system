@@ -39,6 +39,10 @@ class API:
         pass
 
     @rpcmethod
+    def cancelJob(queue_id: str) -> None:
+        pass
+
+    @rpcmethod
     def ls(dirname: str = ".") -> list:
         pass
 

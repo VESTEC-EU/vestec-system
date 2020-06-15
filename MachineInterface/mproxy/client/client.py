@@ -42,6 +42,7 @@ class Client:
     getstatus = proxy(API.getstatus)
     submitJob = proxy(API.submitJob)
     getJobStatus = proxy(API.getJobStatus)
+    cancelJob = proxy(API.cancelJob)
 
     @classmethod
     async def create(cls, name, connection, exchange_name=None):

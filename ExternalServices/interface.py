@@ -143,6 +143,14 @@ def updateDataMetadata():
 def downloadData(data_uuid):
     return managementAPI.downloadData(data_uuid)
 
+@app.route('/flask/simulation', methods=['DELETE'])
+@pny.db_session
+@fresh_jwt_required
+def cancelSimulation():
+    simulation_uuid = request.args.get("sim_uuid", None)    
+    username = get_jwt_identity()  
+    return managementAPI.cancelSimulation(simulation_uuid, username)
+
 @app.route('/flask/data', methods=['DELETE'])
 @pny.db_session
 @fresh_jwt_required
