@@ -1,4 +1,6 @@
 import sys
+sys.path.append("../")
+from Database import initialiseDatabase
 import argparse
 import asyncio
 import signal
@@ -35,6 +37,7 @@ async def main():
 
     names = args.names if len(args.names) else list(config["machines"].keys())    
 
+    initialiseDatabase()
     runner = ServerRunner(config, names)    
     await runner.start()
     print("Started machine interface")
