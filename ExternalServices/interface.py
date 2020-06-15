@@ -293,6 +293,20 @@ def enable_machine(machineid):
 def disable_machine(machineid):
     return managementAPI.disableMachine(machineid)
 
+@app.route("/flask/enabletestmodemachine/<machineid>", methods=["POST"])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def enable_testmode_machine(machineid):
+    return managementAPI.enableTestModeMachine(machineid)
+
+@app.route("/flask/disabletestmodemachine/<machineid>", methods=["POST"])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def disable_test_mode_machine(machineid):
+    return managementAPI.disableTestModeMachine(machineid)
+
 if __name__ == '__main__':    
     app.run(host='0.0.0.0', port=8000)    
 

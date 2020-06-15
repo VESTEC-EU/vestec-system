@@ -13,6 +13,7 @@ class Machine(db.Entity):
     cores_per_node = pny.Required(int)
     base_work_dir = pny.Required(str)
     enabled = pny.Required(bool, default=False, sql_default='0')
+    test_mode = pny.Required(bool, default=False, sql_default='0')
     
     status = pny.Optional(str)
     status_last_checked = pny.Optional(datetime.datetime)

@@ -273,6 +273,14 @@ def disableMachine(machine_id):
     disabled_info = requests.post(MSM_URL + '/disable/'+machine_id)    
     return Response(disabled_info.content, disabled_info.status_code)
 
+def enableTestModeMachine(machine_id):
+    enabled_info = requests.post(MSM_URL + '/enable_testmode/'+machine_id)    
+    return Response(enabled_info.content, enabled_info.status_code)
+
+def disableTestModeMachine(machine_id):
+    disabled_info = requests.post(MSM_URL + '/disable_testmode/'+machine_id)    
+    return Response(disabled_info.content, disabled_info.status_code)    
+
 @pny.db_session
 def deleteWorkflow(retrieved_data):
     workflow_kind = retrieved_data.get("kind", None)

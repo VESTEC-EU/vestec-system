@@ -888,7 +888,12 @@ function getMachineInfo() {
                     } else {
                         handler_entry += "<img src='../img/disabled_icon.png' onclick=\"enableMachine('"+item.uuid+"')\" height='24' title='Enable machine' style='cursor: pointer;'>";
                     }
-                    handler_entry += "</td>";
+                    handler_entry += "</td><td>";
+                    if (item.test_mode) {
+                        handler_entry += "<img src='../img/enabled_icon.png' onclick=\"disableTestModeMachine('"+item.uuid+"')\" height='24' title='Disable test mode' style='cursor: pointer;'>";
+                    } else {
+                        handler_entry += "<img src='../img/disabled_icon.png' onclick=\"enableTestModeMachine('"+item.uuid+"')\" height='24' title='Enable test mode' style='cursor: pointer;'>";
+                    }
                     handler_entry += "<td>";                                        
                     handler_entry += "<img src='../img/cross.png' onclick=\"deleteMachine('"+item.uuid+"')\" height='24' title='Delete machine' style='cursor: pointer;'>";
                     handler_entry += "</td>";
@@ -898,6 +903,36 @@ function getMachineInfo() {
                 $("#MachineInfotable").append("</tbody>");
             }
         });
+    });
+}
+
+function enableTestModeMachine(machine_id) {
+    $.ajax({
+        url: "/flask/enabletestmodemachine/"+machine_id,
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},       
+        success: function(response) {            
+            getMachineInfo();
+        },
+        error: function(xhr) {
+            //$("#userEditErrorMessage").removeClass().addClass("red self-center");
+            //$("#userEditErrorMessage").html("<span>&#10007</span> User edit failed");
+        }
+    });
+}
+
+function disableTestModeMachine(machine_id) {
+    $.ajax({
+        url: "/flask/disabletestmodemachine/"+machine_id,
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},       
+        success: function(response) {            
+            getMachineInfo();
+        },
+        error: function(xhr) {
+            //$("#userEditErrorMessage").removeClass().addClass("red self-center");
+            //$("#userEditErrorMessage").html("<span>&#10007</span> User edit failed");
+        }
     });
 }
 
