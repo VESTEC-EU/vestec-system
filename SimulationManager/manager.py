@@ -71,12 +71,15 @@ def create_job():
     pny.commit()
 
     matched_machine=requests.get(MSM_URL + '/matchmachine?walltime='+str(requested_walltime)+'&num_nodes='+str(num_nodes))
-    stored_machine=Machine.get(machine_id=matched_machine.json()["machine_id"])
-
-    simulation.machine=stored_machine
-    simulation.status="QUEUED"
-    simulation.status_updated=datetime.datetime.now()
-    simulation.jobID=asyncio.run(submit_job_to_machine(stored_machine.machine_name, num_nodes, requested_walltime, executable))
+    if matched_machine.status_code == 200:
+        stored_machine=Machine.get(machine_id=matched_machine.json()["machine_id"])
+        simulation.machine=stored_machine
+        simulation.status="QUEUED"
+        simulation.status_updated=datetime.datetime.now()
+        simulation.jobID=asyncio.run(submit_job_to_machine(stored_machine.machine_name, num_nodes, requested_walltime, executable))
+    else:
+        # TODO - report this, for now print out
+        print(matched_machine.json()["msg"])
 
     pny.commit()
     return jsonify({"status": 201, "simulation_id": uuid})
