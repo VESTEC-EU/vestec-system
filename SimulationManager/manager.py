@@ -87,18 +87,24 @@ async def submit_job_to_machine(machine_name, num_nodes, requested_walltime, exe
 @pny.db_session
 def poll_outstanding_sim_statuses():
     simulations=pny.select(g for g in Simulation if g.status == "QUEUED" or g.status == "RUNNING")
+    machine_to_queueid={}    
+    queueid_to_sim={}
     for sim in simulations:
-        job_status=asyncio.run(get_job_status_update(sim.machine.machine_name, sim.jobID))
-        print("TEST "+job_status)
-        if (job_status != sim.status):
-            sim.status=job_status
-            sim.status_updated=datetime.datetime.now()
-            pny.commit()
+        queueid_to_sim[sim.jobID]=sim
+        if (not sim.machine.machine_name in machine_to_queueid):
+            machine_to_queueid[sim.machine.machine_name]=[]
+        machine_to_queueid[sim.machine.machine_name].append(sim.jobID)
+    for key, value in machine_to_queueid.items():
+        job_statuses=asyncio.run(get_job_status_update(key, value))
+        for jkey, jvalue in job_statuses.items():
+            if (jvalue != queueid_to_sim[jkey].status):
+                queueid_to_sim[jkey].status=jvalue
+                queueid_to_sim[jkey].status_updated=datetime.datetime.now()
 
-async def get_job_status_update(machine_name, queue_id):    
+async def get_job_status_update(machine_name, queue_ids):    
     connection = await aio_pika.connect(host="localhost")
     client = await Client.create(machine_name, connection)
-    status= await client.getJobStatus(queue_id)
+    status= await client.getJobStatus(queue_ids)
     return status
 
 if __name__ == "__main__":

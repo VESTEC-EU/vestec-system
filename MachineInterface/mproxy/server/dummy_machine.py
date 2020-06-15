@@ -62,16 +62,19 @@ class DummyMachineConnection(ThrottlableMixin):
         return queueid
 
     @throttle
-    def getJobStatus(self, queue_id):
-        if (queue_id in dummy_jobs):
-            status=dummy_jobs[queue_id]
-            if (status == "QUEUED"):
-                dummy_jobs[queue_id]="RUNNING"
-            elif (status == "RUNNING"):
-                dummy_jobs[queue_id]="COMPLETED"
-            return dummy_jobs[queue_id]
-        else:
-            return "UNKNOWN"
+    def getJobStatus(self, queue_ids):
+        to_return={}
+        for queue_id in queue_ids:
+            if (queue_id in dummy_jobs):
+                status=dummy_jobs[queue_id]
+                if (status == "QUEUED"):
+                    dummy_jobs[queue_id]="RUNNING"
+                elif (status == "RUNNING"):
+                    dummy_jobs[queue_id]="COMPLETED"
+                to_return[queue_id]=dummy_jobs[queue_id]                
+            else:
+                to_return[queue_id]="UNKNOWN"
+        return to_return
 
     @throttle
     def cancelJob(self, queue_id):

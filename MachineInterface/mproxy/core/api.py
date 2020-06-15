@@ -35,7 +35,7 @@ class API:
         pass
 	
     @rpcmethod
-    def getJobStatus(queue_id: str) -> str:
+    def getJobStatus(queue_id: list) -> dict:
         pass
 
     @rpcmethod
