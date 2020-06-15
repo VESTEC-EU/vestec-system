@@ -19,7 +19,7 @@ import Utils.log as log
 import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
-
+from WorkflowManager import workflow
 from mproxy.client import Client
 import asyncio
 import aio_pika
@@ -65,6 +65,9 @@ def create_job():
     executable = data["executable"]    
 
     simulation = Simulation(uuid=uuid, incident=incident_id, date_created=datetime.datetime.now(), num_nodes=num_nodes, requested_walltime=requested_walltime, executable=executable, status_updated=datetime.datetime.now())
+    if ("queuestate_calls" in data):
+        for key, value in data["queuestate_calls"].items():
+            simulation.queue_state_calls.create(queue_state=key, call_name=value)
     pny.commit()
 
     matched_machine=requests.get(MSM_URL + '/matchmachine?walltime='+str(requested_walltime)+'&num_nodes='+str(num_nodes))
@@ -89,6 +92,7 @@ def poll_outstanding_sim_statuses():
     simulations=pny.select(g for g in Simulation if g.status == "QUEUED" or g.status == "RUNNING")
     machine_to_queueid={}    
     queueid_to_sim={}
+    workflow_stages_to_run=[]
     for sim in simulations:
         queueid_to_sim[sim.jobID]=sim
         if (not sim.machine.machine_name in machine_to_queueid):
@@ -98,8 +102,32 @@ def poll_outstanding_sim_statuses():
         job_statuses=asyncio.run(get_job_status_update(key, value))
         for jkey, jvalue in job_statuses.items():
             if (jvalue != queueid_to_sim[jkey].status):
-                queueid_to_sim[jkey].status=jvalue
-                queueid_to_sim[jkey].status_updated=datetime.datetime.now()
+                queueid_to_sim[jkey].status=jvalue                
+                queueid_to_sim[jkey].status_updated=datetime.datetime.now()                
+                targetStateCall=checkMatchAgainstQueueStateCalls(queueid_to_sim[jkey].queue_state_calls, jvalue)
+                if (targetStateCall is not None):                      
+                    new_wf_stage_call={'targetName' : targetStateCall, 'incidentId' : queueid_to_sim[jkey].incident.uuid, 'simulationId' : queueid_to_sim[jkey].uuid}
+                    workflow_stages_to_run.append(new_wf_stage_call)
+    pny.commit()
+    if workflow_stages_to_run:
+        issueWorkFlowStageCalls(workflow_stages_to_run)
+
+def issueWorkFlowStageCalls(workflow_stages_to_run):
+    workflow.OpenConnection()
+    for wf_call in workflow_stages_to_run:            
+        msg={}    
+        msg["IncidentID"] = wf_call["incidentId"]
+        msg["simulationId"]=wf_call["simulationId"]
+        workflow.send(message=msg, queue=wf_call["targetName"])
+
+    workflow.FlushMessages()
+    workflow.CloseConnection()
+
+def checkMatchAgainstQueueStateCalls(state_calls, queue_state):
+    for state_call in state_calls:
+        if (queue_state == state_call.queue_state):
+            return state_call.call_name
+    return None
 
 async def get_job_status_update(machine_name, queue_ids):    
     connection = await aio_pika.connect(host="localhost")
