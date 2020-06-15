@@ -17,6 +17,10 @@ OK=0
 FILE_ERROR=1
 NOT_IMPLEMENTED = 2
 
+@app.route("/DM/health", methods=["GET"])
+def get_health():
+    return flask.jsonify({"status": 200})
+
 #Returns the information for all data entities, or for a specified entity
 @app.route("/DM/info")
 @app.route("/DM/info/<id>")

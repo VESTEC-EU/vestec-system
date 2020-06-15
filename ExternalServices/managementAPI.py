@@ -29,14 +29,12 @@ logger = log.VestecLogger("Website")
 VERSION_PRECLUDE="1.1"
 version_number=VERSION_PRECLUDE+"."+VERSION_POSTFIX
 
-if "VESTEC_MANAGER_URI" in os.environ:
-    JOB_MANAGER_URI = os.environ["VESTEC_MANAGER_URI"]
+if "VESTEC_MANAGER_URI" in os.environ:    
     EDI_URL = os.environ["VESTEC_EDI_URI"]
     MSM_URL = os.environ["VESTEC_MSM_URI"]
     DATA_MANAGER_URI = os.environ["VESTEC_DM_URI"]
     SM_URL= os.environ["VESTEC_SM_URI"]
-else:
-    JOB_MANAGER_URI = 'http://127.0.0.1:5500/jobs'
+else:    
     EDI_URL= 'http://127.0.0.1:5501/EDImanager'
     MSM_URL= 'http://127.0.0.1:5502/MSM'
     DATA_MANAGER_URI = 'http://localhost:5000/DM'
@@ -246,7 +244,9 @@ def _getHealthOfComponent(component_name, displayname):
 def getComponentHealths():
     component_healths=[]    
     component_healths.append(_getHealthOfComponent(EDI_URL, "External data interface"))    
-    component_healths.append(_getHealthOfComponent(JOB_MANAGER_URI, "Simulation manager"))    
+    component_healths.append(_getHealthOfComponent(SM_URL, "Simulation manager"))    
+    component_healths.append(_getHealthOfComponent(MSM_URL, "Machine status manager"))    
+    component_healths.append(_getHealthOfComponent(DATA_MANAGER_URI, "Data manager"))
     return json.dumps(component_healths)
 
 def getEDIInfo():
