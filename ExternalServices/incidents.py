@@ -90,6 +90,7 @@ def packageIncident(stored_incident, include_sort_key, include_digraph, include_
         simulation_dict={}
         simulation_dict["uuid"]=sim.uuid
         simulation_dict["status"]=sim.status
+        simulation_dict["status_updated"]=sim.status_updated.strftime("%d/%m/%Y, %H:%M:%S")
         simulation_dict["created"]=sim.date_created.strftime("%d/%m/%Y, %H:%M:%S")
         simulation_dict["walltime"]=sim.walltime
         simulation_dict["num_nodes"]=sim.num_nodes

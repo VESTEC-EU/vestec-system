@@ -585,7 +585,7 @@ function loadIncidentDetails(incident) {
         incident_html+="<div id=\"incident_data\" class=\"jobDetails self-center\"><table id='incidentSimulationsTable' class='self-center displayTable'>";
         incident_html+="<thead><tr><th>Created</th><th>Status</th><th>Walltime</th><th>Number nodes</th><th>Machine</th></tr></thead>";
         for (sim of incident.simulations) {    
-            incident_html+="<td>"+sim.created+"</td><td>"+sim.status+"</td><td>";            
+            incident_html+="<td>"+sim.created+"</td><td>"+sim.status+" <i>("+sim.status_updated+")</i></td><td>";            
             if (sim.walltime != null) {
                 incident_html+=sim.walltime;
             } else {

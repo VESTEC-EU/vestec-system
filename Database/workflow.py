@@ -57,6 +57,7 @@ class Simulation(db.Entity):
     incident = pny.Required(Incident)
     date_created = pny.Required(datetime.datetime)
     status = pny.Required(str,default="NOT SUBMITTED")
+    status_updated = pny.Required(datetime.datetime)
     machine = pny.Optional("Machine")
     queue = pny.Optional(str)
     jobID = pny.Optional(str)
