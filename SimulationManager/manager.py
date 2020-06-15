@@ -17,12 +17,16 @@ import datetime
 from uuid import uuid4
 import Utils.log as log
 import requests
+from apscheduler.schedulers.background import BackgroundScheduler
+from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
 
 from mproxy.client import Client
 import asyncio
 import aio_pika
 
 MSM_URL= 'http://127.0.0.1:5502/MSM'
+
+poll_scheduler=BackgroundScheduler(executors={"default": ThreadPoolExecutor(1)})
 
 app = Flask("Simulation Manager")
 logger = log.VestecLogger("Simulation Manager")
@@ -47,7 +51,7 @@ def create_job():
     requested_walltime = data["requested_walltime"]
     executable = data["executable"]    
 
-    simulation = Simulation(uuid=uuid, incident=incident_id, date_created=datetime.datetime.now(), num_nodes=num_nodes, requested_walltime=requested_walltime, executable=executable)
+    simulation = Simulation(uuid=uuid, incident=incident_id, date_created=datetime.datetime.now(), num_nodes=num_nodes, requested_walltime=requested_walltime, executable=executable, status_updated=datetime.datetime.now())
     pny.commit()
 
     matched_machine=requests.get(MSM_URL + '/matchmachine?walltime='+str(requested_walltime)+'&num_nodes='+str(num_nodes))
@@ -55,6 +59,7 @@ def create_job():
 
     simulation.machine=stored_machine
     simulation.status="QUEUED"
+    simulation.status_updated=datetime.datetime.now()
     simulation.jobID=asyncio.run(submit_job_to_machine(stored_machine.machine_name, num_nodes, requested_walltime, executable))
 
     pny.commit()
@@ -66,6 +71,27 @@ async def submit_job_to_machine(machine_name, num_nodes, requested_walltime, exe
     queue_id = await client.submitJob(num_nodes, requested_walltime, executable)
     return queue_id
 
+@pny.db_session
+def poll_outstanding_sim_statuses():
+    simulations=pny.select(g for g in Simulation if g.status == "QUEUED" or g.status == "RUNNING")
+    for sim in simulations:
+        job_status=asyncio.run(get_job_status_update(sim.machine.machine_name, sim.jobID))
+        print("TEST "+job_status)
+        if (job_status != sim.status):
+            sim.status=job_status
+            sim.status_updated=datetime.datetime.now()
+            pny.commit()
+
+async def get_job_status_update(machine_name, queue_id):    
+    connection = await aio_pika.connect(host="localhost")
+    client = await Client.create(machine_name, connection)
+    status= await client.getJobStatus(queue_id)
+    return status
+
 if __name__ == "__main__":
-    initialiseDatabase()    
+    initialiseDatabase()
+    poll_scheduler.start()
+    runon = datetime.datetime.now()+ datetime.timedelta(seconds=5)
+    poll_scheduler.add_job(poll_outstanding_sim_statuses, 'interval', seconds=10, next_run_time = runon)
     app.run(host="0.0.0.0", port=5505)
+    poll_scheduler.shutdown()

@@ -33,6 +33,10 @@ class API:
     @rpcmethod
     def submitJob(num_nodes: int, requested_walltime:int, executable: str) -> str:
         pass
+	
+    @rpcmethod
+    def getJobStatus(queue_id: str) -> str:
+        pass
 
     @rpcmethod
     def ls(dirname: str = ".") -> list:

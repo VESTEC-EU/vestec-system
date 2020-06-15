@@ -2,9 +2,11 @@ import io
 import logging
 from mproxy.core.model import CmdResult
 from .throttle import ThrottlableMixin, throttle
+from random import randint
 
 log = logging.getLogger(__name__)
 
+dummy_jobs={}
 
 class DummyMachineConnection(ThrottlableMixin):
     """Don't do anything except log operations and return dummy data"""
@@ -55,7 +57,21 @@ class DummyMachineConnection(ThrottlableMixin):
     @throttle
     def submitJob(self, num_nodes, requested_walltime, executable):
         log.info("%s.getstatus()", self.name)
-        return "Q123456"
+        queueid="Q".join(["{}".format(randint(0, 5)) for num in range(0, 5)])
+        dummy_jobs[queueid]="QUEUED"
+        return queueid
+
+    @throttle
+    def getJobStatus(self, queue_id):
+        if (queue_id in dummy_jobs):
+            status=dummy_jobs[queue_id]
+            if (status == "QUEUED"):
+                dummy_jobs[queue_id]="RUNNING"
+            elif (status == "RUNNING"):
+                dummy_jobs[queue_id]="COMPLETED"
+            return dummy_jobs[queue_id]
+        else:
+            return "UNKNOWN"
 
     @throttle
     def ls(self, dirname="."):
