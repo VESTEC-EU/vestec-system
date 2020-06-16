@@ -25,7 +25,19 @@ def add_performance_data(message):
             - ["type"]: type of the performance data ("timings", "likwid", etc.)
             - ["raw_json"]: performance data in json format
     """
-    new_db_entry = str()
+    job_id = message["data"]["JobID"]
+    data_type = message["data"]["type"]
+    # pipe this through the json module for consistent formatting
+    # removing indentation to save space in the database
+    raw_json = json.dumps(json.loads(message["data"]["raw_json"]))
+    new_db_entry = PerformanceData(
+        job=Job[job_id], data_type=data_type, raw_json=raw_json
+    )
+    print(
+        "Performance data of job {} has been added to the database".format(
+            new_db_entry.job.job_id
+        )
+    )
 
 
 @workflow.handler
