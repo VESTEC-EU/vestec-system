@@ -122,14 +122,14 @@ def poll_machine_statuses():
     machines=pny.select(machine for machine in Machine)
     for machine in machines:
         if not machine == None and machine.enabled: 
-            status=asyncio.run(retrieve_machine_status())
+            status=asyncio.run(retrieve_machine_status(machine.machine_name))
             machine.status=status
             machine.status_last_checked=datetime.datetime.now()
             pny.commit()
 
-async def retrieve_machine_status():    
+async def retrieve_machine_status(machine_name):    
     connection = await aio_pika.connect(host="localhost")
-    client = await Client.create("test", connection)
+    client = await Client.create(machine_name, connection)
     status = await client.getstatus()
     return status
             
