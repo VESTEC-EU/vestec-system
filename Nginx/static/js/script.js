@@ -4,8 +4,9 @@ var version_number=-1;
 
 var add_data_dialog;
 var edit_data_dialog;
+var edit_user_dialog;
 
-const ConfirmationTypeEnum = Object.freeze({"DELETEEDIHANDLER":1, "DELETEDATAITEM":2});
+const ConfirmationTypeEnum = Object.freeze({"DELETEEDIHANDLER":1, "DELETEDATAITEM":2, "DELETEUSER":3});
 var confirmation_box_type=null;
 var confirmation_box_data={};
 
@@ -55,6 +56,8 @@ $( function() {
                 performHandlerDeletion();
               } else if (confirmation_box_type == ConfirmationTypeEnum.DELETEDATAITEM) {
                 performDataSetDeletion();
+              } else if (confirmation_box_type == ConfirmationTypeEnum.DELETEUSER) {
+                performUserDeletion();
               }
             },
             Cancel: function() {
@@ -62,6 +65,21 @@ $( function() {
             }
           }
         });
+
+        edit_user_dialog = $("#edit-user-dialog-form").dialog({
+            autoOpen: false,
+            height: 720,
+            width: 500,
+            modal: true,
+            buttons: {                
+                Cancel: function() {
+                    edit_user_dialog.dialog( "close" );
+                }
+            },
+            close: function() {        
+                
+            }
+            });            
     });
 
 
@@ -710,34 +728,33 @@ function getWorkflows() {
     $("#nav-dash").removeClass("blue");
     $("#nav-logout").removeClass("blue");
     $("#body-container").load("../templates/workflows.html", function() {
+        $.ajax({
+            url: "/flask/workflowinfo",
+            type: "GET",
+            headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+            success: function(response) {
+                var workflows = JSON.parse(response);
+                $("#workflowTable").append("<tbody>");
 
-    $.ajax({
-        url: "/flask/workflowinfo",
-        type: "GET",
-        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
-        success: function(response) {
-            var workflows = JSON.parse(response);
-            $("#workflowTable").append("<tbody>");
+                for (item in workflows) {
+                    var wf_entry = "<tr>";
+                    item = workflows[item];
+                    wf_entry += "<td>" + item.kind + "</td>";
+                    wf_entry += "<td>" + item.initqueuename + "</td>";
+                    wf_entry += "<td>" + item.dataqueuename + "</td>";
+                    wf_entry += "<td><img src='../img/cross.png' class='click_button' width=32 height=32 onClick=\"deleteWorkflow('"+item.kind+"')\"></td>";
+                    
+                    wf_entry += "</tr>";
 
-            for (item in workflows) {
-                var wf_entry = "<tr>";
-                item = workflows[item];
-                wf_entry += "<td>" + item.kind + "</td>";
-                wf_entry += "<td>" + item.initqueuename + "</td>";
-                wf_entry += "<td>" + item.dataqueuename + "</td>";
-                wf_entry += "<td><img src='../img/cross.png' class='click_button' width=32 height=32 onClick=\"deleteWorkflow('"+item.kind+"')\"></td>";
-                
-                wf_entry += "</tr>";
-
-                $("#workflowTable").append(wf_entry);
+                    $("#workflowTable").append(wf_entry);
+                }
+                $("#workflowTable").append("</tbody>");
+            },
+            error: function(xhr) {
+                $("#confirmation").removeClass().addClass("button red self-center");
+                $("#confirmation").html("<span>&#10007</span> Workflow retrieval failed");
             }
-            $("#workflowTable").append("</tbody>");
-        },
-        error: function(xhr) {
-            $("#confirmation").removeClass().addClass("button red self-center");
-            $("#confirmation").html("<span>&#10007</span> Workflow retrieval failed");
-        }
-    });
+        });
     });
 }
 
@@ -746,40 +763,39 @@ function getEDIInfo() {
     $("#nav-home").removeClass("blue");
     $("#nav-dash").removeClass("blue");
     $("#nav-logout").removeClass("blue");
-    $("#body-container").load("../templates/ediinfo.html");   
+    $("#body-container").load("../templates/ediinfo.html", function() { 
+        $.ajax({
+            url: "/flask/getediinfo",
+            type: "GET",
+            headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
+            success: function(response) {            
+                var edi_handlers = response.handlers;
+                $("#EDIInfotable").append("<tbody>");
 
+                for (edi_handler in edi_handlers) {
+                    var handler_entry = "<tr>";
+                    item = edi_handlers[edi_handler];
+                    handler_entry += "<td>"+item.endpoint + "</td>";                
+                    if (item.pollperiod == null) {
+                        handler_entry += "<td>PUSH</td>";
+                    } else {
+                        handler_entry += "<td>PULL ("+item.pollperiod+")</td>";
+                    }
+                    handler_entry += "<td>" + item.incidentid + "</td>";
+                    handler_entry += "<td>" + item.queuename + "</td>";
+                    
+                    handler_entry += "<td><img src='../img/cross.png' class='click_button' width=26 height=26 onClick=\"deleteEDIHandler('"+item.queuename+"','"+item.endpoint+"','"+item.incidentid+"','"+item.pollperiod+"')\"></td>";
+                    
+                    handler_entry += "</tr>";
 
-    $.ajax({
-        url: "/flask/getediinfo",
-        type: "GET",
-        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
-        success: function(response) {            
-            var edi_handlers = response.handlers;
-            $("#EDIInfotable").append("<tbody>");
-
-            for (edi_handler in edi_handlers) {
-                var handler_entry = "<tr>";
-                item = edi_handlers[edi_handler];
-                handler_entry += "<td>"+item.endpoint + "</td>";                
-                if (item.pollperiod == null) {
-                    handler_entry += "<td>PUSH</td>";
-                } else {
-                    handler_entry += "<td>PULL ("+item.pollperiod+")</td>";
+                    $("#EDIInfotable").append(handler_entry);
                 }
-                handler_entry += "<td>" + item.incidentid + "</td>";
-                handler_entry += "<td>" + item.queuename + "</td>";
-                
-                handler_entry += "<td><img src='../img/cross.png' class='click_button' width=26 height=26 onClick=\"deleteEDIHandler('"+item.queuename+"','"+item.endpoint+"','"+item.incidentid+"','"+item.pollperiod+"')\"></td>";
-                
-                handler_entry += "</tr>";
-
-                $("#EDIInfotable").append(handler_entry);
+                $("#EDIInfotable").append("</tbody>");
+            },
+            error: function(xhr) {
+                console.log({"status": 500, "msg": "Sorry, there seems to be a problem with our system."});
             }
-            $("#EDIInfotable").append("</tbody>");
-        },
-        error: function(xhr) {
-            console.log({"status": 500, "msg": "Sorry, there seems to be a problem with our system."});
-        }
+        });
     });
 }
 
@@ -795,47 +811,50 @@ function getUsers() {
     $("#nav-home").removeClass("blue");
     $("#nav-dash").removeClass("blue");
     $("#nav-logout").removeClass("blue");
-    $("#body-container").load("../templates/users.html");   
+    $("#body-container").load("../templates/users.html", function() {
+        $.ajax({
+            url: "/flask/getallusers",
+            type: "GET",
+            headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+            success: function(response) {
+                var users = JSON.parse(response);
+                $("#userTable").append("<tbody>");
 
-    $.ajax({
-        url: "/flask/getallusers",
-        type: "GET",
-        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
-        success: function(response) {
-            var users = JSON.parse(response);
-            $("#userTable").append("<tbody>");
+                for (item in users) {
+                    var user_entry = "<tr>";
+                    item = users[item];
+                    user_entry += "<td>"+item.username+"   <i>(<span class=\"link\" onclick=\"manageUser('"+item.username+"');\">click here to edit</span>)</i></td>";
+                    user_entry += "<td>" + item.name + "</td>";
+                    user_entry += "<td>" + item.email + "</td>";
+                    if (item.access_rights == 0) {
+                        user_entry += "<td>user</td>";
+                    } else if (item.access_rights == 1) {
+                        user_entry += "<td>administrator</td>";
+                    }
+                    
+                    if (item.enabled) {
+                        user_entry += "<td>Yes</td>";
+                    } else {
+                        user_entry += "<td>No</td>";
+                    }
+                    
+                    user_entry += "</tr>";
 
-            for (item in users) {
-                var user_entry = "<tr>";
-                item = users[item];
-                user_entry += "<td><span class=\"link\" onclick=\"manageUser('"+item.username+"');\">" + item.username + "</span></td>";
-                user_entry += "<td>" + item.name + "</td>";
-                user_entry += "<td>" + item.email + "</td>";
-                if (item.access_rights == 0) {
-                    user_entry += "<td>user</td>";
-                } else if (item.access_rights == 1) {
-                    user_entry += "<td>administrator</td>";
+                    $("#userTable").append(user_entry);
                 }
-                
-                user_entry += "<td></td>";
-                
-                user_entry += "</tr>";
-
-                $("#userTable").append(user_entry);
+                $("#userTable").append("</tbody>");
+            },
+            error: function(xhr) {
+                $("#confirmation").removeClass().addClass("button red self-center");
+                $("#confirmation").html("<span>&#10007</span> User retrieval failed");
             }
-            $("#userTable").append("</tbody>");
-            $("#userDetails").hide();
-        },
-        error: function(xhr) {
-            $("#confirmation").removeClass().addClass("button red self-center");
-            $("#confirmation").html("<span>&#10007</span> User retrieval failed");
-        }
+        });
     });
 }
 
 function addWorkflowToUser() {
     var data = {};
-    var username=$('#usernameh2').text();
+    var username=$('#username').val();
     data["username"] = username;
     data["workflow"] = $('#all_registeredworkflows').val();
     $.ajax({
@@ -845,19 +864,20 @@ function addWorkflowToUser() {
         contentType: "application/json",
         data: JSON.stringify(data),
         dataType: "json",
-        success: function(response) {
-            manageUser(username);
+        success: function(response) {            
+            $("#registeredworkflows_users").append($('<option>', {value:data["workflow"], text: data["workflow"]}))
+            $('#all_registeredworkflows').children('option[value="'+data["workflow"]+'"]').remove();
         },
         error: function(xhr) {
-            $("#confirmation").removeClass().addClass("button red self-center");
-            $("#confirmation").html("<span>&#10007</span> User edit failed");
+            $("#userEditErrorMessage").removeClass().addClass("red self-center");
+            $("#userEditErrorMessage").html("<span>&#10007</span> Adding workflow to user failed");
         }
     });
 }
 
-function removeWorkflowFromUser() {
+function removeWorkflowFromUser() {    
     var data = {};
-    var username=$('#usernameh2').text();
+    var username=$('#username').val();
     data["username"] = username;
     data["workflow"] = $('#registeredworkflows_users').val();
     $.ajax({
@@ -868,11 +888,12 @@ function removeWorkflowFromUser() {
         data: JSON.stringify(data),
         dataType: "json",
         success: function(response) {
-            manageUser(username);
+            $('#registeredworkflows_users').children('option[value="'+data["workflow"]+'"]').remove();
+            $("#all_registeredworkflows").append($('<option>', {value:data["workflow"], text: data["workflow"]}))
         },
         error: function(xhr) {
-            $("#confirmation").removeClass().addClass("button red self-center");
-            $("#confirmation").html("<span>&#10007</span> User edit failed");
+            $("#userEditErrorMessage").removeClass().addClass("red self-center");
+            $("#userEditErrorMessage").html("<span>&#10007</span> Removing workflow from user failed");
         }
     });
 }
@@ -908,34 +929,89 @@ function manageUser(username) {
         }
     })
     ).then(function() {
-        user=users[0]
-        $('#usernameh2').text(user.username);
-        $('#name').val(user.name)
-        $('#email').val(user.email)
-        if (user.access_rights == 0) {
-            $('#type').val("user");
-        } else if (user.access_rights == 1) {
-            $('#type').val("administrator");
+
+        $('#edit-user-dialog-contents').load('templates/edituser.html #editUserScreen', function() {
+            user=users[0]
+            $('#username').val(user.username);
+            $('#name').val(user.name);
+            $('#email').val(user.email);
+            if (user.access_rights == 0) {
+                $('#type').val("user");
+            } else if (user.access_rights == 1) {
+                $('#type').val("administrator");
+            }
+            $('#enabled').prop('checked', user.enabled);
+            $("#registeredworkflows_users").empty();
+            var usersWorkflows = []
+            for (wf in user.workflows) {
+                wf=user.workflows[wf];
+                usersWorkflows.push(wf);
+                $("#registeredworkflows_users").append($('<option>', {value:wf, text: wf}))
+            }
+            $("#all_registeredworkflows").empty();
+            for (wf in workflows) {
+                wf=workflows[wf].kind;
+                if (!usersWorkflows.includes(wf)) {
+                    $("#all_registeredworkflows").append("<option value='"+wf+"'>"+wf+"</option>");
+                }
+            }
+            edit_user_dialog.dialog( "open" );
+        }); 
+    });
+}
+
+function deleteUser() {
+    confirmation_box_type=ConfirmationTypeEnum.DELETEUSER;    
+    $("#dialog-confirm-text").text("Are you sure you want to delete this user?");
+    $( "#dialog-confirm" ).dialog("open");
+}
+
+function performUserDeletion() {
+    var wf = {};
+    wf["username"] = $("#username").val();
+    $.ajax({
+        url: "/flask/deleteuser",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(wf),
+        dataType: "json",
+        success: function(response) {
+            edit_user_dialog.dialog( "close" );
+            getUsers();
+        },
+        error: function(xhr) {
+            $("#userEditErrorMessage").removeClass().addClass("red self-center");
+            $("#userEditErrorMessage").html("<span>&#10007</span> Deletion of user failed");
         }
-        $('#enabled').prop('checked', user.enabled);
-        $("#registeredworkflows_users").empty();
-        for (wf in user.workflows) {
-            wf=user.workflows[wf];
-            $("#registeredworkflows_users").append($('<option>', {value:wf, text: wf}))
+    });
+}
+
+function changePassword() {
+    var wf = {};
+    wf["username"] = $("#username").val();
+    wf["password"] = $("#password").val();
+    $.ajax({
+        url: "/flask/changepassword",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(wf),
+        dataType: "json",
+        success: function(response) {
+            edit_user_dialog.dialog( "close" );
+            getUsers();
+        },
+        error: function(xhr) {
+            $("#userEditErrorMessage").removeClass().addClass("red self-center");
+            $("#userEditErrorMessage").html("<span>&#10007</span> Changing user password failed");
         }
-        $("#all_registeredworkflows").empty();
-        for (wf in workflows) {
-            wf=workflows[wf].kind;
-            $("#all_registeredworkflows").append("<option value='"+wf+"'>"+wf+"</option>");
-        }
-        $("#userTable").hide();
-        $("#userDetails").show();
     });
 }
 
 function editUser() {
     var wf = {};
-    wf["username"] = $("#usernameh2").text();
+    wf["username"] = $("#username").val();
     wf["name"] = $("#name").val();
     wf["email"] = $("#email").val();
     wf["type"] = $("#type").val();
@@ -948,11 +1024,12 @@ function editUser() {
         data: JSON.stringify(wf),
         dataType: "json",
         success: function(response) {
+            edit_user_dialog.dialog( "close" );
             getUsers();
         },
         error: function(xhr) {
-            $("#confirmation").removeClass().addClass("button red self-center");
-            $("#confirmation").html("<span>&#10007</span> User edit failed");
+            $("#userEditErrorMessage").removeClass().addClass("red self-center");
+            $("#userEditErrorMessage").html("<span>&#10007</span> User edit failed");
         }
     });
 }

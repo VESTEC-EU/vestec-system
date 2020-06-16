@@ -88,6 +88,18 @@ def login():
 
     logger.Log(log.LogType.Website, str(request), user=username)
 
+def changePassword():
+    login = request.json
+    username = login.get("username", None)
+    password = login.get("password", None)
+    
+    if username and password:
+        success=logins.change_user_password(username, password)
+        if (success):
+            return jsonify({"status": 200, "msg": "Password changed"})
+    
+    return jsonify({"status": 400, "msg": "Can not change password"})
+
 def getMyWorkflows(username):
     allowed_workflows=logins.get_allowed_workflows(username)
     return json.dumps(allowed_workflows) 
@@ -273,6 +285,18 @@ def getUserDetails(retrieved_data):
     username=retrieved_data.get("username", None)
     user_details=logins.get_user_details(username)
     return json.dumps(user_details) 
+
+@pny.db_session
+def deleteUser(retrieved_data):
+    username = retrieved_data.get("username", None)
+    stored_user=User.get(username=username)
+    if (stored_user is not None):        
+        stored_user.delete()
+        pny.commit()    
+        return jsonify({"status": 200, "msg": "User edited"})
+    else:
+        return jsonify({"status": 401, "msg": "User deletion failed"})
+
 
 @pny.db_session
 def editUserDetails(retrieved_data):

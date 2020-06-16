@@ -43,6 +43,13 @@ def getUserType():
 def login():
     return managementAPI.login()
 
+@app.route('/flask/changepassword', methods=['POST'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def changePassword():
+    return managementAPI.changePassword()    
+
 @app.route("/flask/authorised", methods=["GET"])
 @fresh_jwt_required
 def authorised():
@@ -200,6 +207,13 @@ def getUserDetails():
 @logins.admin_required
 def editUserDetails():    
     return managementAPI.editUserDetails(request.json)
+
+@app.route('/flask/deleteuser', methods=['POST'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def deleteUser():    
+    return managementAPI.deleteUser(request.json)
 
 @app.route('/flask/addusertoworkflow', methods=['POST'])
 @pny.db_session
