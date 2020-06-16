@@ -221,6 +221,7 @@ function userLogin() {
                     window.location.href = "/home";
                 } else {
                     $("#login-message").html(response.msg);
+                    $("#login-message").removeClass().addClass("button white-btn red-high-btn self-left");
                     $("#login-message").show();
                 }
             },

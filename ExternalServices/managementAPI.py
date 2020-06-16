@@ -77,7 +77,7 @@ def login():
     authorise = False
 
     if username and password:
-        authorise = logins.verify_user(username, password)
+        authorise, message = logins.verify_user(username, password)
 
     if authorise:
         access_token = create_access_token(identity=username, fresh=True)
@@ -86,7 +86,7 @@ def login():
 
         return response
     else:
-        return jsonify({"status": 400, "msg": "Incorrect username or password. Please try again."})
+        return jsonify({"status": 400, "msg": message})
 
     logger.Log(log.LogType.Website, str(request), user=username)
 
