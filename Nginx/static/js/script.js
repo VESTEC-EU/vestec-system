@@ -586,7 +586,7 @@ function loadIncidentDetails(incident) {
 
     if (incident.simulations.length > 0) {
         incident_html+="<div id=\"incident_data\" class=\"jobDetails self-center\"><table id='incidentSimulationsTable' class='self-center displayTable'>";
-        incident_html+="<thead><tr><th>Created</th><th>Status</th><th>Walltime</th><th>Number nodes</th><th>Machine</th><th>Actions</th></tr></thead>";
+        incident_html+="<thead><tr><th>Created</th><th>Status</th><th>Walltime</th><th>Number nodes</th><th>Machine</th><th>Job ID</th><th>Actions</th></tr></thead>";
         for (sim of incident.simulations) {    
             incident_html+="<td>"+sim.created+"</td><td>"+sim.status+" <i>("+sim.status_updated+")</i></td><td>";            
             if (sim.walltime != null) {
@@ -597,6 +597,10 @@ function loadIncidentDetails(incident) {
             incident_html+="</td><td>"+sim.num_nodes+"</td><td>";
             if ("machine" in sim) {
                 incident_html+=sim.machine;
+            }
+            incident_html+="</td><td>";
+            if ("jobID" in sim) {
+                incident_html+=sim.jobID;
             }
             incident_html+="</td><td>";
             if (sim.status=="QUEUED" || sim.status=="RUNNING" || sim.status=="PENDING") {

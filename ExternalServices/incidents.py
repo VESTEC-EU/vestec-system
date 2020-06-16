@@ -90,6 +90,8 @@ def packageIncident(stored_incident, include_sort_key, include_digraph, include_
     for sim in stored_incident.simulations:
         simulation_dict={}
         simulation_dict["uuid"]=sim.uuid
+        if sim.jobID is not None and sim.jobID != "":
+            simulation_dict["jobID"]=sim.jobID
         simulation_dict["status"]=sim.status
         simulation_dict["status_updated"]=sim.status_updated.strftime("%d/%m/%Y, %H:%M:%S")
         simulation_dict["created"]=sim.date_created.strftime("%d/%m/%Y, %H:%M:%S")
