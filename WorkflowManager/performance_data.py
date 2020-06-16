@@ -23,36 +23,13 @@ else:
 @workflow.handler
 @pny.db_session
 def add_performance_data(message):
-    file_contents_to_add = json.loads(message["data"]["payload"])
-    header, encoded = file_contents_to_add["payload"].split(",", 1)
-    filetype = header.split(":", 1)[1].split(";", 1)[0]
-    data = b64decode(encoded)
-
-    new_file = LocalDataStorage(
-        contents=data, filename=file_contents_to_add["filename"], filetype=filetype
-    )
-    pny.commit()
-
-    myobj = {
-        "filename": str(new_file.uuid),
-        "path": "vestecDB",
-        "machine": "VESTECSERVER",
-        "description": "manually uploaded",
-        "size": str(len(data)),
-        "originator": "manually added",
-        "group": "none",
-    }
-    x = requests.put(DATA_MANAGER_URI + "/register", data=myobj)
-    incidentId = message["IncidentID"]
-    incident = Incident[incidentId]
-    incident.associated_datasets.create(
-        uuid=x.text,
-        name=file_contents_to_add["filename"],
-        type=file_contents_to_add["filetype"],
-        comment=file_contents_to_add["filecomment"],
-        date_created=datetime.datetime.now(),
-    )
-    pny.commit()
+    """ add performance data to database
+        expected fields in message["data"]:
+            - ["JobID"]: id of the compute job in the VESTEC database
+            - ["type"]: type of the performance data ("timings", "likwid", etc.)
+            - ["raw_json"]: performance data in json format
+    """
+    new_db_entry = str()
 
 
 @workflow.handler
