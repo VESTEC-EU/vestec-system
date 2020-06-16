@@ -57,7 +57,7 @@ class DummyMachineConnection(ThrottlableMixin):
     @throttle
     def submitJob(self, num_nodes, requested_walltime, executable):
         log.info("%s.getstatus()", self.name)
-        queueid="Q".join(["{}".format(randint(0, 5)) for num in range(0, 5)])
+        queueid="Q"+(''.join(["{}".format(randint(0, 5)) for num in range(0, 5)]))
         dummy_jobs[queueid]="QUEUED"
         return queueid
 
