@@ -4,13 +4,9 @@ sys.path.append("../")
 import workflow
 import os
 import pony.orm as pny
-import datetime
-import time
 import requests
 import json
-from base64 import b64decode
-from Database import LocalDataStorage
-from Database.workflow import Incident, StoredDataset
+from Database import PerformanceData, Job
 
 if "VESTEC_EDI_URI" in os.environ:
     EDI_URL = os.environ["VESTEC_EDI_URI"]
