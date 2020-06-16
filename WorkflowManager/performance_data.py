@@ -21,7 +21,7 @@ else:
 # we now want to define some handlers
 @workflow.handler
 @pny.db_session
-def manually_add_data(message):
+def add_performance_data(message):
     file_contents_to_add = json.loads(message["data"]["payload"])
     header, encoded = file_contents_to_add["payload"].split(",", 1)
     filetype=header.split(":", 1)[1].split(";", 1)[0]
@@ -43,14 +43,14 @@ def manually_add_data(message):
 
 
 @workflow.handler
-def initialise_simple(message):
+def initialise_performance_data(message):
     print("Initialise simple workflow for "+message["IncidentID"])
-    myobj = {'queuename': 'add_data_simple', 'incidentid':message["IncidentID"], 'endpoint':'add_data_simple'+message["IncidentID"]}
+    myobj = {'queuename': 'add_performance_data', 'incidentid':message["IncidentID"], 'endpoint':'add_performance_data'+message["IncidentID"]}
     x = requests.post(EDI_URL+"/register", json = myobj)
     print("EDI response for manually add data" + x.text)
     workflow.setIncidentActive(message["IncidentID"])
 
 # we have to register them with the workflow system
 def RegisterHandlers():
-    workflow.RegisterHandler(manually_add_data, "add_data_simple")
-    workflow.RegisterHandler(initialise_simple, "initialise_simple")
+    workflow.RegisterHandler(add_performance_data, "add_data_simple")
+    workflow.RegisterHandler(initialise_performance_data, "initialise_simple")
