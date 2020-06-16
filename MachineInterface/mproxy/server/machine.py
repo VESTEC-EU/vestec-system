@@ -33,14 +33,14 @@ class MachineConnectionFactory:
         try:
             return self.configs[name]
         except KeyError:
-            log.error('Unknown connection name "%s"', name)
+            print('Unknown connection name '+ name)
             raise
 
     @pny.db_session
     def __call__(self, name):
         stored_machine=Machine.get(machine_name=name)
         if stored_machine is None:
-            log.error('Unknown connection name "%s"', name)
+            print("Unknown connection name " + name)
             raise
         else:
             if stored_machine.test_mode:                
