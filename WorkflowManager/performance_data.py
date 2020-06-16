@@ -20,11 +20,6 @@ else:
 
 # we now want to define some handlers
 @workflow.handler
-def external_data_arrival_handler(message):
-    print("Got some external data from "+message["data"]["source"])
-    workflow.Complete(message["IncidentID"])
-
-@workflow.handler
 @pny.db_session
 def manually_add_data(message):
     file_contents_to_add = json.loads(message["data"]["payload"])
@@ -50,10 +45,6 @@ def manually_add_data(message):
 @workflow.handler
 def initialise_simple(message):
     print("Initialise simple workflow for "+message["IncidentID"])
-    myobj = {'queuename': 'external_data_arrival', 'incidentid':message["IncidentID"], 'endpoint':'editest'}
-    x = requests.post(EDI_URL+"/register", json = myobj)
-    print("EDI response for external data arrival" + x.text)
-
     myobj = {'queuename': 'add_data_simple', 'incidentid':message["IncidentID"], 'endpoint':'add_data_simple'+message["IncidentID"]}
     x = requests.post(EDI_URL+"/register", json = myobj)
     print("EDI response for manually add data" + x.text)
@@ -61,6 +52,5 @@ def initialise_simple(message):
 
 # we have to register them with the workflow system
 def RegisterHandlers():
-    workflow.RegisterHandler(external_data_arrival_handler, "external_data_arrival")
     workflow.RegisterHandler(manually_add_data, "add_data_simple")
     workflow.RegisterHandler(initialise_simple, "initialise_simple")
