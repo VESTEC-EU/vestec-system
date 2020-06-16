@@ -52,7 +52,7 @@ class MachineConnectionFactory:
             raise
         else:
             if stored_machine.test_mode:
-                return self._mk_dummy_machine_connection(name, self.getConfiguration(name))
+                return self._mk_dummy_machine_connection(name, None, self.getConfiguration(name))
             else:                
                 if name in self._machine_cache:
                     return self._machine_cache[name]
