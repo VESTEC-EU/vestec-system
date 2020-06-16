@@ -2,8 +2,7 @@ amqp:
     hostname: localhost
 
 machines:
-    test:
-        type: dummy
-
     ARCHER:
-       type: dummy
+        type: openssh
+        hostname: archer        
+        remote_base_dir: .
