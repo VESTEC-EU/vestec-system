@@ -6,8 +6,8 @@ from Database.job import Job
 
 
 class PerformanceDataType(Enum):
-    TIMINGS=0
-    LIKWID=1
+    TIMINGS = 0
+    LIKWID = 1
 
 
 class PerformanceData(db.Entity):
