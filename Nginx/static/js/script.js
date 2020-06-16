@@ -226,7 +226,7 @@ function userLogin() {
                 }
             },
             error: function(xhr) {
-                $("#login-message").html("Sorry, there seems to be a problem with our system");
+                $("#login-message").html("Internal system error, consult the logs for more details");
                 $("#login-message").removeClass().addClass("button white-btn red-high-btn self-left");
                 $("#login-message").show();
             }
@@ -333,11 +333,11 @@ function generateNavigationBar() {
           user_type = JSON.parse(response.access_level);
           generateNavigationBar();
         } else {
-          console.log({"status": 400, "msg": "Sorry, there seems to be a problem with the look up of user authorisation level"});
+          console.log({"status": 400, "msg": "Internal system error, can not retrieve user authorisation level"});
         }
       },
       error: function(xhr) {
-        console.log({"status": 500, "msg": "Sorry, there seems to be a problem with our system."});
+        console.log({"status": 500, "msg": "Internal system error, consult the logs for more details"});
       }
     });
     user_type
@@ -392,11 +392,11 @@ function getJobsDashboard() {
                 all_incidents = JSON.parse(response.incidents);
                 loadIncidentCards(all_incidents, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter);
             } else {
-                console.log({"status": 400, "msg": "Sorry, there seems to be a problem with the extraction of activities."});
+                console.log({"status": 400, "msg": "Internal system error, cannot extract activities."});
             }
         },
         error: function(xhr) {
-            console.log({"status": 500, "msg": "Sorry, there seems to be a problem with our system."});
+            console.log({"status": 500, "msg": "Internal system error, consult the logs for more details"});
         }
     });
 }
@@ -1034,7 +1034,7 @@ function getEDIInfo() {
                 $("#EDIInfotable").append("</tbody>");
             },
             error: function(xhr) {
-                console.log({"status": 500, "msg": "Sorry, there seems to be a problem with our system."});
+                console.log({"status": 500, "msg": "Internal system error, consult the logs for more details"});
             }
         });
     });
