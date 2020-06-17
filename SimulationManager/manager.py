@@ -39,7 +39,7 @@ def get_health():
 @pny.db_session
 def refresh_sim_state(simulation_id):
     sim=Simulation[simulation_id]
-    if (sim.status=="PENDING" or sim.status=="QUEUED" or sim.status=="RUNNING"):
+    if (sim.status=="PENDING" or sim.status=="QUEUED" or sim.status=="RUNNING" or sim.status=="ENDING"):
         handleRefreshOfSimulations([sim])
     return jsonify({"status": 200})    
 
@@ -110,7 +110,7 @@ async def submit_job_to_machine(machine_name, num_nodes, requested_walltime, dir
 
 @pny.db_session
 def poll_outstanding_sim_statuses():
-    simulations=pny.select(g for g in Simulation if g.status == "QUEUED" or g.status == "RUNNING")
+    simulations=pny.select(g for g in Simulation if g.status == "QUEUED" or g.status == "RUNNING" or g.status == "ENDING")
     handleRefreshOfSimulations(simulations)    
 
 def handleRefreshOfSimulations(simulations):
@@ -126,9 +126,11 @@ def handleRefreshOfSimulations(simulations):
         job_statuses=asyncio.run(get_job_status_update(key, value))
         for jkey, jvalue in job_statuses.items():
             queueid_to_sim[jkey].status_updated=datetime.datetime.now() 
-            if (jvalue != queueid_to_sim[jkey].status):
-                queueid_to_sim[jkey].status=jvalue
-                targetStateCall=checkMatchAgainstQueueStateCalls(queueid_to_sim[jkey].queue_state_calls, jvalue)
+            if (jvalue[0] != queueid_to_sim[jkey].status):
+                queueid_to_sim[jkey].status=jvalue[0]
+                if (len(jvalue[1]) > 0):
+                    queueid_to_sim[jkey].walltime=jvalue[1]
+                targetStateCall=checkMatchAgainstQueueStateCalls(queueid_to_sim[jkey].queue_state_calls, jvalue[0])
                 if (targetStateCall is not None):                      
                     new_wf_stage_call={'targetName' : targetStateCall, 'incidentId' : queueid_to_sim[jkey].incident.uuid, 'simulationId' : queueid_to_sim[jkey].uuid}
                     workflow_stages_to_run.append(new_wf_stage_call)

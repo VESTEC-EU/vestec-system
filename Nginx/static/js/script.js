@@ -607,7 +607,7 @@ function loadIncidentDetails(incident) {
             incident_html+=sim.status;
             if (sim.status_message != null) incident_html+="</span>";
             incident_html+=" <i>("+sim.status_updated+")</i></td><td>";            
-            if (sim.walltime != null) {
+            if (sim.walltime != null && sim.walltime != "" && (sim.status!="QUEUED" || sim.status!="PENDING")) {
                 incident_html+=sim.walltime;
             } else {
                 incident_html+=sim.requested_walltime;

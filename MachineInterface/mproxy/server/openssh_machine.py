@@ -3,6 +3,7 @@ import os
 import logging
 import datetime
 from .throttle import ThrottlableMixin, throttle
+from .job_status import JobStatus
 from subprocess import Popen, PIPE
 
 log = logging.getLogger(__name__)
@@ -84,7 +85,7 @@ class OpenSSHMachineConnection(ThrottlableMixin):
             for queue_id in queue_ids:
                 if (queue_id in parsed_jobs):
                     status=parsed_jobs[queue_id]                
-                    to_return[queue_id]=status
+                    to_return[queue_id]=[status.getStatus(), status.getWalltime()]
                     self.queue_info[queue_id]=status    # Update general machine status information too with this                
         return to_return
 

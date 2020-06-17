@@ -66,8 +66,8 @@ class Simulation(db.Entity):
     executable = pny.Required(str)
     kind = pny.Required(str)
     results_handler = pny.Optional(str)
-    requested_walltime = pny.Optional(int)
-    walltime = pny.Optional(datetime.timedelta)
+    requested_walltime = pny.Optional(str)
+    walltime = pny.Optional(str)
     num_nodes = pny.Optional(int)
     queue_state_calls = pny.Set("SimulationStateWorkflowCalls")
     

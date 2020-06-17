@@ -30,7 +30,7 @@ class API:
         pass
 
     @rpcmethod
-    def submitJob(num_nodes: int, requested_walltime:int, directory:str, executable: str) -> list:
+    def submitJob(num_nodes: int, requested_walltime:str, directory:str, executable: str) -> list:
         pass
 	
     @rpcmethod

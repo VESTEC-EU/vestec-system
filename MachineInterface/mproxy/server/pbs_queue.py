@@ -1,3 +1,5 @@
+from .job_status import JobStatus
+
 class PBSQueueProcessor:
     def getQueueStatusSummaryCommand(self):
         return "qstat"
@@ -24,18 +26,18 @@ class PBSQueueProcessor:
             if ".sdb" in line:
                 tokens=line.split()
                 if (len(tokens) < 8):
-                    jobs[tokens[0]]=self.getConvertPBSJobStatusCode(tokens[4])
-                else:
-                    jobs[tokens[0]]=self.getConvertPBSJobStatusCode(tokens[9])
+                    jobs[tokens[0]]=JobStatus(tokens[0], self.getConvertPBSJobStatusCode(tokens[4]), tokens[3] if tokens[3] != "0" else "")
+                else:                    
+                    jobs[tokens[0]]=JobStatus(tokens[0], self.getConvertPBSJobStatusCode(tokens[9]), tokens[10] if tokens[10] != "--" else "")
 
         return jobs
 
     def getSummaryOfMachineStatus(self, job_queue_info):
         status={}
         for value in list(job_queue_info.values()):            
-            if value not in status:
-                status[value]=0
-            status[value]+=1
+            if value.getStatus() not in status:
+                status[value.getStatus()]=0
+            status[value.getStatus()]+=1
         return status
 
     def getConvertPBSJobStatusCode(self, job_queue_str):        
