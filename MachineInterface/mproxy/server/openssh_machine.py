@@ -17,7 +17,7 @@ class OpenSSHMachineConnection(ThrottlableMixin):
 
         self.remote_base_dir = remote_base_dir        
         self.queue_system = queue_system        
-        self.queue_info=[]
+        self.queue_info={}
         self.hostname=hostname
         self.summary_status={}
         self.queue_last_updated=datetime.datetime.now()
@@ -71,14 +71,14 @@ class OpenSSHMachineConnection(ThrottlableMixin):
 
     @throttle
     def getJobStatus(self, queue_ids):        
-        status_command=self.queue_system.getQueueStatusForSpecificJobsCommand
+        status_command=self.queue_system.getQueueStatusForSpecificJobsCommand(queue_ids)
         output, errors=self.run(status_command)
 
         parsed_jobs=self.queue_system.parseQueueStatus(output)
         to_return={}
         for queue_id in queue_ids:
-            if (queue_id in self.parsed_jobs):
-                status=self.parsed_jobs[queue_id]                
+            if (queue_id in parsed_jobs):
+                status=parsed_jobs[queue_id]                
                 to_return[queue_id]=status
                 self.queue_info[queue_id]=status    # Update general machine status information too with this
             else:
@@ -90,9 +90,14 @@ class OpenSSHMachineConnection(ThrottlableMixin):
         pass
 
     @throttle
-    def submitJob(self, num_nodes, requested_walltime, executable):
-        #log.info("%s.getstatus()", self.name)
-        return "Q123456"
+    def submitJob(self, num_nodes, requested_walltime, directory, executable):        
+        command_to_run = ""
+        if len(directory) > 0:
+            command_to_run += "cd "+directory+" ; "
+        command_to_run+=self.queue_system.getSubmissionCommand(executable)
+        print(command_to_run)
+        output, errors=self.run(command_to_run)
+        return output
 
     @throttle
     def cd(self, dir):

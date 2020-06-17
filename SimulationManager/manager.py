@@ -69,7 +69,11 @@ def create_job():
     incident_id = data["incident_id"]    
     num_nodes = data["num_nodes"]
     requested_walltime = data["requested_walltime"]
-    executable = data["executable"]    
+    executable = data["executable"]
+    if "directory" in data:
+        directory = data["directory"]
+    else:
+        directory = ""
 
     simulation = Simulation(uuid=uuid, incident=incident_id, date_created=datetime.datetime.now(), num_nodes=num_nodes, requested_walltime=requested_walltime, executable=executable, status_updated=datetime.datetime.now())
     if ("queuestate_calls" in data):
@@ -83,7 +87,7 @@ def create_job():
         simulation.machine=stored_machine
         simulation.status="QUEUED"
         simulation.status_updated=datetime.datetime.now()
-        simulation.jobID=asyncio.run(submit_job_to_machine(stored_machine.machine_name, num_nodes, requested_walltime, executable))
+        simulation.jobID=asyncio.run(submit_job_to_machine(stored_machine.machine_name, num_nodes, requested_walltime, directory, executable))
     else:
         # TODO - report this, for now print out
         print(matched_machine.json()["msg"])
@@ -91,10 +95,10 @@ def create_job():
     pny.commit()
     return jsonify({"status": 201, "simulation_id": uuid})
 
-async def submit_job_to_machine(machine_name, num_nodes, requested_walltime, executable):    
+async def submit_job_to_machine(machine_name, num_nodes, requested_walltime, directory, executable):    
     connection = await aio_pika.connect(host="localhost")
     client = await Client.create(machine_name, connection)
-    queue_id = await client.submitJob(num_nodes, requested_walltime, executable)
+    queue_id = await client.submitJob(num_nodes, requested_walltime, directory, executable)
     return queue_id
 
 @pny.db_session
