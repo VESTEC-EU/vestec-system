@@ -51,7 +51,7 @@ class OpenSSHMachineConnection(ThrottlableMixin):
             self.updateQueueInfo()
 
     def updateQueueInfo(self):
-        status_command=self.queue_system.getQueueStatusCommand()
+        status_command=self.queue_system.getQueueStatusSummaryCommand()
         output, errors=self.run(status_command)
         if "Shared connection to" not in errors:
             print("Error running command, "+errors)
@@ -70,13 +70,17 @@ class OpenSSHMachineConnection(ThrottlableMixin):
             return "Error"
 
     @throttle
-    def getJobStatus(self, queue_ids):
-        self.checkForUpdateToQueueData()
+    def getJobStatus(self, queue_ids):        
+        status_command=self.queue_system.getQueueStatusForSpecificJobsCommand
+        output, errors=self.run(status_command)
+
+        parsed_jobs=self.queue_system.parseQueueStatus(output)
         to_return={}
         for queue_id in queue_ids:
-            if (queue_id in self.queue_info):
-                status=self.queue_info[queue_id]                
-                to_return[queue_id]=status              
+            if (queue_id in self.parsed_jobs):
+                status=self.parsed_jobs[queue_id]                
+                to_return[queue_id]=status
+                self.queue_info[queue_id]=status    # Update general machine status information too with this
             else:
                 to_return[queue_id]="COMPLETED"
         return to_return

@@ -1,6 +1,12 @@
 class PBSQueueProcessor:
-    def getQueueStatusCommand(self):
+    def getQueueStatusSummaryCommand(self):
         return "qstat"
+
+    def getQueueStatusForSpecificJobsCommand(self, queue_ids):
+        job_queue_str=""
+        for queue_id in queue_ids:
+            job_queue_str+=queue_id+" "
+        return "qstat -H "+job_queue_str
 
     def parseQueueStatus(self, queue_raw_data):
         jobs={}        
@@ -24,4 +30,5 @@ class PBSQueueProcessor:
         if (job_queue_str == "Q"): return "QUEUED"
         if (job_queue_str == "R"): return "RUNNING"
         if (job_queue_str == "H"): return "HELD"
+        if (job_queue_str == "F"): return "COMPLETED"
         return "UNKNOWN"
