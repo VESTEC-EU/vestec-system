@@ -603,8 +603,10 @@ function loadIncidentDetails(incident) {
                 incident_html+=sim.jobID;
             }
             incident_html+="</td><td>";
-            if (sim.status=="QUEUED" || sim.status=="RUNNING" || sim.status=="PENDING") {
-                incident_html+="<img src='../img/refresh.png' class='click_button' width=26 height=26 title='Refresh status' onClick=\"refreshSimulation('"+sim.uuid+"','"+incident.uuid+"')\">";
+            if (sim.status!="COMPLETED") {
+                incident_html+="<img id='refresh_icon_"+sim.uuid+"' src='../img/refresh.png' class='click_button' width=26 height=26 title='Refresh status' onClick=\"refreshSimulation('"+sim.uuid+"','"+incident.uuid+"')\">";
+            }
+            if (sim.status=="QUEUED" || sim.status=="RUNNING" || sim.status=="PENDING") {                
                 incident_html+="&nbsp;&nbsp;&nbsp;&nbsp;";
                 incident_html+="<img src='../img/cross.png' class='click_button' width=26 height=26 title='Cancel simulation' onClick=\"cancelSimulation('"+sim.uuid+"','"+incident.uuid+"')\">";
             }
@@ -636,6 +638,7 @@ function loadIncidentDetails(incident) {
 function refreshSimulation(sim_uuid, incident_uuid) {
     var data_description = {};
     data_description["sim_uuid"] = sim_uuid;
+    $('#refresh_icon_'+sim_uuid).css('opacity', 0.2);
     $.ajax({
         url: "/flask/refreshsimulation",
         type: "POST",
