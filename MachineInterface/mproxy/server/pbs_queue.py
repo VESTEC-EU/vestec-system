@@ -11,6 +11,9 @@ class PBSQueueProcessor:
     def getSubmissionCommand(self, scriptname):
         return "qsub -q short "+scriptname
 
+    def getJobDeletionCommand(self, jobID):
+        return "qdel "+jobID
+
     def parseQueueStatus(self, queue_raw_data):
         jobs={}        
 

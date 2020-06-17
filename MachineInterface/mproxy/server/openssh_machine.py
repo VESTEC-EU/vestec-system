@@ -87,7 +87,8 @@ class OpenSSHMachineConnection(ThrottlableMixin):
 
     @throttle
     def cancelJob(self, queue_id):
-        pass
+        deletion_command=self.queue_system.getJobDeletionCommand(queue_id)
+        output, errors=self.run(deletion_command)        
 
     @throttle
     def submitJob(self, num_nodes, requested_walltime, directory, executable):        

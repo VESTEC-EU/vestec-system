@@ -603,7 +603,7 @@ function loadIncidentDetails(incident) {
                 incident_html+=sim.jobID;
             }
             incident_html+="</td><td>";
-            if (sim.status!="COMPLETED") {
+            if (sim.status != "COMPLETED" && sim.status != "CANCELLED") {
                 incident_html+="<img id='refresh_icon_"+sim.uuid+"' src='../img/refresh.png' class='click_button' width=26 height=26 title='Refresh status' onClick=\"refreshSimulation('"+sim.uuid+"','"+incident.uuid+"')\">";
             }
             if (sim.status=="QUEUED" || sim.status=="RUNNING" || sim.status=="PENDING") {                
