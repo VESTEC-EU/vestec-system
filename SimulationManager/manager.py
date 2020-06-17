@@ -39,7 +39,7 @@ def get_health():
 @pny.db_session
 def refresh_sim_state(simulation_id):
     sim=Simulation[simulation_id]
-    if (sim.status=="PENDING" || sim.status=="QUEUED" || sim.status=="RUNNING"):
+    if (sim.status=="PENDING" or sim.status=="QUEUED" or sim.status=="RUNNING"):
         handleRefreshOfSimulations([sim])
     return jsonify({"status": 200})    
 
@@ -69,6 +69,7 @@ def create_job():
     uuid=str(uuid4())
     incident_id = data["incident_id"]    
     num_nodes = data["num_nodes"]
+    kind = data["kind"]
     requested_walltime = data["requested_walltime"]
     executable = data["executable"]
     if "directory" in data:
@@ -76,7 +77,7 @@ def create_job():
     else:
         directory = ""
 
-    simulation = Simulation(uuid=uuid, incident=incident_id, date_created=datetime.datetime.now(), num_nodes=num_nodes, requested_walltime=requested_walltime, executable=executable, status_updated=datetime.datetime.now())
+    simulation = Simulation(uuid=uuid, incident=incident_id, kind=kind, date_created=datetime.datetime.now(), num_nodes=num_nodes, requested_walltime=requested_walltime, executable=executable, status_updated=datetime.datetime.now())
     if ("queuestate_calls" in data):
         for key, value in data["queuestate_calls"].items():
             simulation.queue_state_calls.create(queue_state=key, call_name=value)

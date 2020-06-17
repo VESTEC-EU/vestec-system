@@ -101,6 +101,7 @@ def packageIncident(stored_incident, include_sort_key, include_digraph, include_
             
         simulation_dict["created"]=sim.date_created.strftime("%d/%m/%Y, %H:%M:%S")
         simulation_dict["walltime"]=sim.walltime
+        simulation_dict["kind"]=sim.kind
         simulation_dict["num_nodes"]=sim.num_nodes
         simulation_dict["requested_walltime"]=sim.requested_walltime
         if sim.machine is not None:

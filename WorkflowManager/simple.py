@@ -52,7 +52,7 @@ def manually_add_data(message):
 def test_workflow(message):
     print("Test called!")
     callbacks = {'COMPLETED': 'simple_workflow_execution_completed'}
-    myobj = {'incident_id': message["IncidentID"], 'num_nodes': 100, 'requested_walltime': 120, 'executable': 'subtest.pbs', 'directory': 'vestec_test', 'queuestate_calls':callbacks}
+    myobj = {'incident_id': message["IncidentID"], 'num_nodes': 100, 'requested_walltime': 120, 'kind': 'test run', 'executable': 'subtest.pbs', 'directory': 'vestec_test', 'queuestate_calls':callbacks}
     x = requests.post(SM_URL+'/create', json=myobj)
     print(x.json())
 

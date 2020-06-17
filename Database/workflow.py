@@ -64,6 +64,7 @@ class Simulation(db.Entity):
     jobID = pny.Optional(str)
     wkdir = pny.Optional(str)
     executable = pny.Required(str)
+    kind = pny.Required(str)
     results_handler = pny.Optional(str)
     requested_walltime = pny.Optional(int)
     walltime = pny.Optional(datetime.timedelta)

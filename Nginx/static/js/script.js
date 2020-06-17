@@ -598,9 +598,9 @@ function loadIncidentDetails(incident) {
 
     if (incident.simulations.length > 0) {
         incident_html+="<div id=\"incident_data\" class=\"jobDetails self-center\"><table id='incidentSimulationsTable' class='self-center displayTable'>";
-        incident_html+="<thead><tr><th>Created</th><th>Status</th><th>Walltime</th><th>Number nodes</th><th>Machine</th><th>Job ID</th><th>Actions</th></tr></thead>";
+        incident_html+="<thead><tr><th>Kind</th><th>Created</th><th>Status</th><th>Walltime</th><th>Number nodes</th><th>Machine</th><th>Job ID</th><th>Actions</th></tr></thead>";
         for (sim of incident.simulations) {    
-            incident_html+="<td>"+sim.created+"</td><td>";
+            incident_html+="<td>"+sim.kind+"</td><td>"+sim.created+"</td><td>";
             if (sim.status_message != null) {
                 incident_html+="<span class=\"link\" onclick=\"displayInfoMessage('"+sim.status_message+"');\">";
             }
