@@ -14,10 +14,10 @@ from Database.workflow import Incident, StoredDataset
 if "VESTEC_EDI_URI" in os.environ:    
     EDI_URL= os.environ["VESTEC_EDI_URI"]
     SM_URL= os.environ["VESTEC_SM_URI"]
-    DATA_MANAGER_URI = os.environ["VESTEC_DM_URI"]
+    DATA_MANAGER_URL = os.environ["VESTEC_DM_URI"]
 else:    
     EDI_URL= 'http://localhost:5501/EDImanager'
-    DATA_MANAGER_URI = 'http://localhost:5000/DM'
+    DATA_MANAGER_URL = 'http://localhost:5000/DM'
     SM_URL = 'http://localhost:5505/SM'
 
 # we now want to define some handlers
@@ -38,7 +38,7 @@ def manually_add_data(message):
     pny.commit()    
 
     myobj = {'filename': str(new_file.uuid), 'path':'vestecDB', 'machine':'VESTECSERVER', 'description':'manually uploaded', 'size':str(len(data)), 'originator':'manually added','group' : 'none'}
-    x = requests.put(DATA_MANAGER_URI+'/register', data=myobj)    
+    x = requests.put(DATA_MANAGER_URL+'/register', data=myobj)    
     incidentId=message["IncidentID"]
     incident=Incident[incidentId]
     incident.associated_datasets.create(

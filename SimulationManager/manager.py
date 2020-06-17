@@ -24,7 +24,10 @@ from mproxy.client import Client
 import asyncio
 import aio_pika
 
-MSM_URL= 'http://127.0.0.1:5502/MSM'
+if "VESTEC_MSM_URI" in os.environ:        
+    MSM_URL = os.environ["VESTEC_MSM_URI"]
+else:
+    MSM_URL= 'http://localhost:5502/MSM'
 
 poll_scheduler=BackgroundScheduler(executors={"default": ThreadPoolExecutor(1)})
 

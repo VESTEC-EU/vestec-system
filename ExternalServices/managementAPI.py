@@ -32,12 +32,12 @@ version_number=VERSION_PRECLUDE+"."+VERSION_POSTFIX
 if "VESTEC_MANAGER_URI" in os.environ:    
     EDI_URL = os.environ["VESTEC_EDI_URI"]
     MSM_URL = os.environ["VESTEC_MSM_URI"]
-    DATA_MANAGER_URI = os.environ["VESTEC_DM_URI"]
+    DATA_MANAGER_URL = os.environ["VESTEC_DM_URI"]
     SM_URL= os.environ["VESTEC_SM_URI"]
 else:    
-    EDI_URL= 'http://127.0.0.1:5501/EDImanager'
-    MSM_URL= 'http://127.0.0.1:5502/MSM'
-    DATA_MANAGER_URI = 'http://localhost:5000/DM'
+    EDI_URL= 'http://localhost:5501/EDImanager'
+    MSM_URL= 'http://localhost:5502/MSM'
+    DATA_MANAGER_URL = 'http://localhost:5000/DM'
     SM_URL = 'http://localhost:5505/SM'
 
 def version():
@@ -183,7 +183,7 @@ def getDataMetadata(data_uuid, incident_uuid, username):
         return jsonify({"status": 200, "metadata": meta_data}) 
 
 def downloadData(data_uuid):
-    data_info=requests.get(DATA_MANAGER_URI+"/info/" + data_uuid)
+    data_info=requests.get(DATA_MANAGER_URL+"/info/" + data_uuid)
     file_info=data_info.json()
     if (file_info["path"]=="vestecDB" and file_info["machine"]=="VESTECSERVER"):
         data_dump=LocalDataStorage[file_info["filename"]]
@@ -196,11 +196,11 @@ def downloadData(data_uuid):
 def deleteData(data_uuid, incident_uuid, username):
     success=incidents.removeDataFromIncident(data_uuid, incident_uuid, username)
     if success:
-        data_info=requests.get(DATA_MANAGER_URI+"/info/" + data_uuid)
+        data_info=requests.get(DATA_MANAGER_URL+"/info/" + data_uuid)
         file_info=data_info.json()
         if (file_info["path"]=="vestecDB" and file_info["machine"]=="VESTECSERVER"):
             LocalDataStorage[file_info["filename"]].delete()
-        requests.delete(DATA_MANAGER_URI+"/remove/" + data_uuid)    
+        requests.delete(DATA_MANAGER_URL+"/remove/" + data_uuid)    
         return jsonify({"status": 200, "msg": "Data deleted"}) 
     else:
         return jsonify({"status": 401, "msg": "Data deletion failed, no incident data set that you can edit"}) 
@@ -252,7 +252,7 @@ def getComponentHealths():
     component_healths.append(_getHealthOfComponent(EDI_URL, "External data interface"))    
     component_healths.append(_getHealthOfComponent(SM_URL, "Simulation manager"))    
     component_healths.append(_getHealthOfComponent(MSM_URL, "Machine status manager"))    
-    component_healths.append(_getHealthOfComponent(DATA_MANAGER_URI, "Data manager"))
+    component_healths.append(_getHealthOfComponent(DATA_MANAGER_URL, "Data manager"))
     return json.dumps(component_healths)
 
 def getEDIInfo():
