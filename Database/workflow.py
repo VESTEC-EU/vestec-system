@@ -56,7 +56,7 @@ class Simulation(db.Entity):
     uuid = pny.PrimaryKey(str)
     incident = pny.Required(Incident)
     date_created = pny.Required(datetime.datetime)
-    status = pny.Required(str,default="NOT SUBMITTED")
+    status = pny.Required(str,default="PENDING")
     status_updated = pny.Required(datetime.datetime)
     machine = pny.Optional("Machine")
     queue = pny.Optional(str)
