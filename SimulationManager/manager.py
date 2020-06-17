@@ -35,6 +35,13 @@ logger = log.VestecLogger("Simulation Manager")
 def get_health():
     return jsonify({"status": 200})
 
+@app.route("/SM/refresh/<simulation_id>", methods=["POST"])
+@pny.db_session
+def refresh_sim_state(simulation_id):
+    sim=Simulation[simulation_id]    
+    handleRefreshOfSimulations([sim])
+    return jsonify({"status": 200})    
+
 @app.route("/SM/simulation/<simulation_id>", methods=["DELETE"])
 @pny.db_session
 def cancel_simulation(simulation_id):
@@ -93,6 +100,9 @@ async def submit_job_to_machine(machine_name, num_nodes, requested_walltime, exe
 @pny.db_session
 def poll_outstanding_sim_statuses():
     simulations=pny.select(g for g in Simulation if g.status == "QUEUED" or g.status == "RUNNING")
+    handleRefreshOfSimulations(simulations)    
+
+def handleRefreshOfSimulations(simulations):
     machine_to_queueid={}    
     queueid_to_sim={}
     workflow_stages_to_run=[]
@@ -142,6 +152,6 @@ if __name__ == "__main__":
     initialiseDatabase()
     poll_scheduler.start()
     runon = datetime.datetime.now()+ datetime.timedelta(seconds=5)
-    poll_scheduler.add_job(poll_outstanding_sim_statuses, 'interval', seconds=10, next_run_time = runon)
+    poll_scheduler.add_job(poll_outstanding_sim_statuses, 'interval', seconds=600, next_run_time = runon)
     app.run(host="0.0.0.0", port=5505)
     poll_scheduler.shutdown()

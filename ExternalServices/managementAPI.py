@@ -206,6 +206,12 @@ def deleteData(data_uuid, incident_uuid, username):
         return jsonify({"status": 401, "msg": "Data deletion failed, no incident data set that you can edit"}) 
 
 @pny.db_session
+def refreshSimulation(request_json):       
+    sim_uuid=request_json.get("sim_uuid", None)
+    returned_info = requests.post(SM_URL + '/refresh/'+sim_uuid)    
+    return Response(returned_info.content, returned_info.status_code)
+
+@pny.db_session
 def cancelSimulation(sim_uuid, username):
     returned_info = requests.delete(SM_URL + '/simulation/'+sim_uuid)    
     return Response(returned_info.content, returned_info.status_code)

@@ -604,7 +604,9 @@ function loadIncidentDetails(incident) {
             }
             incident_html+="</td><td>";
             if (sim.status=="QUEUED" || sim.status=="RUNNING" || sim.status=="PENDING") {
-                incident_html+="<img src='../img/cross.png' class='click_button' width=26 height=26 onClick=\"cancelSimulation('"+sim.uuid+"','"+incident.uuid+"')\">";
+                incident_html+="<img src='../img/refresh.png' class='click_button' width=26 height=26 title='Refresh status' onClick=\"refreshSimulation('"+sim.uuid+"','"+incident.uuid+"')\">";
+                incident_html+="&nbsp;&nbsp;&nbsp;&nbsp;";
+                incident_html+="<img src='../img/cross.png' class='click_button' width=26 height=26 title='Cancel simulation' onClick=\"cancelSimulation('"+sim.uuid+"','"+incident.uuid+"')\">";
             }
             incident_html+="</td></tr>";
         }
@@ -629,6 +631,26 @@ function loadIncidentDetails(incident) {
     incident_html+="<div id=\"workflow_diagram\" class=\"jobDetails self-center\"><svg id=\"svg-canvas\" style='width: 100%; height: auto;'></svg></div>"    
 
     return incident_html;
+}
+
+function refreshSimulation(sim_uuid, incident_uuid) {
+    var data_description = {};
+    data_description["sim_uuid"] = sim_uuid;
+    $.ajax({
+        url: "/flask/refreshsimulation",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},   
+        contentType: "application/json",
+        data: JSON.stringify(data_description),
+        dataType: "json",     
+        success: function(response) {
+            getIncidentDetails(incident_uuid);
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> Simulation refresh failed");
+        }
+    });
 }
 
 function cancelSimulation(sim_uuid, incident_uuid) {

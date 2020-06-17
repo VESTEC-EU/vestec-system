@@ -143,6 +143,12 @@ def updateDataMetadata():
 def downloadData(data_uuid):
     return managementAPI.downloadData(data_uuid)
 
+@app.route('/flask/refreshsimulation', methods=['POST'])
+@pny.db_session
+@fresh_jwt_required
+def refreshSimulation():    
+    return managementAPI.refreshSimulation(request.json)
+
 @app.route('/flask/simulation', methods=['DELETE'])
 @pny.db_session
 @fresh_jwt_required
