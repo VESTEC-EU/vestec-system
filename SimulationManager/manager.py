@@ -114,9 +114,9 @@ def handleRefreshOfSimulations(simulations):
     for key, value in machine_to_queueid.items():
         job_statuses=asyncio.run(get_job_status_update(key, value))
         for jkey, jvalue in job_statuses.items():
+            queueid_to_sim[jkey].status_updated=datetime.datetime.now() 
             if (jvalue != queueid_to_sim[jkey].status):
-                queueid_to_sim[jkey].status=jvalue                
-                queueid_to_sim[jkey].status_updated=datetime.datetime.now()                
+                queueid_to_sim[jkey].status=jvalue
                 targetStateCall=checkMatchAgainstQueueStateCalls(queueid_to_sim[jkey].queue_state_calls, jvalue)
                 if (targetStateCall is not None):                      
                     new_wf_stage_call={'targetName' : targetStateCall, 'incidentId' : queueid_to_sim[jkey].incident.uuid, 'simulationId' : queueid_to_sim[jkey].uuid}
