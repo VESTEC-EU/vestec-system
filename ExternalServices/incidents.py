@@ -91,9 +91,14 @@ def packageIncident(stored_incident, include_sort_key, include_digraph, include_
         simulation_dict={}
         simulation_dict["uuid"]=sim.uuid
         if sim.jobID is not None and sim.jobID != "":
-            simulation_dict["jobID"]=sim.jobID
+            simulation_dict["jobID"]=sim.jobID        
+
         simulation_dict["status"]=sim.status
         simulation_dict["status_updated"]=sim.status_updated.strftime("%d/%m/%Y, %H:%M:%S")
+
+        if sim.status_message is not None and sim.status_message != "":
+            simulation_dict["status_message"]=sim.status_message
+            
         simulation_dict["created"]=sim.date_created.strftime("%d/%m/%Y, %H:%M:%S")
         simulation_dict["walltime"]=sim.walltime
         simulation_dict["num_nodes"]=sim.num_nodes

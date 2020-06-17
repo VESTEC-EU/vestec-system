@@ -14,6 +14,9 @@ class PBSQueueProcessor:
     def getJobDeletionCommand(self, jobID):
         return "qdel "+jobID
 
+    def isStringQueueId(self, raw_str):
+        return ".sdb" in raw_str
+
     def parseQueueStatus(self, queue_raw_data):
         jobs={}        
 

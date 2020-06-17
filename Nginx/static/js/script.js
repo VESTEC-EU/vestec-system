@@ -26,6 +26,18 @@ $( function() {
         
     }
     });
+    
+    $( "#dialog-message" ).dialog({
+        modal: true,
+        autoOpen: false,
+        height: "auto",
+        width: "auto",
+        buttons: {
+            Ok: function() {
+              $( this ).dialog( "close" );
+            }
+        }
+    });      
 
     edit_data_dialog = $("#edit-data-dialog-form").dialog({
         autoOpen: false,
@@ -588,7 +600,13 @@ function loadIncidentDetails(incident) {
         incident_html+="<div id=\"incident_data\" class=\"jobDetails self-center\"><table id='incidentSimulationsTable' class='self-center displayTable'>";
         incident_html+="<thead><tr><th>Created</th><th>Status</th><th>Walltime</th><th>Number nodes</th><th>Machine</th><th>Job ID</th><th>Actions</th></tr></thead>";
         for (sim of incident.simulations) {    
-            incident_html+="<td>"+sim.created+"</td><td>"+sim.status+" <i>("+sim.status_updated+")</i></td><td>";            
+            incident_html+="<td>"+sim.created+"</td><td>";
+            if (sim.status_message != null) {
+                incident_html+="<span class=\"link\" onclick=\"displayInfoMessage('"+sim.status_message+"');\">";
+            }
+            incident_html+=sim.status;
+            if (sim.status_message != null) incident_html+="</span>";
+            incident_html+=" <i>("+sim.status_updated+")</i></td><td>";            
             if (sim.walltime != null) {
                 incident_html+=sim.walltime;
             } else {
@@ -603,7 +621,7 @@ function loadIncidentDetails(incident) {
                 incident_html+=sim.jobID;
             }
             incident_html+="</td><td>";
-            if (sim.status != "COMPLETED" && sim.status != "CANCELLED") {
+            if (sim.status != "COMPLETED" && sim.status != "CANCELLED" && sim.status != "ERROR") {
                 incident_html+="<img id='refresh_icon_"+sim.uuid+"' src='../img/refresh.png' class='click_button' width=26 height=26 title='Refresh status' onClick=\"refreshSimulation('"+sim.uuid+"','"+incident.uuid+"')\">";
             }
             if (sim.status=="QUEUED" || sim.status=="RUNNING" || sim.status=="PENDING") {                
@@ -633,6 +651,11 @@ function loadIncidentDetails(incident) {
     incident_html+="<div id=\"workflow_diagram\" class=\"jobDetails self-center\"><svg id=\"svg-canvas\" style='width: 100%; height: auto;'></svg></div>"    
 
     return incident_html;
+}
+
+function displayInfoMessage(message) {
+    $("#dialog-message-text").text(message);
+    $( "#dialog-message" ).dialog("open");    
 }
 
 function refreshSimulation(sim_uuid, incident_uuid) {

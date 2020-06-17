@@ -38,8 +38,9 @@ def get_health():
 @app.route("/SM/refresh/<simulation_id>", methods=["POST"])
 @pny.db_session
 def refresh_sim_state(simulation_id):
-    sim=Simulation[simulation_id]    
-    handleRefreshOfSimulations([sim])
+    sim=Simulation[simulation_id]
+    if (sim.status=="PENDING" || sim.status=="QUEUED" || sim.status=="RUNNING"):
+        handleRefreshOfSimulations([sim])
     return jsonify({"status": 200})    
 
 @app.route("/SM/simulation/<simulation_id>", methods=["DELETE"])
@@ -84,10 +85,15 @@ def create_job():
     matched_machine=requests.get(MSM_URL + '/matchmachine?walltime='+str(requested_walltime)+'&num_nodes='+str(num_nodes))
     if matched_machine.status_code == 200:
         stored_machine=Machine.get(machine_id=matched_machine.json()["machine_id"])
-        simulation.machine=stored_machine
-        simulation.status="QUEUED"
+        simulation.machine=stored_machine        
+        submission_data=asyncio.run(submit_job_to_machine(stored_machine.machine_name, num_nodes, requested_walltime, directory, executable))
+        if (submission_data[0]):
+            simulation.jobID=submission_data[1]
+            simulation.status="QUEUED"
+        else:
+            simulation.status="ERROR"
+            simulation.status_message=submission_data[1]            
         simulation.status_updated=datetime.datetime.now()
-        simulation.jobID=asyncio.run(submit_job_to_machine(stored_machine.machine_name, num_nodes, requested_walltime, directory, executable))
     else:
         # TODO - report this, for now print out
         print(matched_machine.json()["msg"])

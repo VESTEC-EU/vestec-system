@@ -27,6 +27,13 @@ class OpenSSHMachineConnection(ThrottlableMixin):
         output, errors = p.communicate()
         return output, errors
 
+    def _checkForErrors(self, errorString, reportError=True):        
+        if len(errorString.strip().split('\n')) == 1 and "Shared connection to" in errorString:
+            return False
+        else:
+            if (reportError): print("Error: "+errorString.strip())
+            return True
+
     @throttle
     def run(self, command, env=None):
         cmd = "\"cd "+self.remote_base_dir+" ; "+command+"\""        
@@ -53,9 +60,7 @@ class OpenSSHMachineConnection(ThrottlableMixin):
     def updateQueueInfo(self):
         status_command=self.queue_system.getQueueStatusSummaryCommand()
         output, errors=self.run(status_command)
-        if "Shared connection to" not in errors:
-            print("Error running command, "+errors)
-        else:
+        if not self._checkForErrors(errors):            
             self.queue_info=self.queue_system.parseQueueStatus(output)
             self.summary_status=self.queue_system.getSummaryOfMachineStatus(self.queue_info)
             self.queue_last_updated=datetime.datetime.now()
@@ -67,38 +72,39 @@ class OpenSSHMachineConnection(ThrottlableMixin):
         if (self.summary_status):
             return "Connected (Q="+str(self.summary_status["QUEUED"])+",R="+str(self.summary_status["RUNNING"])+")";
         else:
-            return "Error"
+            return "Error, can not connect"
 
     @throttle
     def getJobStatus(self, queue_ids):        
         status_command=self.queue_system.getQueueStatusForSpecificJobsCommand(queue_ids)
         output, errors=self.run(status_command)
-
-        parsed_jobs=self.queue_system.parseQueueStatus(output)
         to_return={}
-        for queue_id in queue_ids:
-            if (queue_id in parsed_jobs):
-                status=parsed_jobs[queue_id]                
-                to_return[queue_id]=status
-                self.queue_info[queue_id]=status    # Update general machine status information too with this
-            else:
-                to_return[queue_id]="COMPLETED"
+        if not self._checkForErrors(errors):
+            parsed_jobs=self.queue_system.parseQueueStatus(output)        
+            for queue_id in queue_ids:
+                if (queue_id in parsed_jobs):
+                    status=parsed_jobs[queue_id]                
+                    to_return[queue_id]=status
+                    self.queue_info[queue_id]=status    # Update general machine status information too with this                
         return to_return
 
     @throttle
     def cancelJob(self, queue_id):
         deletion_command=self.queue_system.getJobDeletionCommand(queue_id)
-        output, errors=self.run(deletion_command)        
+        output, errors=self.run(deletion_command)
+        self._checkForErrors(errors)  
 
     @throttle
     def submitJob(self, num_nodes, requested_walltime, directory, executable):        
         command_to_run = ""
         if len(directory) > 0:
             command_to_run += "cd "+directory+" ; "
-        command_to_run+=self.queue_system.getSubmissionCommand(executable)
-        print(command_to_run)
+        command_to_run+=self.queue_system.getSubmissionCommand(executable)        
         output, errors=self.run(command_to_run)
-        return output
+        if not self._checkForErrors(errors):
+            return [self.queue_system.isStringQueueId(output), output]
+        else:
+            return [False, errors]
 
     @throttle
     def cd(self, dir):
