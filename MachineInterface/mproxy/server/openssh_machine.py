@@ -47,7 +47,7 @@ class OpenSSHMachineConnection(ThrottlableMixin):
 
     def checkForUpdateToQueueData(self):
         elapsed=datetime.datetime.now() - self.queue_last_updated
-        if not self.queue_info or elapsed.total_seconds() > 360:
+        if not self.queue_info or elapsed.total_seconds() > 600:
             self.updateQueueInfo()
 
     def updateQueueInfo(self):
