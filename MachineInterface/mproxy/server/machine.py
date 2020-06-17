@@ -57,7 +57,7 @@ class MachineConnectionFactory:
         if stored_machine is None:
             print("Unknown connection name " + name)
             raise
-        else:
+        elif stored_machine.enabled:        
             if stored_machine.test_mode:
                 return self._mk_dummy_machine_connection(name, None, self.getConfiguration(name))
             else:                
@@ -74,5 +74,9 @@ class MachineConnectionFactory:
                         return createdMachineMechanism
                     else:
                         print("Error, either machine connection type or scheduler is not recognised")
+                        raise
+        else:
+            print("Machine disabled, will not connect")
+            raise
 
     pass
