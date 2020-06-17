@@ -78,9 +78,8 @@ def login():
         authorise = logins.verify_user(username, password)
 
     if authorise:
-        access_token = create_access_token(identity=username, fresh=True)
-        response = jsonify({"status": 200, "access_token": access_token})
-        set_access_cookies(response, access_token)
+        access_token = create_access_token(identity=username, fresh=True, expires_delta=False)
+        response = jsonify({"status": 200, "access_token": access_token})        
 
         return response
     else:
