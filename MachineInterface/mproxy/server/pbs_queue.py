@@ -8,13 +8,19 @@ class PBSQueueProcessor:
             job_queue_str+=queue_id+" "
         return "qstat -H "+job_queue_str
 
+    def getSubmissionCommand(self, scriptname):
+        return "qsub -q short "+scriptname
+
     def parseQueueStatus(self, queue_raw_data):
         jobs={}        
 
         for line in queue_raw_data.split('\n'):
             if ".sdb" in line:
                 tokens=line.split()
-                jobs[tokens[0]]=self.getConvertPBSJobStatusCode(tokens[4])                
+                if (len(tokens) < 8):
+                    jobs[tokens[0]]=self.getConvertPBSJobStatusCode(tokens[4])
+                else:
+                    jobs[tokens[0]]=self.getConvertPBSJobStatusCode(tokens[9])
 
         return jobs
 
@@ -26,9 +32,10 @@ class PBSQueueProcessor:
             status[value]+=1
         return status
 
-    def getConvertPBSJobStatusCode(self, job_queue_str):
+    def getConvertPBSJobStatusCode(self, job_queue_str):        
         if (job_queue_str == "Q"): return "QUEUED"
         if (job_queue_str == "R"): return "RUNNING"
         if (job_queue_str == "H"): return "HELD"
         if (job_queue_str == "F"): return "COMPLETED"
+        if (job_queue_str == "E"): return "ENDING"
         return "UNKNOWN"
