@@ -875,6 +875,7 @@ function getMachineInfo() {
                     item = machine_infos[machine_info];
                     handler_entry += "<td>"+item.name + "</td>";
                     handler_entry += "<td>"+item.host_name + "</td>";
+                    handler_entry += "<td>"+item.connection_type + "</td>";                    
                     handler_entry += "<td>"+item.scheduler + "</td>";
                     handler_entry += "<td>"+parseInt(item.nodes) * parseInt(parseInt(item.cores_per_node)) + "</td>";
                     handler_entry += "<td>";
@@ -982,6 +983,7 @@ function performAddMachine() {
     data["machine_name"] = $('#machinename').val();
     data["host_name"] = $('#hostname').val();
     data["scheduler"] = $('#scheduler').val();
+    data["connection_type"] = $('#connectionType').val();
     data["num_nodes"] = $('#number_nodes').val();
     data["cores_per_node"] = $('#number_cores').val();
     data["base_work_dir"] = $('#basedir').val();

@@ -5,8 +5,16 @@
       <label for="hostname" class="addDataLabel">Hostname</label>
       <input type="text" name="hostname" id="hostname" class="addDataText text ui-widget-content ui-corner-all"> 
 
-       <label for="scheduler" class="addDataLabel">Scheduler</label>
-	<select id="scheduler"  style="float:left; width:50%;"><option value="pbs">PBS</option><option value="slurm">Slurm</option></select> 
+      <div style="width: 100%; overflow: hidden;">
+        <div style="float: right; width:45%;">
+          <label for="connectionType" class="addDataLabel">Connection Type</label>
+          <select id="connectionType"  style="float:left; width:50%;"><option value="openssh">OpenSSH</option><option value="fabric">Fabric SSH</option><option value="dummy">Dummy</option></select>          
+        </div>
+        <div style="float: left; width:45%;">
+          <label for="scheduler" class="addDataLabel">Scheduler</label>
+          <select id="scheduler"  style="float:left; width:50%;"><option value="pbs">PBS</option><option value="slurm">Slurm</option></select> 
+        </div>
+    </div>
       
       <div style="width: 100%; overflow: hidden;">
         <div style="float: right; width:45%;">

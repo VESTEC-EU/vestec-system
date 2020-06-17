@@ -74,11 +74,12 @@ def add_machine():
     machine_name=machine_info.get("machine_name", None)
     host_name=machine_info.get("host_name", None)
     scheduler=machine_info.get("scheduler", None)
+    connection_type=machine_info.get("connection_type", None)
     num_nodes=machine_info.get("num_nodes", None)
     cores_per_node=machine_info.get("cores_per_node", None)
     base_work_dir=machine_info.get("base_work_dir", None)
 
-    newMachine = Machine(machine_id=str(uuid4()), machine_name=machine_name, host_name=host_name, scheduler=scheduler, num_nodes=num_nodes, cores_per_node=cores_per_node, base_work_dir=base_work_dir)
+    newMachine = Machine(machine_id=str(uuid4()), machine_name=machine_name, host_name=host_name, scheduler=scheduler, connection_type=connection_type, num_nodes=num_nodes, cores_per_node=cores_per_node, base_work_dir=base_work_dir)
     pny.commit()
     return jsonify({"status": 200})
 
@@ -105,6 +106,7 @@ def get_machine_status():
             machine_info["name"]=machine.machine_name
             machine_info["host_name"]=machine.host_name
             machine_info["scheduler"]=machine.scheduler
+            machine_info["connection_type"]=machine.connection_type
             machine_info["nodes"]=machine.num_nodes            
             machine_info["cores_per_node"]=machine.cores_per_node
             machine_info["enabled"]=machine.enabled
