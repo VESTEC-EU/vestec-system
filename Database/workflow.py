@@ -37,8 +37,8 @@ class Incident(db.Entity):
     status = pny.Required(str, default="PENDING")
     comment = pny.Optional(str)
     user_id = pny.Optional(User)
-    upper_right_latlong = pny.Optional(str)
-    lower_left_latlong = pny.Optional(str)
+    upper_left_latlong = pny.Optional(str)
+    lower_right_latlong = pny.Optional(str)
 
     date_started = pny.Required(datetime.datetime)
     date_completed = pny.Optional(datetime.datetime)
