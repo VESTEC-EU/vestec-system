@@ -12,6 +12,7 @@ import MesoNH
 #import quick
 import simple
 import hotspot
+import performance_data
 
 # set the logging level of the workflow logger
 workflow.SetLoggingLevel(logging.WARNING)
@@ -24,6 +25,7 @@ MesoNH.RegisterHandlers()
 #quick.RegisterHandlers()
 simple.RegisterHandlers()
 hotspot.RegisterHandlers()
+#performance_data.RegisterHandlers()
 
 workflow.execute()
 
