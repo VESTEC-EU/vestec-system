@@ -102,6 +102,10 @@ class DummyMachineConnection(ThrottlableMixin):
     def mv(self, src, dest):
         log.info("%s.mv(%s -> %s)", self.name, src, dest)
 
+    @throttle
+    def cp(self, src, dest):
+        log.info("%s.cp(%s -> %s)", self.name, src, dest)
+
 
 def DummyMachineConnectionFactory(name):
     return DummyMachineConnection(name)

@@ -61,4 +61,8 @@ class API:
     def mv(src: str, dest: str) -> None:
         pass
 
+    @rpcmethod
+    def cp(src: str, dest: str) -> None:
+        pass
+
     pass

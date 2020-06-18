@@ -145,14 +145,22 @@ class OpenSSHMachineConnection(ThrottlableMixin):
 
     @throttle
     def rm(self, file):
-        pass # self.sftp.remove(file)
+        output, errors=self.run("rm "+file)
+        self._checkForErrors(errors)
 
     @throttle
     def rmdir(self, dir):
-        pass #self.sftp.rmdir(dir)
+        output, errors=self.run("rmdir "+dir)
+        self._checkForErrors(errors)
 
     @throttle
     def mv(self, src, dest):
-        pass #self.sftp.move(src, dest)
+        output, errors=self.run("mv "+src+" "+dest)
+        self._checkForErrors(errors)
+
+    @throttle
+    def cp(self, src, dest):
+        output, errors=self.run("cp "+src+" "+dest)
+        self._checkForErrors(errors)  
 
     pass
