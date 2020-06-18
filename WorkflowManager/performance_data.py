@@ -31,7 +31,7 @@ def add_performance_data(message):
     job_id = message["data"]["JobID"]
     # pipe this through the json module for consistent formatting
     # removing indentation to save space in the database
-    raw_json = json.dumps(json.loads(message["data"]["raw_json"]))
+    raw_json = json.dumps(json.loads(message["data"]["raw_json"]), indent=0)
     new_db_entry = PerformanceData(
         simulation=Simulation.get(machine=machine, jobID=job_id),
         data_type=data_type,
