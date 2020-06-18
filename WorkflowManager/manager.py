@@ -25,7 +25,7 @@ MesoNH.RegisterHandlers()
 #quick.RegisterHandlers()
 simple.RegisterHandlers()
 hotspot.RegisterHandlers()
-#performance_data.RegisterHandlers()
+performance_data.RegisterHandlers()
 
 workflow.execute()
 
