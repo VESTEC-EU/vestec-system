@@ -13,3 +13,4 @@ pygraphviz
 pyproj
 requests==2.21.0
 shapely
+geopandas
