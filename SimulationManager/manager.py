@@ -23,6 +23,7 @@ from WorkflowManager import workflow
 from mproxy.client import Client
 import asyncio
 import aio_pika
+import os
 
 if "VESTEC_MSM_URI" in os.environ:        
     MSM_URL = os.environ["VESTEC_MSM_URI"]
@@ -108,7 +109,7 @@ def create_job():
 async def submit_job_to_machine(machine_name, num_nodes, requested_walltime, directory, executable):    
     connection = await aio_pika.connect(host="localhost")
     client = await Client.create(machine_name, connection)
-    queue_id = await client.submitJob(num_nodes, requested_walltime, directory, executable)
+    queue_id = await client.submitJob(num_nodes, requested_walltime, directory, executable)    
     return queue_id
 
 @pny.db_session
