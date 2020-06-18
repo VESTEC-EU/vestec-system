@@ -5,6 +5,7 @@ import datetime
 from .throttle import ThrottlableMixin, throttle
 from .job_status import JobStatus
 from subprocess import Popen, PIPE
+import tempfile
 
 log = logging.getLogger(__name__)
 
@@ -24,12 +25,12 @@ class OpenSSHMachineConnection(ThrottlableMixin):
         self.queue_last_updated=datetime.datetime.now()
 
     def _execute_command(self, command):
-        p = Popen("ssh -t " + self.hostname+" "+ command, stdout=PIPE, stderr=PIPE, universal_newlines=True, shell=True)
+        p = Popen(command, stdout=PIPE, stderr=PIPE, universal_newlines=True, shell=True)
         output, errors = p.communicate()
         return output, errors
 
     def _checkForErrors(self, errorString, reportError=True):        
-        if len(errorString.strip().split('\n')) == 1 and "Shared connection to" in errorString:
+        if len(errorString.strip()) == 0 or (len(errorString.strip().split('\n')) == 1 and "Shared connection to" in errorString):
             return False
         else:
             if (reportError): print("Error: "+errorString.strip())
@@ -37,21 +38,36 @@ class OpenSSHMachineConnection(ThrottlableMixin):
 
     @throttle
     def run(self, command, env=None):
-        cmd = "\"cd "+self.remote_base_dir+" ; "+command+"\""        
+        cmd = "ssh -t " + self.hostname+" \"cd "+self.remote_base_dir+" ; "+command+"\""        
         return self._execute_command(cmd)
 
     @throttle
-    def put(self, src_bytes, dest):
-        log.info("Copying to %s:%s", self.host, os.path.join(self.getcwd(), dest))
-        with io.BytesIO(src_bytes) as src:
-            pass #self.sftp.putfo(src, dest)
+    def put(self, src_bytes, dest):        
+        if (dest.startswith("/")):
+            full_destination=dest
+        else:
+            full_destination=self.remote_base_dir+"/"+dest
+        temp = tempfile.NamedTemporaryFile()
+        temp.write(src_bytes)
+        temp.flush()
+        output, errors=self._execute_command("scp "+temp.name+" "+self.hostname+":"+full_destination)
+        self._checkForErrors(errors)
+        temp.close()
 
     @throttle
     def get(self, src):
-        log.info("Copying from %s:%s", self.host, os.path.join(self.getcwd(), src))
-        with io.BytesIO() as dest:
-            #self.sftp.getfo(src, dest)
-            return dest.getvalue()    
+        if (src.startswith("/")):
+            full_src=src
+        else:
+            full_src=self.remote_base_dir+"/"+src
+        temp = tempfile.NamedTemporaryFile(mode="rb")
+        output, errors=self._execute_command("scp "+self.hostname+":"+full_src+" "+temp.name)
+        if not self._checkForErrors(errors):
+            read_bytes=temp.read()
+            temp.close()
+            return read_bytes
+        else:
+            return b''
 
     def checkForUpdateToQueueData(self):
         elapsed=datetime.datetime.now() - self.queue_last_updated
