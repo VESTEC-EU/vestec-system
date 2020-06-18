@@ -63,6 +63,7 @@ class Simulation(db.Entity):
     results_handler = pny.Optional(str)
     walltime = pny.Optional(datetime.timedelta)
     nodes = pny.Optional(int)
+    performance_data = pny.Set("PerformanceData")
 
 
 #lock for workflow handlers

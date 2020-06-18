@@ -6,7 +6,7 @@ import os
 import pony.orm as pny
 import requests
 import json
-from Database import PerformanceData, Job
+from Database import PerformanceData, Simulation
 
 if "VESTEC_EDI_URI" in os.environ:
     EDI_URL = os.environ["VESTEC_EDI_URI"]
@@ -21,21 +21,25 @@ else:
 def add_performance_data(message):
     """ add performance data to database
         expected fields in message["data"]:
-            - ["JobID"]: id of the compute job in the VESTEC database
+            - ["machine"]: name of the machine
+            - ["jobID"]: job id on the HPC machine
             - ["type"]: type of the performance data ("timings", "likwid", etc.)
             - ["raw_json"]: performance data in json format
     """
-    job_id = message["data"]["JobID"]
     data_type = message["data"]["type"]
+    machine = message["data"]["machine"]
+    job_id = message["data"]["JobID"]
     # pipe this through the json module for consistent formatting
     # removing indentation to save space in the database
     raw_json = json.dumps(json.loads(message["data"]["raw_json"]))
     new_db_entry = PerformanceData(
-        job=Job[job_id], data_type=data_type, raw_json=raw_json
+        simulation=Simulation.get(machine=machine, jobID=job_id),
+        data_type=data_type,
+        raw_json=raw_json,
     )
     print(
         "Performance data of job {} has been added to the database".format(
-            new_db_entry.job.job_id
+            new_db_entry.simulation.uuid
         )
     )
 
@@ -46,7 +50,7 @@ def initialise_performance_data(message):
     myobj = {
         "queuename": "add_performance_data",
         "incidentid": message["IncidentID"],
-        "endpoint": "add_performance_data" + message["IncidentID"],
+        "endpoint": "add_performance_data",
     }
     x = requests.post(EDI_URL + "/register", json=myobj)
     print("EDI response for manually add data" + x.text)

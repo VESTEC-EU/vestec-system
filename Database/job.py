@@ -27,8 +27,6 @@ class Job(db.Entity):
     end_time = pny.Optional(datetime.datetime)
     status = pny.Required(str, default="QUEUED")
 
-    performance_data = pny.Set("PerformanceData")
-
     def setStatus(self, status):
         self.status = status
 

@@ -1,7 +1,7 @@
 import pony.orm as pny
 from enum import Enum
 from Database import db
-from Database.job import Job
+from Database.workflow import Simulation
 
 
 class PerformanceDataType(Enum):
@@ -10,6 +10,6 @@ class PerformanceDataType(Enum):
 
 
 class PerformanceData(db.Entity):
-    job = pny.Required(Job)
+    simulation = pny.Required(Simulation)
     data_type = pny.Required(PerformanceDataType)
     raw_json = pny.Required(str)
