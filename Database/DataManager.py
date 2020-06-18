@@ -8,7 +8,7 @@ class Data(db.Entity):
     id = pny.PrimaryKey(str)
     machine = pny.Required(str)
     filename = pny.Required(str)
-    path = pny.Required(str)
+    path = pny.Optional(str)
     description = pny.Required(str)
     size = pny.Required(int)
     metadata = pny.Optional(str) #json with optional "stuff" in it
