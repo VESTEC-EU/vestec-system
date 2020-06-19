@@ -9,6 +9,7 @@ class Data(db.Entity):
     machine = pny.Required(str)
     filename = pny.Required(str)
     path = pny.Optional(str)
+    storage_technology = pny.Required(str,default="FILESYSTEM") #could be FILESYSTEM, VESTECDB, OBJECTSTORE
     description = pny.Required(str)
     size = pny.Required(int)
     metadata = pny.Optional(str) #json with optional "stuff" in it

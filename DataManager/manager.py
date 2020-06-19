@@ -72,30 +72,44 @@ def info(id=None):
 def register():
     #get the info from the request
     fname = flask.request.form["filename"]
-    path = flask.request.form["path"]
+    if "path" in flask.request.form:
+        path = flask.request.form["path"]
+    else:
+        path = ""
     machine = flask.request.form["machine"]
     description = flask.request.form["description"]
     size = flask.request.form["size"]
     originator = flask.request.form["originator"]
     group = flask.request.form["group"]
+    if "storage_technology" in flask.request.form:
+        storage_technology = flask.request.form["storage_technology"]
+    else:
+        storage_technology = "FILESYSTEM"
 
     if _checkExists(machine,fname,path):
         return "File already exists", 406
 
     #register this with the database and return its UUID
-    id=_register(fname,path,machine,description,size,originator,group)
+    id=_register(fname,path,machine,description,size,originator,group,storage_technology)
     return id, 201
 
 #instructs the data manager to download data from the internet onto a specified machine. Returns a uuid for that data entity
 @app.route("/DM/getexternal",methods=["PUT"])
 def GetExternal():
     #get required fields from the header
-    fname = flask.request.form["filename"]
-    path = flask.request.form["path"]
+    fname = flask.request.form["filename"]    
+    if "path" in flask.request.form:
+        path = flask.request.form["path"]
+    else:
+        path = ""
     machine = flask.request.form["machine"]
     description = flask.request.form["description"]
     originator = flask.request.form["originator"]
     group = flask.request.form["group"]
+    if "storage_technology" in flask.request.form:
+        storage_technology = flask.request.form["storage_technology"]
+    else:
+        storage_technology = "FILESYSTEM"
     url = flask.request.form["url"]
     protocol = flask.request.form["protocol"]
     options = json.loads(flask.request.form["options"])
@@ -112,7 +126,7 @@ def GetExternal():
     if status == OK:
         size=options["size"]
         #register this new file with the data manager
-        id=_register(fname,path,machine,description,size,originator,group)
+        id=_register(fname,path, machine, description,size, originator, group, storage_technology)
         return id, 201
     elif status == NOT_IMPLEMENTED:
         return message, 501
@@ -143,7 +157,7 @@ def remove(id):
         file = os.path.join(d.path,d.filename)
 
     #delete this file
-    status, message =_delete(file,machine)    
+    status, message =_delete(file,machine, d.storage_technology)    
 
     if status == FILE_ERROR:
         with pny.db_session:
@@ -189,6 +203,10 @@ def _handle_copy_or_move(id, move):
     #get the options from the header
     dest_machine = flask.request.form["machine"]
     dest = flask.request.form["dest"]
+    if "storage_technology" in flask.request.form:
+        dest_storage_technology = flask.request.form["storage_technology"]
+    else:
+        dest_storage_technology = "FILESYSTEM"
 
     with pny.db_session:
         transfer_id = str(uuid.uuid4())
@@ -206,7 +224,7 @@ def _handle_copy_or_move(id, move):
         return "File already exists", 406    
 
     # perform move or copy on the file
-    status, message =_copy(src, src_machine, dest, dest_machine, move=move)
+    status, message =_copy(src, src_machine, data.storage_technology, dest, dest_machine, dest_storage_technology, move=move)
     date_completed = datetime.datetime.now()
 
     if status == FILE_ERROR:
@@ -227,7 +245,7 @@ def _handle_copy_or_move(id, move):
                 new_id=id
             else:
                 path,fname = os.path.split(dest)
-                new_id =_register(fname,path,dest_machine,description,size,originator,group)
+                new_id =_register(fname,path,dest_machine,description,size,originator,group,dest_storage_technology)
             data_transfer = DataTransfer[transfer_id]
             data_transfer.status = "COMPLETED"
             data_transfer.dst_id = new_id
@@ -238,16 +256,22 @@ def _handle_copy_or_move(id, move):
 
 #Creates a new entry in the database
 @pny.db_session
-def _register(fname,path,machine,description,size,originator,group):
+def _register(fname,path,machine,description,size,originator,group,storage_technology="FILESYSTEM"):
     id = str(uuid.uuid4())
-    d=Data(id=id,machine=machine,filename=fname,path=path,description=description,size=size,date_registered=datetime.datetime.now(),originator=originator,group=group)
+    d=Data(id=id,machine=machine,filename=fname,path=path,description=description,size=size,date_registered=datetime.datetime.now(),originator=originator,group=group,storage_technology=storage_technology)
     return id
 
 #deletes a file, and marks its entry in the database as deleted
-def _delete(file,machine):
-    if machine == "localhost":
-        data_item=LocalDataStorage.get(filename=src)
-        data_item.delete()
+def _delete(file, machine, storage_technology):
+    if machine == "localhost":  
+        if storage_technology == "FILESYSTEM":
+            try:
+                os.remove(file)
+            except OSError as e:
+                return FILE_ERROR, str(e)            
+        elif storage_technology == "VESTECDB":
+            data_item=LocalDataStorage.get(filename=src)
+            data_item.delete()
     else:
         asyncio.run(submit_remove_file_on_machine(machine, file))
     return OK, "Deleted"    
@@ -259,21 +283,32 @@ async def submit_remove_file_on_machine(machine_name, file):
 
 #copies a file between two (possibly remote) locations. If move=true this acts like a move (deletes the source file)
 @pny.db_session
-def _copy(src,src_machine,dest,dest_machine,move=False):
+def _copy(src, src_machine, src_storage_technology, dest, dest_machine, dest_storage_technology, move=False):
     print("Copying %s from %s to %s with new name %s"%(src,src_machine,dest_machine,dest))
     #copy within a machine
     if src_machine == dest_machine:        
         #local copy on the VESTEC server
-        if src_machine == "localhost":            
-            data_item=LocalDataStorage.get(filename=src)
-            if data_item is not None:
+        if src_machine == "localhost":   
+            if src_storage_technology == "FILESYSTEM":
                 if move:
-                    data_item.filename=dest
+                    command = "mv %s %s"%(src,dest)
                 else:
-                    new_data_item=LocalDataStorage(contents=data_item.contents, filename=dest, filetype=data_item.filetype)
-                return OK, "copied"
-            else:
-                return FILE_ERROR, "No such source file"
+                    command = "cp %s %s"%(src,dest)
+                result = subprocess.run(command.split(" "),stdout=subprocess.PIPE, stderr=subprocess.PIPE,text=True)
+                if result.returncode == 0:
+                    return OK, "copied"
+                else:
+                    return FILE_ERROR, result.stderr
+            elif src_storage_technology == "VESTECDB":
+                data_item=LocalDataStorage.get(filename=src)
+                if data_item is not None:
+                    if move:
+                        data_item.filename=dest
+                    else:
+                        new_data_item=LocalDataStorage(contents=data_item.contents, filename=dest, filetype=data_item.filetype)
+                    return OK, "copied"
+                else:
+                    return FILE_ERROR, "No such source file"
 
         #local copy on a remote machine
         else:
@@ -283,17 +318,23 @@ def _copy(src,src_machine,dest,dest_machine,move=False):
     else:
         #copy from VESTEC server to remote machine
         if src_machine == "localhost":
-            data_item=LocalDataStorage.get(filename=src)
-            asyncio.run(submit_copy_bytes_to_machine(dest_machine, data_item.contents, dest))
-            if move:
-                data_item.delete()
-            return OK, "copied"
+            if src_storage_technology == "FILESYSTEM":
+                pass
+            elif src_storage_technology == "VESTECDB":
+                data_item=LocalDataStorage.get(filename=src)
+                asyncio.run(submit_copy_bytes_to_machine(dest_machine, data_item.contents, dest))
+                if move:
+                    data_item.delete()
+                return OK, "copied"
 
         #copy from remote machine to VESTEC server
         elif dest_machine == "localhost":
-            byte_contents=asyncio.run(submit_copy_bytes_from_machine(dest_machine, src, move))
-            new_file = LocalDataStorage(contents=byte_contents, filename=dest, filetype="")
-            return OK, "copied"
+            if dest_storage_technology == "FILESYSTEM":
+                pass
+            elif dest_storage_technology == "VESTECDB":
+                byte_contents=asyncio.run(submit_copy_bytes_from_machine(dest_machine, src, move))
+                new_file = LocalDataStorage(contents=byte_contents, filename=dest, filetype="")
+                return OK, "copied"
 
         #copy between two remote machines
         else:
@@ -389,8 +430,7 @@ def _download(filename,path,machine,url,protocol,options):
             return OK, "Downloaded"
 
 @pny.db_session
-def _checkExists(machine,filename,path):
-    print("Checking for %s, %s, %s"%(machine,filename,path))
+def _checkExists(machine,filename,path):    
     entries = pny.select(d for d in Data if (d.status!="DELETED" and d.status!="UNKNOWN") and d.machine == machine and d.path==path and d.filename == filename)
 
     if len(entries)>0:

@@ -185,7 +185,7 @@ def getDataMetadata(data_uuid, incident_uuid, username):
 def downloadData(data_uuid):
     data_info=requests.get(DATA_MANAGER_URL+"/info/" + data_uuid)
     file_info=data_info.json()
-    if (file_info["path"]=="vestecDB" and file_info["machine"]=="VESTECSERVER"):
+    if (file_info["storage_technology"]=="VESTECDB" and file_info["machine"]=="localhost"):
         data_dump=LocalDataStorage[file_info["filename"]]
         return send_file(io.BytesIO(data_dump.contents),
                      attachment_filename=data_dump.filename,
@@ -198,8 +198,6 @@ def deleteData(data_uuid, incident_uuid, username):
     if success:
         data_info=requests.get(DATA_MANAGER_URL+"/info/" + data_uuid)
         file_info=data_info.json()
-        if (file_info["path"]=="vestecDB" and file_info["machine"]=="VESTECSERVER"):
-            LocalDataStorage[file_info["filename"]].delete()
         requests.delete(DATA_MANAGER_URL+"/remove/" + data_uuid)    
         return jsonify({"status": 200, "msg": "Data deleted"}) 
     else:

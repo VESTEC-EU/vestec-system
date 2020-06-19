@@ -37,7 +37,7 @@ def manually_add_data(message):
     new_file = LocalDataStorage(contents=data, filename=file_contents_to_add["filename"], filetype=filetype)
     pny.commit()    
 
-    myobj = {'filename': str(new_file.uuid), 'path':'vestecDB', 'machine':'VESTECSERVER', 'description':'manually uploaded', 'size':str(len(data)), 'originator':'manually added','group' : 'none'}
+    myobj = {'filename': str(new_file.uuid), 'machine':'localhost', 'storage_technology' : 'VESTECDB', 'description':'manually uploaded', 'size':str(len(data)), 'originator':'manually added','group' : 'none'}
     x = requests.put(DATA_MANAGER_URL+'/register', data=myobj)    
     incidentId=message["IncidentID"]
     incident=Incident[incidentId]
