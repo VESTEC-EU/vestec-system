@@ -269,7 +269,7 @@ def process_hotspots(msg):
                 description = "%s hotspots for region on %s"%(sensor,date),
                 originator = "process hotspots handler",
                 group = "hotspot",
-                storage_technology= "VESTECDB"
+                storage_technology= "VESTECDB",
                 incident = incident)
 
     #clean up files we no longer need
