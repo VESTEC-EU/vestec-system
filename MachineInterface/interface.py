@@ -20,7 +20,7 @@ async def wait_for_interrupt():
 
 async def main():
     p = argparse.ArgumentParser(description="Machine Proxy server")
-    p.add_argument("--config", default="machines.yml", help="configuration file")
+    p.add_argument("--config", default="machines.yaml", help="configuration file")
     p.add_argument(
         "names",
         nargs="*",
