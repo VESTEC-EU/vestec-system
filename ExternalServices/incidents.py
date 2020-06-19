@@ -118,9 +118,9 @@ def packageIncident(stored_incident, include_sort_key, include_digraph, include_
     if (stored_incident.date_completed is not None):
         incident["date_completed"]=stored_incident.date_completed.strftime("%d/%m/%Y, %H:%M:%S")
     incident["incident_date"]=stored_incident.incident_date.strftime("%d/%m/%Y, %H:%M:%S")
-    if (stored_incident.upper_left_latlong is not ""):
+    if (stored_incident.upper_left_latlong != ""):
         incident["upper_left_latlong"]=stored_incident.upper_left_latlong
-    if (stored_incident.lower_right_latlong is not ""):
+    if (stored_incident.lower_right_latlong != ""):
         incident["lower_right_latlong"]=stored_incident.lower_right_latlong
     if (include_sort_key): incident["srt_key"]=stored_incident.incident_date
     if (include_digraph):
