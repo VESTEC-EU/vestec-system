@@ -1,4 +1,5 @@
-FROM python:3-slim
+FROM python:3.7-slim
+EXPOSE 5000
 COPY . /app
 WORKDIR /app/DataManager
 RUN apt update

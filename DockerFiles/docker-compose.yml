@@ -25,7 +25,8 @@ services:
     ports:
       - 8000:8000
     environment:
-      VESTEC_MANAGER_URI: "http://manager:5500/jobs"
+      VESTEC_SM_URI: "http://simmanager:5505/SM"
+      VESTEC_MSM_URI: "http://msm:5502/MSM"
       VESTEC_EDI_URI: "http://edi:5501/EDImanager"
       VESTEC_DM_URI : "http://datamanager:5000/DM"
       JWT_PASSWD: "SECRET"  # to be replaced by docker secrets
@@ -34,13 +35,45 @@ services:
     networks:
       - vestec
 
-  manager:
-    container_name: manager
+  simmanager:
+    container_name: simmanager
     depends_on:
       - "maria"
     build:
       context: ../
       dockerfile: SimulationManager/Dockerfile
+    #WE ONLY NEED THIS IF WE ARE USING SQLITE
+    # volumes:
+    #   - "../Database:/database"
+    environment:
+      VESTEC_MSM_URI: "http://msm:5502/MSM"
+    env_file:
+      - environment_variables.env
+    networks:
+      - vestec
+
+  msm:
+    container_name: msm
+    depends_on:
+      - "maria"
+    build:
+      context: ../
+      dockerfile: MachineStatusManager/Dockerfile
+    #WE ONLY NEED THIS IF WE ARE USING SQLITE
+    # volumes:
+    #   - "../Database:/database"
+    env_file:
+      - environment_variables.env
+    networks:
+      - vestec
+
+  machineinterface:
+    container_name: machineinterface
+    depends_on:
+      - "maria"
+    build:
+      context: ../
+      dockerfile: MachineInterface/Dockerfile
     #WE ONLY NEED THIS IF WE ARE USING SQLITE
     # volumes:
     #   - "../Database:/database"
@@ -89,7 +122,9 @@ services:
     build:
       context: ../
       dockerfile: WorkflowManager/Dockerfile
-    environment:    
+    environment:
+      VESTEC_SM_URI: "http://simmanager:5505/SM"
+      VESTEC_MSM_URI: "http://msm:5502/MSM"
       VESTEC_EDI_URI: "http://edi:5501/EDImanager"
       VESTEC_DM_URI : "http://datamanager:5000/DM"
     env_file:
@@ -104,8 +139,6 @@ services:
     build:
       context: ../
       dockerfile: DataManager/Dockerfile
-    environment:    
-      VESTEC_EDI_URI: "http://edi:5501/EDImanager"
     env_file:
       - environment_variables.env
     networks:

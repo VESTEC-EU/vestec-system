@@ -1,0 +1,7 @@
+pony
+aio-pika
+aiormq
+pika
+pyYAML
+fabric
+paramiko
