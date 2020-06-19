@@ -66,6 +66,12 @@ def init(msg):
     #make the working directory for this incident
     os.mkdir(os.path.join(wkdir,incident))
 
+    #make sure the coordinates are in the incident DB
+    with pny.db_session:
+        i = Incident[incident]
+        if i.lower_right_latlong == "" or i.upper_left_latlong=="":
+            raise ValueError("Region coordinates not provided with incident")
+
     workflow.setIncidentActive(incident)
     
     #register EDI to poll for MODIS data
@@ -226,8 +232,27 @@ def process_hotspots(msg):
     outputdir = os.path.join(msg["baseDir"],"output")
     date = msg["date"]
     
+    try:
+        with pny.db_session:
+            i = Incident[incident]
+            upperLeft = i.upper_left_latlong
+            lowerRight = i.lower_right_latlong
+            
+            lonmin, latmax = upperLeft.split("/")
+            lonmax, latmin = lowerRight.split("/")
+
+            lonmin = float(lonmin)
+            latmax = float(latmax)
+            lonmax = float(lonmax)
+            latmin = float(latmax)
+    except Exception as e:
+        raise ValueError("Unable to parse region coordinates") from e
+
+    points = [lonmin,latmax,lonmax,latmin]
+
+    
     #This needs to be taken from the Incident table in the DB eventually
-    points = [1.8347167968750002, 53.38332836757156, 11.744384765625, 48.75618876280552]
+    #points = [1.8347167968750002, 53.38332836757156, 11.744384765625, 48.75618876280552]
     
     #make the directry to place the hotspots files
     os.mkdir(outputdir)
@@ -444,9 +469,9 @@ def RegisterHandlers():
 
 #kick off an incident for the hotspot workflow
 if __name__ == "__main__":
-    # upperRight = "1.8347167968750002/53.38332836757156"
-    # lowerLeft = "11.744384765625/48.75618876280552"
-    incident = workflow.CreateIncident("hotspot", "test_hotspot")
+    upperLeft = "1.8347167968750002/53.38332836757156"
+    lowerRight = "11.744384765625/48.75618876280552"
+    incident = workflow.CreateIncident("hotspot", "test_hotspot",upper_left_latlong=upperLeft,lower_right_latlong=lowerRight)
 
     workflow.OpenConnection()
     workflow.send({"IncidentID": incident},"hotspot_init")
