@@ -80,9 +80,8 @@ def login():
         authorise, message = logins.verify_user(username, password)
 
     if authorise:
-        access_token = create_access_token(identity=username, fresh=True)
-        response = jsonify({"status": 200, "access_token": access_token})
-        set_access_cookies(response, access_token)
+        access_token = create_access_token(identity=username, fresh=True, expires_delta=False)
+        response = jsonify({"status": 200, "access_token": access_token})        
 
         return response
     else:
@@ -110,10 +109,11 @@ def createIncident(username):
     incident_request = request.json    
     incident_name=incident_request.get("incidentName", None)
     incident_kind=incident_request.get("incidentType", None)
-    incident_upper_right_latlong=incident_request.get("upperRightLatlong", "")
-    incident_lower_left_latlong=incident_request.get("lowerLeftLatlong", "")
+    incident_upper_left_latlong=incident_request.get("upperLeftLatlong", "")
+    incident_lower_right_latlong=incident_request.get("lowerRightLatlong", "")
+    incident_duration=incident_request.get("duration", None)
     if incident_name and incident_kind:
-        job_id = incidents.createIncident(incident_name, incident_kind, username, incident_upper_right_latlong, incident_lower_left_latlong)
+        job_id = incidents.createIncident(incident_name, incident_kind, username, incident_upper_left_latlong, incident_lower_right_latlong)
         logger.Log(log.LogType.Website, ("Creation of incident kind %s of name %s by %s" % (incident_name, incident_kind, username)), user=username)
         return jsonify({"status": 201, "msg": "Incident successfully created.", "incidentid" : job_id})    
     else:

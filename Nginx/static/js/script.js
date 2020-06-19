@@ -277,8 +277,9 @@ function submitJob() {
     var job = {}
     job["incidentType"] = $("#incidentType").val();
     job["incidentName"] = $("#incidentName").val();
-    if ($("#upperRightLatlong").val().length > 0) job["upperRightLatlong"] = $("#upperRightLatlong").val();
-    if ($("#lowerLeftLatlong").val().length > 0) job["lowerLeftLatlong"] = $("#lowerLeftLatlong").val();
+    if ($("#upperLeftLatlong").val().length > 0) job["upperLeftLatlong"] = $("#upperLeftLatlong").val();
+    if ($("#lowerRightLatlong").val().length > 0) job["lowerRightLatlong"] = $("#lowerRightLatlong").val();
+    if ($("#duration").val().length > 0) job["duration"] = $("#duration").val();
     
     $.ajax({
         url: "/flask/createincident",
@@ -561,11 +562,11 @@ function loadIncidentDetails(incident) {
     incident_html += '<div class="jobLine"><b>Created On: </b><div>' + incident.incident_date + '</div></div>';
     incident_html += '<div class="jobLine"><b>Created By: </b><div>' + incident.creator + '</div></div>';
     incident_html += '<div class="jobLine"><b>Status: </b><div>' + incident.status + '</div></div>';
-    if ("upper_right_latlong" in incident) {
-        incident_html += '<div class="jobLine"><b>Upper right Lat/Long: </b><div>' + incident.upper_right_latlong + '</div></div>';
+    if ("upper_left_latlong" in incident) {
+        incident_html += '<div class="jobLine"><b>Upper left Lat/Long: </b><div>' + incident.upper_left_latlong + '</div></div>';
     }
-    if ("lower_left_latlong" in incident) {
-        incident_html += '<div class="jobLine"><b>Lower left Lat/Long: </b><div>' + incident.lower_left_latlong + '</div></div>';
+    if ("lower_right_latlong" in incident) {
+        incident_html += '<div class="jobLine"><b>Lower right Lat/Long: </b><div>' + incident.lower_right_latlong + '</div></div>';
     }
     incident_html += '<div class="jobLine"><b>Associated datasets: </b><div>' + incident.data_sets.length + '</div></div>';
     if (incident.status == "COMPLETE") {

@@ -37,8 +37,9 @@ class Incident(db.Entity):
     status = pny.Required(str, default="PENDING")
     comment = pny.Optional(str)
     user_id = pny.Optional(User)
-    upper_right_latlong = pny.Optional(str)
-    lower_left_latlong = pny.Optional(str)
+    upper_left_latlong = pny.Optional(str)
+    lower_right_latlong = pny.Optional(str)
+    duration = pny.Optional(int)
 
     date_started = pny.Required(datetime.datetime)
     date_completed = pny.Optional(datetime.datetime)
@@ -70,6 +71,7 @@ class Simulation(db.Entity):
     walltime = pny.Optional(str)
     num_nodes = pny.Optional(int)
     queue_state_calls = pny.Set("SimulationStateWorkflowCalls")
+    performance_data = pny.Set("PerformanceData")
     
 class SimulationStateWorkflowCalls(db.Entity):
     id = pny.PrimaryKey(int, auto=True)

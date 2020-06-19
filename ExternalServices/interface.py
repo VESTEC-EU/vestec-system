@@ -20,9 +20,7 @@ app = Flask(__name__)  # create an instance if the imported Flask class
 
 # Initialise JWT
 app.config["JWT_SECRET_KEY"] = os.environ["JWT_PASSWD"]
-app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
-app.config["JWT_ACCESS_COOKIE_PATH"] = "/flask/"
-app.config["JWT_COOKIE_CSRF_PROTECT"] = False
+app.config["JWT_TOKEN_LOCATION"] = ["headers"]
 jwt = JWTManager(app)
 
 @app.route('/flask/version', methods=["GET"])
