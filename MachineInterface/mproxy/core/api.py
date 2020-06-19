@@ -18,6 +18,18 @@ class API:
         pass
 
     @rpcmethod
+    def upload(src_file: str, dest_file: str) -> None:
+        pass
+
+    @rpcmethod
+    def download(src_file: str, dest_file: str) -> None:
+        pass
+
+    @rpcmethod
+    def remote_copy(src_file: str, dest_machine:str, dest_file: str) -> None:
+        pass
+
+    @rpcmethod
     def cd(dirname: str) -> None:
         pass
 

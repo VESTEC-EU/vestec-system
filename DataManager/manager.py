@@ -318,8 +318,8 @@ def _copy(src, src_machine, src_storage_technology, dest, dest_machine, dest_sto
     else:
         #copy from VESTEC server to remote machine
         if src_machine == "localhost":
-            if src_storage_technology == "FILESYSTEM":
-                pass
+            if src_storage_technology == "FILESYSTEM":                
+                asyncio.run(transfer_file_to_or_from_machine(dest_machine, src, dest, download=False))
             elif src_storage_technology == "VESTECDB":
                 data_item=LocalDataStorage.get(filename=src)
                 asyncio.run(submit_copy_bytes_to_machine(dest_machine, data_item.contents, dest))
@@ -330,37 +330,33 @@ def _copy(src, src_machine, src_storage_technology, dest, dest_machine, dest_sto
         #copy from remote machine to VESTEC server
         elif dest_machine == "localhost":
             if dest_storage_technology == "FILESYSTEM":
-                pass
+                asyncio.run(transfer_file_to_or_from_machine(src_machine, src, dest, download=True))
             elif dest_storage_technology == "VESTECDB":
-                byte_contents=asyncio.run(submit_copy_bytes_from_machine(dest_machine, src, move))
+                byte_contents=asyncio.run(submit_copy_bytes_from_machine(src_machine, src, move))
                 new_file = LocalDataStorage(contents=byte_contents, filename=dest, filetype="")
                 return OK, "copied"
 
         #copy between two remote machines
         else:
-            connection = ConnectionManager.RemoteConnection(src_machine)
-            user = ConnectionManager.machines[dest_machine]["username"]
+            dest_user = ConnectionManager.machines[dest_machine]["username"]
             machine = ConnectionManager.machines[dest_machine]["host"]
-            machinestr = user+"@"+machine+":"+dest
-            cmd = "scp "+src+" "+machinestr
-            print(cmd)
-            stdout, stderr, code = connection.ExecuteCommand(cmd)
-            if code != 0:
-                print("Error")
-                print(stderr)
-                connection.CloseConnection()
-                return FILE_ERROR, stderr
-            else:
-                if move:
-                    try:
-                        connection.rm(src)
-                    except Exception as e:
-                        print("Error: unable to remove file")
-                        print("%s"%e)
-                        connection.CloseConnection()
-                        return FILE_ERROR, str(e)
-                connection.CloseConnection()
-                return OK, "copied"
+            asyncio.run(submit_remote_copy_betwee_machines(src_machine, src, dest_machine, dest_file, move))          
+            return OK, "copied"
+
+async def submit_remote_copy_betwee_machines(src_machine_name, src_file, dest_machine, dest_file, move):
+    connection = await aio_pika.connect(host="localhost")
+    client = await Client.create(machine_name, connection)              
+    await client.remote_copy(src_file, dest_machine, dest_username, dest_file)
+    if move:
+        await client.rm(src_file)
+
+async def transfer_file_to_or_from_machine(machine_name, src, dest, download):
+    connection = await aio_pika.connect(host="localhost")
+    client = await Client.create(machine_name, connection)
+    if download:          
+        await client.download(src, dest)
+    else:
+        await client.upload(src, dest)
 
 async def submit_move_or_copy_file_on_machine(machine_name, src, dest, move):
     connection = await aio_pika.connect(host="localhost")
@@ -370,12 +366,12 @@ async def submit_move_or_copy_file_on_machine(machine_name, src, dest, move):
     else:
         await client.cp(src, dest)
 
-async def submit_copy_bytes_from_machine(machine_name, dest, move=False):    
+async def submit_copy_bytes_from_machine(machine_name, src_file, move=False):    
     connection = await aio_pika.connect(host="localhost")
     client = await Client.create(machine_name, connection)    
-    byte_contents= await client.get(dest)                
+    byte_contents= await client.get(src_filest)                
     if move:
-        await client.rm(dest)
+        await client.rm(src_file)
     return byte_contents
 
 async def submit_copy_bytes_to_machine(machine_name, src_bytes, dest):    

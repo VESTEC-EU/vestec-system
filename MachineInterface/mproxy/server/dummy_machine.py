@@ -41,6 +41,18 @@ class DummyMachineConnection(ThrottlableMixin):
         return self._get
 
     @throttle
+    def upload(src_file, dest_file):
+        log.info("%s.upload(%s)", self.name, src_file)
+
+    @throttle
+    def download(src_file, dest_file):
+        log.info("%s.download(%s)", self.name, src_file)
+
+    @throttle
+    def remote_copy(src_file, dest_machine, dest_file):
+        log.info("%s.remote_copy(%s)", self.name, src_file)
+
+    @throttle
     def cd(self, dirname):
         log.info("%s.cd(%s)", self.name, dirname)
 

@@ -69,6 +69,21 @@ class OpenSSHMachineConnection(ThrottlableMixin):
         else:
             return b''
 
+    @throttle
+    def upload(src_file, dest_file):
+        output, errors=self._execute_command("scp "+src_file+" "+self.hostname+":"+dest_file)
+        self._checkForErrors(errors)
+
+    @throttle
+    def download(src_file, dest_file):
+        output, errors=self._execute_command("scp "+self.hostname+":"+src_file+" "+dest_file)
+        self._checkForErrors(errors)
+
+    @throttle
+    def remote_copy(src_file, dest_machine, dest_file):
+        output, errors=self.run("scp "+file+" "+dest_machine+":"+dest_file)
+        self._checkForErrors(errors)        
+
     def checkForUpdateToQueueData(self):
         elapsed=datetime.datetime.now() - self.queue_last_updated
         if not self.queue_info or elapsed.total_seconds() > 600:
