@@ -109,6 +109,7 @@ def createIncident(username):
     incident_kind=incident_request.get("incidentType", None)
     incident_upper_left_latlong=incident_request.get("upperLeftLatlong", "")
     incident_lower_right_latlong=incident_request.get("lowerRightLatlong", "")
+    incident_duration=incident_request.get("duration", None)
     if incident_name and incident_kind:
         job_id = incidents.createIncident(incident_name, incident_kind, username, incident_upper_left_latlong, incident_lower_right_latlong)
         logger.Log(log.LogType.Website, ("Creation of incident kind %s of name %s by %s" % (incident_name, incident_kind, username)), user=username)

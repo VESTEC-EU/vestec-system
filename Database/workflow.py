@@ -39,6 +39,7 @@ class Incident(db.Entity):
     user_id = pny.Optional(User)
     upper_left_latlong = pny.Optional(str)
     lower_right_latlong = pny.Optional(str)
+    duration = pny.Optional(int)
 
     date_started = pny.Required(datetime.datetime)
     date_completed = pny.Optional(datetime.datetime)

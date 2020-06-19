@@ -246,6 +246,7 @@ function submitJob() {
     job["incidentName"] = $("#incidentName").val();
     if ($("#upperLeftLatlong").val().length > 0) job["upperLeftLatlong"] = $("#upperLeftLatlong").val();
     if ($("#lowerRightLatlong").val().length > 0) job["lowerRightLatlong"] = $("#lowerRightLatlong").val();
+    if ($("#duration").val().length > 0) job["duration"] = $("#duration").val();
     
     $.ajax({
         url: "/flask/createincident",
