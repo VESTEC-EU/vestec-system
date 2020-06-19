@@ -244,7 +244,7 @@ def process_hotspots(msg):
             lonmin = float(lonmin)
             latmax = float(latmax)
             lonmax = float(lonmax)
-            latmin = float(latmax)
+            latmin = float(latmin)
     except Exception as e:
         raise ValueError("Unable to parse region coordinates") from e
 
@@ -252,6 +252,8 @@ def process_hotspots(msg):
 
     
     #This needs to be taken from the Incident table in the DB eventually
+    # print(points)
+    # print([1.8347167968750002, 53.38332836757156, 11.744384765625, 48.75618876280552])
     #points = [1.8347167968750002, 53.38332836757156, 11.744384765625, 48.75618876280552]
     
     #make the directry to place the hotspots files
