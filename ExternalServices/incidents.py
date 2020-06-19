@@ -8,6 +8,7 @@ from functools import wraps
 import networkx as nx
 from networkx.drawing.nx_agraph import to_agraph
 import datetime
+from operator import itemgetter
 
 def checkIfUserCanAccessIncident(incident, user):
     if (incident is not None and user is not None):
@@ -86,6 +87,34 @@ def packageIncident(stored_incident, include_sort_key, include_digraph, include_
     if stored_incident.duration is not None:
         incident["duration"]=stored_incident.duration
     incident["date_started"]=stored_incident.date_started.strftime("%d/%m/%Y, %H:%M:%S")    
+    
+    incident_workflow=RegisteredWorkflow.get(kind=stored_incident.kind)
+    incident["test_workflow"]=incident_workflow.test_workflow
+
+    incident["simulations"]=[]
+    for sim in stored_incident.simulations:
+        simulation_dict={}
+        simulation_dict["uuid"]=sim.uuid
+        if sim.jobID is not None and sim.jobID != "":
+            simulation_dict["jobID"]=sim.jobID        
+
+        simulation_dict["status"]=sim.status
+        simulation_dict["status_updated"]=sim.status_updated.strftime("%d/%m/%Y, %H:%M:%S")
+
+        if sim.status_message is not None and sim.status_message != "":
+            simulation_dict["status_message"]=sim.status_message
+            
+        simulation_dict["created"]=sim.date_created.strftime("%d/%m/%Y, %H:%M:%S")
+        simulation_dict["walltime"]=sim.walltime
+        simulation_dict["kind"]=sim.kind
+        simulation_dict["num_nodes"]=sim.num_nodes
+        simulation_dict["requested_walltime"]=sim.requested_walltime
+        if sim.machine is not None:
+            simulation_dict["machine"]=sim.machine.machine_name             
+        incident["simulations"].append(simulation_dict)
+
+    incident["simulations"]=sorted(incident["simulations"], key=itemgetter('created'), reverse=True)
+
     if (stored_incident.date_completed is not None):
         incident["date_completed"]=stored_incident.date_completed.strftime("%d/%m/%Y, %H:%M:%S")
     incident["incident_date"]=stored_incident.incident_date.strftime("%d/%m/%Y, %H:%M:%S")
@@ -96,8 +125,7 @@ def packageIncident(stored_incident, include_sort_key, include_digraph, include_
     if (include_sort_key): incident["srt_key"]=stored_incident.incident_date
     if (include_digraph):
         incident["digraph"]=str(generateIncidentDiGraph(stored_incident.uuid))
-    if (include_manual_data_queuename):
-        incident_workflow=RegisteredWorkflow.get(kind=stored_incident.kind)
+    if (include_manual_data_queuename):        
         incident["data_queue_name"]=incident_workflow.data_queue_name
     if (include_associated_data):
         incident["data_sets"]=[]

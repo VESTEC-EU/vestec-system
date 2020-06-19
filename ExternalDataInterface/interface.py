@@ -202,10 +202,15 @@ def remove():
         return jsonify({"status": 400, "msg": "The request header does not contain the required fields"}), 400
     
     #get any handlers that match this
-    handlers = EDIHandler.select(lambda d: d.queuename==queuename
+    if (pollperiod != "null" and pollperiod is not None):        
+        handlers = EDIHandler.select(lambda d: d.queuename==queuename
                             and d.incidentid==incidentid 
                             and d.endpoint==endpoint 
-                            and d.pollperiod==pollperiod)
+                            and str(d.pollperiod)==pollperiod)
+    else:
+        handlers = EDIHandler.select(lambda d: d.queuename==queuename
+                            and d.incidentid==incidentid 
+                            and d.endpoint==endpoint)
     
     print("endpoint = ", endpoint)
     

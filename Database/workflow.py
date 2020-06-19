@@ -48,7 +48,7 @@ class Incident(db.Entity):
 
     parameters = pny.Optional(str)
 
-    simulations = pny.Set("Simulation")
+    simulations = pny.Set("Simulation")    
 
     associated_datasets = pny.Set(StoredDataset)
 
@@ -56,16 +56,28 @@ class Incident(db.Entity):
 class Simulation(db.Entity):
     uuid = pny.PrimaryKey(str)
     incident = pny.Required(Incident)
-    status = pny.Required(str,default="NOT SUBMITTED")
-    machine = pny.Optional(str)
+    date_created = pny.Required(datetime.datetime)
+    status = pny.Required(str,default="PENDING")
+    status_updated = pny.Required(datetime.datetime)
+    status_message = pny.Optional(str)
+    machine = pny.Optional("Machine")
     queue = pny.Optional(str)
     jobID = pny.Optional(str)
     wkdir = pny.Optional(str)
+    executable = pny.Required(str)
+    kind = pny.Required(str)
     results_handler = pny.Optional(str)
-    walltime = pny.Optional(datetime.timedelta)
-    nodes = pny.Optional(int)
+    requested_walltime = pny.Optional(str)
+    walltime = pny.Optional(str)
+    num_nodes = pny.Optional(int)
+    queue_state_calls = pny.Set("SimulationStateWorkflowCalls")
     performance_data = pny.Set("PerformanceData")
-
+    
+class SimulationStateWorkflowCalls(db.Entity):
+    id = pny.PrimaryKey(int, auto=True)
+    queue_state = pny.Required(str)
+    call_name = pny.Required(str)
+    simulation = pny.Required(Simulation)
 
 #lock for workflow handlers
 class Lock(db.Entity):
@@ -80,7 +92,8 @@ class HandlerLog(db.Entity):
     data = pny.Required(str)
 
 class RegisteredWorkflow(db.Entity):
-	kind=pny.Required(str)
-	init_queue_name=pny.Required(str)
-	data_queue_name=pny.Optional(str)
-	users = pny.Set("User")
+    kind=pny.Required(str)
+    init_queue_name=pny.Required(str)
+    data_queue_name=pny.Optional(str)
+    test_workflow = pny.Required(bool, default=False, sql_default='0')
+    users = pny.Set("User")

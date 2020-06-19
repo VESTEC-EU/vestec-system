@@ -29,14 +29,16 @@ logger = log.VestecLogger("Website")
 VERSION_PRECLUDE="1.1"
 version_number=VERSION_PRECLUDE+"."+VERSION_POSTFIX
 
-if "VESTEC_MANAGER_URI" in os.environ:
-    JOB_MANAGER_URI = os.environ["VESTEC_MANAGER_URI"]
+if "VESTEC_MANAGER_URI" in os.environ:    
     EDI_URL = os.environ["VESTEC_EDI_URI"]
-    DATA_MANAGER_URI = os.environ["VESTEC_DM_URI"]
-else:
-    JOB_MANAGER_URI = 'http://127.0.0.1:5500/jobs'
-    EDI_URL= 'http://127.0.0.1:5501/EDImanager'
-    DATA_MANAGER_URI = 'http://localhost:5000/DM'
+    MSM_URL = os.environ["VESTEC_MSM_URI"]
+    DATA_MANAGER_URL = os.environ["VESTEC_DM_URI"]
+    SM_URL= os.environ["VESTEC_SM_URI"]
+else:    
+    EDI_URL= 'http://localhost:5501/EDImanager'
+    MSM_URL= 'http://localhost:5502/MSM'
+    DATA_MANAGER_URL = 'http://localhost:5000/DM'
+    SM_URL = 'http://localhost:5505/SM'
 
 def version():
     return jsonify({"status": 200, "version": version_number})
@@ -75,7 +77,7 @@ def login():
     authorise = False
 
     if username and password:
-        authorise = logins.verify_user(username, password)
+        authorise, message = logins.verify_user(username, password)
 
     if authorise:
         access_token = create_access_token(identity=username, fresh=True, expires_delta=False)
@@ -83,7 +85,7 @@ def login():
 
         return response
     else:
-        return jsonify({"status": 400, "msg": "Incorrect username or password. Please try again."})
+        return jsonify({"status": 400, "msg": message})
 
     logger.Log(log.LogType.Website, str(request), user=username)
 
@@ -181,9 +183,9 @@ def getDataMetadata(data_uuid, incident_uuid, username):
         return jsonify({"status": 200, "metadata": meta_data}) 
 
 def downloadData(data_uuid):
-    data_info=requests.get(DATA_MANAGER_URI+"/info/" + data_uuid)
+    data_info=requests.get(DATA_MANAGER_URL+"/info/" + data_uuid)
     file_info=data_info.json()
-    if (file_info["path"]=="vestecDB" and file_info["machine"]=="VESTECSERVER"):
+    if (file_info["storage_technology"]=="VESTECDB" and file_info["machine"]=="localhost"):
         data_dump=LocalDataStorage[file_info["filename"]]
         return send_file(io.BytesIO(data_dump.contents),
                      attachment_filename=data_dump.filename,
@@ -194,14 +196,23 @@ def downloadData(data_uuid):
 def deleteData(data_uuid, incident_uuid, username):
     success=incidents.removeDataFromIncident(data_uuid, incident_uuid, username)
     if success:
-        data_info=requests.get(DATA_MANAGER_URI+"/info/" + data_uuid)
+        data_info=requests.get(DATA_MANAGER_URL+"/info/" + data_uuid)
         file_info=data_info.json()
-        if (file_info["path"]=="vestecDB" and file_info["machine"]=="VESTECSERVER"):
-            LocalDataStorage[file_info["filename"]].delete()
-        requests.delete(DATA_MANAGER_URI+"/remove/" + data_uuid)    
+        requests.delete(DATA_MANAGER_URL+"/remove/" + data_uuid)    
         return jsonify({"status": 200, "msg": "Data deleted"}) 
     else:
         return jsonify({"status": 401, "msg": "Data deletion failed, no incident data set that you can edit"}) 
+
+@pny.db_session
+def refreshSimulation(request_json):       
+    sim_uuid=request_json.get("sim_uuid", None)
+    returned_info = requests.post(SM_URL + '/refresh/'+sim_uuid)    
+    return Response(returned_info.content, returned_info.status_code)
+
+@pny.db_session
+def cancelSimulation(sim_uuid, username):
+    returned_info = requests.delete(SM_URL + '/simulation/'+sim_uuid)    
+    return Response(returned_info.content, returned_info.status_code)
 
 @pny.db_session
 def getLogs():
@@ -237,7 +248,9 @@ def _getHealthOfComponent(component_name, displayname):
 def getComponentHealths():
     component_healths=[]    
     component_healths.append(_getHealthOfComponent(EDI_URL, "External data interface"))    
-    component_healths.append(_getHealthOfComponent(JOB_MANAGER_URI, "Simulation manager"))    
+    component_healths.append(_getHealthOfComponent(SM_URL, "Simulation manager"))    
+    component_healths.append(_getHealthOfComponent(MSM_URL, "Machine status manager"))    
+    component_healths.append(_getHealthOfComponent(DATA_MANAGER_URL, "Data manager"))
     return json.dumps(component_healths)
 
 def getEDIInfo():
@@ -247,6 +260,30 @@ def getEDIInfo():
 def deleteEDIHandler(retrieved_data):    
     deleted_info = requests.post(EDI_URL + '/remove', json=retrieved_data)    
     return Response(deleted_info.content, deleted_info.status_code)
+
+def retrieveMachineStatuses():
+    machine_statuses=requests.get(MSM_URL + '/machinestatuses')
+    return jsonify({"status": 200, "machine_statuses": machine_statuses.json()})
+
+def addNewMachine(retrieved_data):
+    created_info = requests.post(MSM_URL + '/add', json=retrieved_data)    
+    return Response(created_info.content, created_info.status_code)
+
+def enableMachine(machine_id):
+    enabled_info = requests.post(MSM_URL + '/enable/'+machine_id)    
+    return Response(enabled_info.content, enabled_info.status_code)
+
+def disableMachine(machine_id):
+    disabled_info = requests.post(MSM_URL + '/disable/'+machine_id)    
+    return Response(disabled_info.content, disabled_info.status_code)
+
+def enableTestModeMachine(machine_id):
+    enabled_info = requests.post(MSM_URL + '/enable_testmode/'+machine_id)    
+    return Response(enabled_info.content, enabled_info.status_code)
+
+def disableTestModeMachine(machine_id):
+    disabled_info = requests.post(MSM_URL + '/disable_testmode/'+machine_id)    
+    return Response(disabled_info.content, disabled_info.status_code)    
 
 @pny.db_session
 def deleteWorkflow(retrieved_data):
@@ -273,7 +310,8 @@ def addWorkflow(retrieved_data):
     workflow_kind = retrieved_data.get("kind", None)
     init_queue_name = retrieved_data.get("initqueuename", None)
     data_queue_name = retrieved_data.get("dataqueuename", None)
-    newwf = RegisteredWorkflow(kind=workflow_kind, init_queue_name=init_queue_name, data_queue_name=data_queue_name)
+    istestWorkflow = retrieved_data.get("testworkflow", None)    
+    newwf = RegisteredWorkflow(kind=workflow_kind, init_queue_name=init_queue_name, data_queue_name=data_queue_name, test_workflow=istestWorkflow)
 
     pny.commit()    
     return jsonify({"status": 200, "msg": "Workflow added"})

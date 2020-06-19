@@ -141,6 +141,20 @@ def updateDataMetadata():
 def downloadData(data_uuid):
     return managementAPI.downloadData(data_uuid)
 
+@app.route('/flask/refreshsimulation', methods=['POST'])
+@pny.db_session
+@fresh_jwt_required
+def refreshSimulation():    
+    return managementAPI.refreshSimulation(request.json)
+
+@app.route('/flask/simulation', methods=['DELETE'])
+@pny.db_session
+@fresh_jwt_required
+def cancelSimulation():
+    simulation_uuid = request.args.get("sim_uuid", None)    
+    username = get_jwt_identity()  
+    return managementAPI.cancelSimulation(simulation_uuid, username)
+
 @app.route('/flask/data', methods=['DELETE'])
 @pny.db_session
 @fresh_jwt_required
@@ -254,6 +268,48 @@ def post_edi_data_anon():
 @app.route("/EDI/<sourceid>", methods=["POST"])
 def post_edi_data(sourceid):    
     return EDIconnector.pushDataToEDI(sourceid)
+
+@app.route('/flask/getmachinestatuses', methods=['GET'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def getMachineStatuses():    
+   return managementAPI.retrieveMachineStatuses()
+
+@app.route("/flask/addmachine", methods=["POST"])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def add_new_machine():        
+    return managementAPI.addNewMachine(request.json)
+
+@app.route("/flask/enablemachine/<machineid>", methods=["POST"])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def enable_machine(machineid):
+    return managementAPI.enableMachine(machineid)
+
+@app.route("/flask/disablemachine/<machineid>", methods=["POST"])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def disable_machine(machineid):
+    return managementAPI.disableMachine(machineid)
+
+@app.route("/flask/enabletestmodemachine/<machineid>", methods=["POST"])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def enable_testmode_machine(machineid):
+    return managementAPI.enableTestModeMachine(machineid)
+
+@app.route("/flask/disabletestmodemachine/<machineid>", methods=["POST"])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def disable_test_mode_machine(machineid):
+    return managementAPI.disableTestModeMachine(machineid)
 
 if __name__ == '__main__':    
     app.run(host='0.0.0.0', port=8000)    

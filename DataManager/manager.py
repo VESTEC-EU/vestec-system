@@ -1,5 +1,6 @@
 import sys
 sys.path.append("../")
+sys.path.append("../MachineInterface")
 import flask
 import uuid
 import pony.orm as pny
@@ -10,12 +11,38 @@ import os
 import ConnectionManager
 import json
 import subprocess
+from Database import LocalDataStorage
+from mproxy.client import Client
+import asyncio
+import aio_pika
 
 app = flask.Flask(__name__)
 
 OK=0
 FILE_ERROR=1
 NOT_IMPLEMENTED = 2
+
+@app.route("/DM/health", methods=["GET"])
+def get_health():
+    return flask.jsonify({"status": 200})
+
+@app.route("/DM/search")
+@pny.db_session
+def search():
+    filename=flask.request.args.get("filename", None)
+    path=flask.request.args.get("path", None)
+    machine=flask.request.args.get("machine", None)
+    if filename is None or machine is None:
+        return "Need filename and machine", 501
+    else:        
+        if path is not None:
+            data_obj=Data.get(filename=filename, machine=machine, path=path)
+        else:
+            data_obj=Data.get(filename=filename, machine=machine)
+        if data_obj is None:
+            return "No such data object registered", 404
+        else:
+            return flask.jsonify(data_obj.to_dict()), 200
 
 #Returns the information for all data entities, or for a specified entity
 @app.route("/DM/info")
@@ -45,30 +72,44 @@ def info(id=None):
 def register():
     #get the info from the request
     fname = flask.request.form["filename"]
-    path = flask.request.form["path"]
+    if "path" in flask.request.form:
+        path = flask.request.form["path"]
+    else:
+        path = ""
     machine = flask.request.form["machine"]
     description = flask.request.form["description"]
     size = flask.request.form["size"]
     originator = flask.request.form["originator"]
     group = flask.request.form["group"]
+    if "storage_technology" in flask.request.form:
+        storage_technology = flask.request.form["storage_technology"]
+    else:
+        storage_technology = "FILESYSTEM"
 
     if _checkExists(machine,fname,path):
         return "File already exists", 406
 
     #register this with the database and return its UUID
-    id=_register(fname,path,machine,description,size,originator,group)
+    id=_register(fname,path,machine,description,size,originator,group,storage_technology)
     return id, 201
 
 #instructs the data manager to download data from the internet onto a specified machine. Returns a uuid for that data entity
 @app.route("/DM/getexternal",methods=["PUT"])
 def GetExternal():
     #get required fields from the header
-    fname = flask.request.form["filename"]
-    path = flask.request.form["path"]
+    fname = flask.request.form["filename"]    
+    if "path" in flask.request.form:
+        path = flask.request.form["path"]
+    else:
+        path = ""
     machine = flask.request.form["machine"]
     description = flask.request.form["description"]
     originator = flask.request.form["originator"]
     group = flask.request.form["group"]
+    if "storage_technology" in flask.request.form:
+        storage_technology = flask.request.form["storage_technology"]
+    else:
+        storage_technology = "FILESYSTEM"
     url = flask.request.form["url"]
     protocol = flask.request.form["protocol"]
     options = json.loads(flask.request.form["options"])
@@ -85,7 +126,7 @@ def GetExternal():
     if status == OK:
         size=options["size"]
         #register this new file with the data manager
-        id=_register(fname,path,machine,description,size,originator,group)
+        id=_register(fname,path, machine, description,size, originator, group, storage_technology)
         return id, 201
     elif status == NOT_IMPLEMENTED:
         return message, 501
@@ -96,136 +137,12 @@ def GetExternal():
 #Moves a data entity from one location to another
 @app.route("/DM/move/<id>",methods=["POST"])
 def move(id):
-    #get details of the data object
-    with pny.db_session:
-        try:
-            data=Data[id]
-        except pny.ObjectNotFound:
-            return "Object %s does not exist"%id, 404
-        src = os.path.join(data.path,data.filename)
-        src_machine = data.machine
-        description = data.description
-        size = data.size
-        originator = data.originator
-        group = data.group
-
-    #get the options from the header
-    dest_machine = flask.request.form["machine"]
-    dest = flask.request.form["dest"]
-
-    with pny.db_session:
-        transfer_id = str(uuid.uuid4())
-        data_transfer = DataTransfer(id=transfer_id,
-                                     src_id=id,
-                                     src_machine=src_machine,
-                                     dst_machine=dest_machine,
-                                     date_started=datetime.datetime.now(),
-                                     status="STARTED")
-
-    path,fname = os.path.split(dest)
-    if _checkExists(dest_machine,fname,path):
-        with pny.db_session:
-            DataTransfer[transfer_id].status = "FAILED"
-        return "File already exists", 406
-
-    #move the file
-    try:
-        status, message =_copy(src,src_machine,dest,dest_machine,move=True)
-        date_completed = datetime.datetime.now()
-    except ConnectionManager.ConnectionError as e:
-        with pny.db_session:
-            DataTransfer[transfer_id].status = "FAILED"
-        return str(e), 500
-
-    if status == FILE_ERROR:
-        print("Move failed")
-        with pny.db_session:
-            DataTransfer[transfer_id].status = "FAILED"
-        return message, 500
-    if status == NOT_IMPLEMENTED:
-        with pny.db_session:
-            DataTransfer[transfer_id].status = "FAILED"
-        return message, 501
-    elif status == OK:
-        with pny.db_session:
-            data=Data[id]
-            data.machine = dest_machine
-            data.path, data.filename = os.path.split(dest)
-            data.date_modified=datetime.datetime.now()
-            data_transfer = DataTransfer[transfer_id]
-            data_transfer.status = "COMPLETED"
-            data_transfer.dst_id = id
-            data_transfer.date_completed = date_completed
-            data_transfer.completion_time = (data_transfer.date_completed -
-                                             data_transfer.date_started)
-            print("Move successful")
-        return "Move successful", 200
+    return _handle_copy_or_move(id, True)
 
 #copies a data entity to a new location, returning the uuid of the copy
 @app.route("/DM/copy/<id>",methods=["POST"])
-def copy(id):
-    #get details of the data object
-    with pny.db_session:
-        try:
-            data=Data[id]
-        except pny.ObjectNotFound:
-            return "Object %s does not exist"%id, 404
-        src = os.path.join(data.path,data.filename)
-        src_machine = data.machine
-        description = data.description
-        size = data.size
-        originator = data.originator
-        group = data.group
-
-    #get the options from the header
-    dest_machine = flask.request.form["machine"]
-    dest = flask.request.form["dest"]
-
-    with pny.db_session:
-        transfer_id = str(uuid.uuid4())
-        data_transfer = DataTransfer(id=transfer_id,
-                                     src_id=id,
-                                     src_machine=src_machine,
-                                     dst_machine=dest_machine,
-                                     date_started=datetime.datetime.now(),
-                                     status="STARTED")
-
-    path,fname = os.path.split(dest)
-    if _checkExists(dest_machine,fname,path):
-        with pny.db_session:
-            DataTransfer[transfer_id].status = "FAILED"
-        return "File already exists", 406
-
-    #copy the file
-    try:
-        status, message =_copy(src,src_machine,dest,dest_machine)
-        date_completed = datetime.datetime.now()
-    except ConnectionManager.ConnectionError as e:
-        with pny.db_session:
-            DataTransfer[transfer_id].status = "FAILED"
-        return str(e), 500
-
-    if status == FILE_ERROR:
-        with pny.db_session:
-            DataTransfer[transfer_id].status = "FAILED"
-        return message, 500
-    if status == NOT_IMPLEMENTED:
-        with pny.db_session:
-            DataTransfer[transfer_id].status = "FAILED"
-        return message, 501
-    elif status == OK:
-        with pny.db_session:
-            path,fname = os.path.split(dest)
-            new_id =_register(fname,path,dest_machine,description,size,originator,group)
-            data_transfer = DataTransfer[transfer_id]
-            data_transfer.status = "COMPLETED"
-            data_transfer.dst_id = new_id
-            data_transfer.date_completed = date_completed
-            data_transfer.completion_time = (data_transfer.date_completed -
-                                             data_transfer.date_started)
-        return new_id, 201
-
-
+def copy(id):    
+    return _handle_copy_or_move(id, False)
 
 #deletes a data entity. This marks the entity as "DELETED" in the database and deletes the file
 @app.route("/DM/remove/<id>",methods=["DELETE"])
@@ -240,10 +157,7 @@ def remove(id):
         file = os.path.join(d.path,d.filename)
 
     #delete this file
-    try:
-        status, message =_delete(file,machine)
-    except ConnectionManager.ConnectionError as e:
-        return str(e), 500
+    status, message =_delete(file,machine, d.storage_technology)    
 
     if status == FILE_ERROR:
         with pny.db_session:
@@ -272,144 +186,198 @@ def activate(id):
 
 #--------------------- helper functions --------------------------
 
+def _handle_copy_or_move(id, move):
+    #get details of the data object
+    with pny.db_session:
+        try:
+            data=Data[id]
+        except pny.ObjectNotFound:            
+            return "Object %s does not exist"%id, 404
+        src = os.path.join(data.path,data.filename)
+        src_machine = data.machine
+        description = data.description
+        size = data.size
+        originator = data.originator
+        group = data.group    
 
+    #get the options from the header
+    dest_machine = flask.request.form["machine"]
+    dest = flask.request.form["dest"]
+    if "storage_technology" in flask.request.form:
+        dest_storage_technology = flask.request.form["storage_technology"]
+    else:
+        dest_storage_technology = "FILESYSTEM"
+
+    with pny.db_session:
+        transfer_id = str(uuid.uuid4())
+        data_transfer = DataTransfer(id=transfer_id,
+                                     src_id=id,
+                                     src_machine=src_machine,
+                                     dst_machine=dest_machine,
+                                     date_started=datetime.datetime.now(),
+                                     status="STARTED")
+
+    path,fname = os.path.split(dest)
+    if _checkExists(dest_machine,fname,path):        
+        with pny.db_session:
+            DataTransfer[transfer_id].status = "FAILED"
+        return "File already exists", 406    
+
+    # perform move or copy on the file
+    status, message =_copy(src, src_machine, data.storage_technology, dest, dest_machine, dest_storage_technology, move=move)
+    date_completed = datetime.datetime.now()
+
+    if status == FILE_ERROR:
+        with pny.db_session:
+            DataTransfer[transfer_id].status = "FAILED"
+        return message, 500
+    if status == NOT_IMPLEMENTED:
+        with pny.db_session:
+            DataTransfer[transfer_id].status = "FAILED"
+        return message, 501
+    elif status == OK:
+        with pny.db_session:
+            if move:
+                data=Data[id]
+                data.machine = dest_machine
+                data.path, data.filename = os.path.split(dest)
+                data.date_modified=datetime.datetime.now()
+                new_id=id
+            else:
+                path,fname = os.path.split(dest)
+                new_id =_register(fname,path,dest_machine,description,size,originator,group,dest_storage_technology)
+            data_transfer = DataTransfer[transfer_id]
+            data_transfer.status = "COMPLETED"
+            data_transfer.dst_id = new_id
+            data_transfer.date_completed = date_completed
+            data_transfer.completion_time = (data_transfer.date_completed -
+                                             data_transfer.date_started)
+        return new_id, 201
 
 #Creates a new entry in the database
 @pny.db_session
-def _register(fname,path,machine,description,size,originator,group):
+def _register(fname,path,machine,description,size,originator,group,storage_technology="FILESYSTEM"):
     id = str(uuid.uuid4())
-    d=Data(id=id,machine=machine,filename=fname,path=path,description=description,size=size,date_registered=datetime.datetime.now(),originator=originator,group=group)
+    d=Data(id=id,machine=machine,filename=fname,path=path,description=description,size=size,date_registered=datetime.datetime.now(),originator=originator,group=group,storage_technology=storage_technology)
     return id
 
 #deletes a file, and marks its entry in the database as deleted
-def _delete(file,machine):
-    if machine == "localhost":
-        print("Deleting %s"%file)
-        try:
-            os.remove(file)
-        except OSError as e:
-            return FILE_ERROR, str(e)
-        else:
-            return OK, "deleted"
+def _delete(file, machine, storage_technology):
+    if machine == "localhost":  
+        if storage_technology == "FILESYSTEM":
+            try:
+                os.remove(file)
+            except OSError as e:
+                return FILE_ERROR, str(e)            
+        elif storage_technology == "VESTECDB":
+            data_item=LocalDataStorage.get(filename=src)
+            data_item.delete()
     else:
-        connection = ConnectionManager.RemoteConnection(machine)
-        try:
-            connection.rm(file)
-        except Exception as e:
-            print("Deletion failed")
-            print("%s"%e)
-            connection.CloseConnection()
-            return FILE_ERROR, str(e)
-        connection.CloseConnection()
-        return OK, "Deleted"
+        asyncio.run(submit_remove_file_on_machine(machine, file))
+    return OK, "Deleted"    
 
-        #return NOT_IMPLEMENTED
-
+async def submit_remove_file_on_machine(machine_name, file):
+    connection = await aio_pika.connect(host="localhost")
+    client = await Client.create(machine_name, connection)    
+    await client.rm(file)
 
 #copies a file between two (possibly remote) locations. If move=true this acts like a move (deletes the source file)
-def _copy(src,src_machine,dest,dest_machine,move=False):
+@pny.db_session
+def _copy(src, src_machine, src_storage_technology, dest, dest_machine, dest_storage_technology, move=False):
     print("Copying %s from %s to %s with new name %s"%(src,src_machine,dest_machine,dest))
     #copy within a machine
-    if src_machine == dest_machine:
-        if move:
-            command = "mv %s %s"%(src,dest)
-        else:
-            command = "cp %s %s"%(src,dest)
-
-        print(command)
-
+    if src_machine == dest_machine:        
         #local copy on the VESTEC server
-        if src_machine == "localhost":
-            result = subprocess.run(command.split(" "),stdout=subprocess.PIPE, stderr=subprocess.PIPE,text=True)
-            if result.returncode == 0:
-                return OK, "copied"
-            else:
-                return FILE_ERROR, result.stderr
+        if src_machine == "localhost":   
+            if src_storage_technology == "FILESYSTEM":
+                if move:
+                    command = "mv %s %s"%(src,dest)
+                else:
+                    command = "cp %s %s"%(src,dest)
+                result = subprocess.run(command.split(" "),stdout=subprocess.PIPE, stderr=subprocess.PIPE,text=True)
+                if result.returncode == 0:
+                    return OK, "copied"
+                else:
+                    return FILE_ERROR, result.stderr
+            elif src_storage_technology == "VESTECDB":
+                data_item=LocalDataStorage.get(filename=src)
+                if data_item is not None:
+                    if move:
+                        data_item.filename=dest
+                    else:
+                        new_data_item=LocalDataStorage(contents=data_item.contents, filename=dest, filetype=data_item.filetype)
+                    return OK, "copied"
+                else:
+                    return FILE_ERROR, "No such source file"
 
         #local copy on a remote machine
         else:
-            connection=ConnectionManager.RemoteConnection(src_machine)
-            if move:
-                cmd = "mv %s %s"%(src,dest)
-            else:
-                cmd = "cp %s %s"%(src,dest)
-            stdout, stderr, code = connection.ExecuteCommand(cmd)
-            connection.CloseConnection()
-            if code == 0:
-                return OK, "copied"
-            else:
-                print("Error")
-                print(stderr)
-                return FILE_ERROR, stderr
+            asyncio.run(submit_move_or_copy_file_on_machine(dest_machine, src, dest, move))            
+            return OK, "copied"
 
     else:
         #copy from VESTEC server to remote machine
         if src_machine == "localhost":
-            connection = ConnectionManager.RemoteConnection(dest_machine)
-            try:
-                connection.CopyToMachine(src,dest)
-            except FileNotFoundError as e:
-                print("Error: %s"%e)
-                connection.CloseConnection()
-                return FILE_ERROR, str(e)
-            else:
-                connection.CloseConnection()
+            if src_storage_technology == "FILESYSTEM":                
+                asyncio.run(transfer_file_to_or_from_machine(dest_machine, src, dest, download=False))
+            elif src_storage_technology == "VESTECDB":
+                data_item=LocalDataStorage.get(filename=src)
+                asyncio.run(submit_copy_bytes_to_machine(dest_machine, data_item.contents, dest))
                 if move:
-                    try:
-                        result=os.remove(src)
-                    except OSError as e:
-                        print("Error - Unable to remove local file")
-                        return FILE_ERROR, str(e)
+                    data_item.delete()
                 return OK, "copied"
 
         #copy from remote machine to VESTEC server
         elif dest_machine == "localhost":
-            connection = ConnectionManager.RemoteConnection(src_machine)
-            try:
-                connection.CopyFromMachine(src,dest)
-            except FileNotFoundError as e:
-                print("Error: %s"%e)
-                connection.CloseConnection()
-                return FILE_ERROR, str(e)
-            else:
-                if move:
-                    try:
-                        connection.rm(src)
-                    except Exception as e:
-                        connection.CloseConnection()
-                        print('Error: Unable to remove file')
-                        print("%s"%e)
-                        return FILE_ERROR, str(e)
-                connection.CloseConnection()
+            if dest_storage_technology == "FILESYSTEM":
+                asyncio.run(transfer_file_to_or_from_machine(src_machine, src, dest, download=True))
+            elif dest_storage_technology == "VESTECDB":
+                byte_contents=asyncio.run(submit_copy_bytes_from_machine(src_machine, src, move))
+                new_file = LocalDataStorage(contents=byte_contents, filename=dest, filetype="")
                 return OK, "copied"
 
         #copy between two remote machines
         else:
-            connection = ConnectionManager.RemoteConnection(src_machine)
-            user = ConnectionManager.machines[dest_machine]["username"]
+            dest_user = ConnectionManager.machines[dest_machine]["username"]
             machine = ConnectionManager.machines[dest_machine]["host"]
-            machinestr = user+"@"+machine+":"+dest
-            cmd = "scp "+src+" "+machinestr
-            print(cmd)
-            stdout, stderr, code = connection.ExecuteCommand(cmd)
-            if code != 0:
-                print("Error")
-                print(stderr)
-                connection.CloseConnection()
-                return FILE_ERROR, stderr
-            else:
-                if move:
-                    try:
-                        connection.rm(src)
-                    except Exception as e:
-                        print("Error: unable to remove file")
-                        print("%s"%e)
-                        connection.CloseConnection()
-                        return FILE_ERROR, str(e)
-                connection.CloseConnection()
-                return OK, "copied"
+            asyncio.run(submit_remote_copy_betwee_machines(src_machine, src, dest_machine, dest_file, move))          
+            return OK, "copied"
 
+async def submit_remote_copy_betwee_machines(src_machine_name, src_file, dest_machine, dest_file, move):
+    connection = await aio_pika.connect(host="localhost")
+    client = await Client.create(machine_name, connection)              
+    await client.remote_copy(src_file, dest_machine, dest_username, dest_file)
+    if move:
+        await client.rm(src_file)
 
+async def transfer_file_to_or_from_machine(machine_name, src, dest, download):
+    connection = await aio_pika.connect(host="localhost")
+    client = await Client.create(machine_name, connection)
+    if download:          
+        await client.download(src, dest)
+    else:
+        await client.upload(src, dest)
+
+async def submit_move_or_copy_file_on_machine(machine_name, src, dest, move):
+    connection = await aio_pika.connect(host="localhost")
+    client = await Client.create(machine_name, connection)
+    if move:          
+        await client.mv(src, dest)
+    else:
+        await client.cp(src, dest)
+
+async def submit_copy_bytes_from_machine(machine_name, src_file, move=False):    
+    connection = await aio_pika.connect(host="localhost")
+    client = await Client.create(machine_name, connection)    
+    byte_contents= await client.get(src_filest)                
+    if move:
+        await client.rm(src_file)
+    return byte_contents
+
+async def submit_copy_bytes_to_machine(machine_name, src_bytes, dest):    
+    connection = await aio_pika.connect(host="localhost")
+    client = await Client.create(machine_name, connection)
+    await client.put(src_bytes, dest)
 
 #downloads a file to a (possibly remote) location
 def _download(filename,path,machine,url,protocol,options):
@@ -458,17 +426,13 @@ def _download(filename,path,machine,url,protocol,options):
             return OK, "Downloaded"
 
 @pny.db_session
-def _checkExists(machine,filename,path):
-    print("Checking for %s, %s, %s"%(machine,filename,path))
+def _checkExists(machine,filename,path):    
     entries = pny.select(d for d in Data if (d.status!="DELETED" and d.status!="UNKNOWN") and d.machine == machine and d.path==path and d.filename == filename)
 
     if len(entries)>0:
         return True
     else:
         return False
-
-
-
 
 if __name__ == "__main__":
     initialiseDatabase()
