@@ -8,6 +8,7 @@ import datetime
 import zipfile
 import json
 import pony.orm as pny
+from Database import LocalDataStorage
 import geopandas as gpd
 
 from Database import Incident
@@ -268,6 +269,7 @@ def process_hotspots(msg):
                 description = "%s hotspots for region on %s"%(sensor,date),
                 originator = "process hotspots handler",
                 group = "hotspot",
+                storage_technology= "VESTECDB"
                 incident = incident)
 
     #clean up files we no longer need
@@ -303,7 +305,7 @@ def zip(files,target):
     file.close()
 
 #register a file with the DM
-def dm_register(file,machine,description,originator,group, incident):
+def dm_register(file,machine,description,originator,group, incident, storage_technology):
     print("Registering %s with DataManager"%file)
     path, filename = os.path.split(file)
     size = os.path.getsize(file)
@@ -315,7 +317,8 @@ def dm_register(file,machine,description,originator,group, incident):
         "size": size,
         "description": description,
         "originator": originator,
-        "group": group
+        "group": group,
+        "storage_technology": storage_technology
     }
     r = requests.put(os.path.join(DATA_MANAGER_URI,"register"),data=data)
     if r.status_code != 201:
@@ -445,13 +448,11 @@ def extract_hotspots(points, inputshp, sensor, outputdir):
     d["crs"] = data["crs"]
     d["features"] = hotspots
 
-
     outfile = os.path.join(outputdir,"%s_hotspots.json"%sensor)
-    print('Writing output to %s'%outfile)
-
-    f=open(outfile,"w")
-    json.dump(d,f,indent=1)
-    f.close()
+    
+    contents=json.dumps(d,indent=1)
+    with pny.db_session:
+        new_file = LocalDataStorage(contents=contents, filename=outfile, filetype="application/json")    
     
     #delete the input json file (no longer needed)
     os.remove(inputjson)
