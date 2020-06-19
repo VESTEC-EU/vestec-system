@@ -12,8 +12,6 @@ from Database import initialiseDatabase
 from Database.machine import Machine
 import datetime
 from uuid import uuid4
-import ConnectionManager
-import Templating
 import Utils.log as log
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor

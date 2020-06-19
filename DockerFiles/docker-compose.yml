@@ -70,6 +70,7 @@ services:
   machineinterface:
     container_name: machineinterface
     depends_on:
+      - "rmq"
       - "maria"
     build:
       context: ../
