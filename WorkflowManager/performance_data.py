@@ -10,10 +10,8 @@ from Database import PerformanceData, Simulation
 
 if "VESTEC_EDI_URI" in os.environ:
     EDI_URL = os.environ["VESTEC_EDI_URI"]
-    DATA_MANAGER_URI = os.environ["VESTEC_DM_URI"]
 else:
-    EDI_URL = "http://localhost:5501/EDImanager"
-    DATA_MANAGER_URI = "http://localhost:5000/DM"
+    EDI_URL= 'http://localhost:5501/EDImanager'
 
 # we now want to define some handlers
 @workflow.handler

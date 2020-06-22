@@ -11,14 +11,20 @@ from base64 import b64decode
 from Database import LocalDataStorage
 from Database.workflow import Incident, StoredDataset
 
-if "VESTEC_EDI_URI" in os.environ:    
-    EDI_URL= os.environ["VESTEC_EDI_URI"]
+if "VESTEC_SM_URI" in os.environ:
     SM_URL= os.environ["VESTEC_SM_URI"]
-    DATA_MANAGER_URL = os.environ["VESTEC_DM_URI"]
-else:    
-    EDI_URL= 'http://localhost:5501/EDImanager'
-    DATA_MANAGER_URL = 'http://localhost:5000/DM'
+else:
     SM_URL = 'http://localhost:5505/SM'
+
+if "VESTEC_EDI_URI" in os.environ:
+    EDI_URL = os.environ["VESTEC_EDI_URI"]
+else:
+    EDI_URL= 'http://localhost:5501/EDImanager'
+
+if "VESTEC_DM_URI" in os.environ:
+    DATA_MANAGER_URL = os.environ["VESTEC_DM_URI"]
+else:
+    DATA_MANAGER_URL = 'http://localhost:5000/DM'
 
 # we now want to define some handlers
 @workflow.handler

@@ -25,7 +25,7 @@ import asyncio
 import aio_pika
 import os
 
-if "VESTEC_MSM_URI" in os.environ:        
+if "VESTEC_MSM_URI" in os.environ:
     MSM_URL = os.environ["VESTEC_MSM_URI"]
 else:
     MSM_URL= 'http://localhost:5502/MSM'

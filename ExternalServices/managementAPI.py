@@ -29,16 +29,25 @@ logger = log.VestecLogger("Website")
 VERSION_PRECLUDE="1.2"
 version_number=VERSION_PRECLUDE+"."+VERSION_POSTFIX
 
-if "VESTEC_MANAGER_URI" in os.environ:    
-    EDI_URL = os.environ["VESTEC_EDI_URI"]
-    MSM_URL = os.environ["VESTEC_MSM_URI"]
-    DATA_MANAGER_URL = os.environ["VESTEC_DM_URI"]
+if "VESTEC_SM_URI" in os.environ:
     SM_URL= os.environ["VESTEC_SM_URI"]
-else:    
-    EDI_URL= 'http://localhost:5501/EDImanager'
-    MSM_URL= 'http://localhost:5502/MSM'
-    DATA_MANAGER_URL = 'http://localhost:5000/DM'
+else:
     SM_URL = 'http://localhost:5505/SM'
+
+if "VESTEC_EDI_URI" in os.environ:
+    EDI_URL = os.environ["VESTEC_EDI_URI"]
+else:
+    EDI_URL= 'http://localhost:5501/EDImanager'
+
+if "VESTEC_MSM_URI" in os.environ:
+    MSM_URL = os.environ["VESTEC_MSM_URI"]
+else:
+    MSM_URL= 'http://localhost:5502/MSM'
+
+if "VESTEC_DM_URI" in os.environ:
+    DATA_MANAGER_URL = os.environ["VESTEC_DM_URI"]
+else:
+    DATA_MANAGER_URL = 'http://localhost:5000/DM'
 
 def version():
     return jsonify({"status": 200, "version": version_number})

@@ -42,12 +42,20 @@ from Database import Incident
 # Presently you run a workflow by executing this file. It will create a new incident, register pull handlers on the EDI and will generate hotspots for the specified region.
 
 
-if "VESTEC_EDI_URI" in os.environ:    
-    EDI_URL= os.environ["VESTEC_EDI_URI"]
-    DATA_MANAGER_URI = os.environ["VESTEC_DM_URI"]
-else:    
+if "VESTEC_SM_URI" in os.environ:
+    SM_URL= os.environ["VESTEC_SM_URI"]
+else:
+    SM_URL = 'http://localhost:5505/SM'
+
+if "VESTEC_EDI_URI" in os.environ:
+    EDI_URL = os.environ["VESTEC_EDI_URI"]
+else:
     EDI_URL= 'http://localhost:5501/EDImanager'
-    DATA_MANAGER_URI = 'http://localhost:5000/DM'
+
+if "VESTEC_DM_URI" in os.environ:
+    DATA_MANAGER_URL = os.environ["VESTEC_DM_URI"]
+else:
+    DATA_MANAGER_URL = 'http://localhost:5000/DM'
 
 #URLS to download the data from
 MODISurl = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/c6/shapes/zips/MODIS_C6_Europe_48h.zip"
@@ -320,7 +328,7 @@ def dm_register(file,machine,description,originator,group, incident, storage_tec
         "group": group,
         "storage_technology": storage_technology
     }
-    r = requests.put(os.path.join(DATA_MANAGER_URI,"register"),data=data)
+    r = requests.put(os.path.join(DATA_MANAGER_URL,"register"),data=data)
     if r.status_code != 201:
         print("ERROR! %s"%r.text)
         raise Exception("DM could not register file")
@@ -354,7 +362,7 @@ def dm_download(file,machine,description,originator,group,url,incident):
         "options": json.dumps({})
     }
 
-    r = requests.put(os.path.join(DATA_MANAGER_URI,"getexternal"),data=data)
+    r = requests.put(os.path.join(DATA_MANAGER_URL,"getexternal"),data=data)
 
     if r.status_code != 201:
         print("ERROR! %s"%r.text)
