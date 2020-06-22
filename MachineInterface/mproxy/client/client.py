@@ -1,9 +1,9 @@
 import uuid
 import json
-from aio_pika import Message, ExchangeType
+from aio_pika import Message, ExchangeType, connect
 from aio_pika.tools import shield
-
 from mproxy.core.api import API
+import os
 
 
 def proxy(meth_descr):
@@ -45,7 +45,13 @@ class Client:
     cancelJob = proxy(API.cancelJob)
 
     @classmethod
-    async def create(cls, name, connection, exchange_name=None):
+    async def create(cls, name, connection=None, exchange_name=None):
+        if connection is None:
+            if "VESTEC_RMQ_SERVER" in os.environ:
+                host = os.environ["VESTEC_RMQ_SERVER"]            
+            else:            
+                host="localhost"
+            connection = await connect(host=host)
         ans = cls(name, connection, exchange_name)
         await ans.connect()
         return ans

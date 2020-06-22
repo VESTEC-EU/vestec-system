@@ -60,9 +60,8 @@ def cancel_simulation(simulation_id):
     else:
         return jsonify({"status": 401})
 
-async def delete_simulation_job(machine_name, queue_id):    
-    connection = await aio_pika.connect(host="localhost")
-    client = await Client.create(machine_name, connection)
+async def delete_simulation_job(machine_name, queue_id):        
+    client = await Client.create(machine_name)
     await client.cancelJob(queue_id)    
 
 @app.route("/SM/create", methods=["POST"])
@@ -106,9 +105,8 @@ def create_job():
     pny.commit()
     return jsonify({"status": 201, "simulation_id": uuid})
 
-async def submit_job_to_machine(machine_name, num_nodes, requested_walltime, directory, executable):    
-    connection = await aio_pika.connect(host="localhost")
-    client = await Client.create(machine_name, connection)
+async def submit_job_to_machine(machine_name, num_nodes, requested_walltime, directory, executable):        
+    client = await Client.create(machine_name)
     queue_id = await client.submitJob(num_nodes, requested_walltime, directory, executable)    
     return queue_id
 
@@ -159,9 +157,8 @@ def checkMatchAgainstQueueStateCalls(state_calls, queue_state):
             return state_call.call_name
     return None
 
-async def get_job_status_update(machine_name, queue_ids):    
-    connection = await aio_pika.connect(host="localhost")
-    client = await Client.create(machine_name, connection)
+async def get_job_status_update(machine_name, queue_ids):        
+    client = await Client.create(machine_name)
     status= await client.getJobStatus(queue_ids)
     return status
 

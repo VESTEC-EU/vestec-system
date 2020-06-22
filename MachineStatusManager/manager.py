@@ -127,9 +127,8 @@ def poll_machine_statuses():
             machine.status_last_checked=datetime.datetime.now()
             pny.commit()
 
-async def retrieve_machine_status(machine_name):    
-    connection = await aio_pika.connect(host="localhost")
-    client = await Client.create(machine_name, connection)
+async def retrieve_machine_status(machine_name):        
+    client = await Client.create(machine_name)
     status = await client.getstatus()
     return status
             

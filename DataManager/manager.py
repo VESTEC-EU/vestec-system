@@ -277,8 +277,7 @@ def _delete(file, machine, storage_technology):
     return OK, "Deleted"    
 
 async def submit_remove_file_on_machine(machine_name, file):
-    connection = await aio_pika.connect(host="localhost")
-    client = await Client.create(machine_name, connection)    
+    client = await Client.create(machine_name)    
     await client.rm(file)
 
 #copies a file between two (possibly remote) locations. If move=true this acts like a move (deletes the source file)
@@ -344,39 +343,34 @@ def _copy(src, src_machine, src_storage_technology, dest, dest_machine, dest_sto
             return OK, "copied"
 
 async def submit_remote_copy_betwee_machines(src_machine_name, src_file, dest_machine, dest_file, move):
-    connection = await aio_pika.connect(host="localhost")
-    client = await Client.create(machine_name, connection)              
+    client = await Client.create(machine_name)              
     await client.remote_copy(src_file, dest_machine, dest_username, dest_file)
     if move:
         await client.rm(src_file)
 
-async def transfer_file_to_or_from_machine(machine_name, src, dest, download):
-    connection = await aio_pika.connect(host="localhost")
-    client = await Client.create(machine_name, connection)
+async def transfer_file_to_or_from_machine(machine_name, src, dest, download):    
+    client = await Client.create(machine_name)
     if download:          
         await client.download(src, dest)
     else:
         await client.upload(src, dest)
 
-async def submit_move_or_copy_file_on_machine(machine_name, src, dest, move):
-    connection = await aio_pika.connect(host="localhost")
-    client = await Client.create(machine_name, connection)
+async def submit_move_or_copy_file_on_machine(machine_name, src, dest, move):    
+    client = await Client.create(machine_name)
     if move:          
         await client.mv(src, dest)
     else:
         await client.cp(src, dest)
 
-async def submit_copy_bytes_from_machine(machine_name, src_file, move=False):    
-    connection = await aio_pika.connect(host="localhost")
-    client = await Client.create(machine_name, connection)    
+async def submit_copy_bytes_from_machine(machine_name, src_file, move=False):        
+    client = await Client.create(machine_name)    
     byte_contents= await client.get(src_filest)                
     if move:
         await client.rm(src_file)
     return byte_contents
 
-async def submit_copy_bytes_to_machine(machine_name, src_bytes, dest):    
-    connection = await aio_pika.connect(host="localhost")
-    client = await Client.create(machine_name, connection)
+async def submit_copy_bytes_to_machine(machine_name, src_bytes, dest):        
+    client = await Client.create(machine_name)
     await client.put(src_bytes, dest)
 
 #downloads a file to a (possibly remote) location
