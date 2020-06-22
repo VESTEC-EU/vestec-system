@@ -26,7 +26,7 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fr
 
 logger = log.VestecLogger("Website")
 
-VERSION_PRECLUDE="1.1"
+VERSION_PRECLUDE="1.2"
 version_number=VERSION_PRECLUDE+"."+VERSION_POSTFIX
 
 if "VESTEC_MANAGER_URI" in os.environ:    
