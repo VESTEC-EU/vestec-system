@@ -29,6 +29,15 @@ logger = log.VestecLogger("Machine Status Manager")
 def get_health():
     return jsonify({"status": 200})
 
+@app.route("/MSM/machine/<machine_id>", methods=["DELETE"])
+@pny.db_session
+def delete_machine(machine_id):
+    stored_machine=Machine.get(machine_id=machine_id)
+    if (stored_machine is not None):        
+        stored_machine.delete()
+        pny.commit()
+    return jsonify({"status": 200})
+
 @app.route("/MSM/enable/<machine_id>", methods=["POST"])
 @pny.db_session
 def enable_machine(machine_id):

@@ -280,6 +280,10 @@ def addNewMachine(retrieved_data):
     created_info = requests.post(MSM_URL + '/add', json=retrieved_data)    
     return Response(created_info.content, created_info.status_code)
 
+def deleteMachine(machine_id):
+    deleted_info = requests.delete(MSM_URL + '/machine/'+machine_id)    
+    return Response(deleted_info.content, deleted_info.status_code)    
+
 def enableMachine(machine_id):
     enabled_info = requests.post(MSM_URL + '/enable/'+machine_id)    
     return Response(enabled_info.content, enabled_info.status_code)

@@ -276,6 +276,13 @@ def post_edi_data(sourceid):
 def getMachineStatuses():    
    return managementAPI.retrieveMachineStatuses()
 
+@app.route('/flask/machine/<machineid>', methods=['DELETE'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def deleteMachine(machineid):    
+   return managementAPI.deleteMachine(machineid)   
+
 @app.route("/flask/addmachine", methods=["POST"])
 @pny.db_session
 @fresh_jwt_required

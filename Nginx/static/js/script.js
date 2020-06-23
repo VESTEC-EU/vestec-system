@@ -6,7 +6,7 @@ var add_data_dialog;
 var edit_data_dialog;
 var edit_user_dialog;
 
-const ConfirmationTypeEnum = Object.freeze({"DELETEEDIHANDLER":1, "DELETEDATAITEM":2, "DELETEUSER":3, "CANCELSIMULATION":4});
+const ConfirmationTypeEnum = Object.freeze({"DELETEEDIHANDLER":1, "DELETEDATAITEM":2, "DELETEUSER":3, "CANCELSIMULATION":4, "DELETEMACHINE":5});
 var confirmation_box_type=null;
 var confirmation_box_data={};
 
@@ -72,6 +72,8 @@ $( function() {
                 performUserDeletion();
               } else if (confirmation_box_type == ConfirmationTypeEnum.CANCELSIMULATION) {
                 performSimulationCancel();
+              } else if (confirmation_box_type == ConfirmationTypeEnum.DELETEMACHINE) {
+                performMachineDelete();
               }
             },
             Cancel: function() {
@@ -959,6 +961,28 @@ function getMachineInfo() {
             }
         });
     });
+}
+
+function deleteMachine(machine_uuid) {
+    confirmation_box_type=ConfirmationTypeEnum.DELETEMACHINE;
+    confirmation_box_data={"machine_uuid" : machine_uuid};
+    $("#dialog-confirm-text").text("Are you sure you want to delete this machine?");
+    $( "#dialog-confirm" ).dialog("open");
+}
+
+function performMachineDelete() {    
+    $.ajax({
+        url: "/flask/machine/"+confirmation_box_data["machine_uuid"],
+        type: "DELETE",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
+        success: function(response) {
+            getMachineInfo();
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> Machine deletion failed");
+        }
+    });   
 }
 
 function enableTestModeMachine(machine_id) {
