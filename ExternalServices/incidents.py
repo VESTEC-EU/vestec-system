@@ -76,6 +76,27 @@ def generateIncidentDiGraph(incident_uuid):
             G.add_edge(originator,destination)
     return to_agraph(G)
 
+def packageSimulation(sim):
+    simulation_dict={}
+    simulation_dict["uuid"]=sim.uuid
+    if sim.jobID is not None and sim.jobID != "":
+        simulation_dict["jobID"]=sim.jobID        
+
+    simulation_dict["status"]=sim.status
+    simulation_dict["status_updated"]=sim.status_updated.strftime("%d/%m/%Y, %H:%M:%S")
+
+    if sim.status_message is not None and sim.status_message != "":
+        simulation_dict["status_message"]=sim.status_message
+                
+    simulation_dict["created"]=sim.date_created.strftime("%d/%m/%Y, %H:%M:%S")
+    simulation_dict["walltime"]=sim.walltime
+    simulation_dict["kind"]=sim.kind
+    simulation_dict["num_nodes"]=sim.num_nodes
+    simulation_dict["requested_walltime"]=sim.requested_walltime
+    if sim.machine is not None:
+        simulation_dict["machine"]=sim.machine.machine_name
+    return simulation_dict
+
 def packageIncident(stored_incident, include_sort_key, include_digraph, include_manual_data_queuename, include_associated_data, include_associated_simulations):
     incident={}
     incident["uuid"]=stored_incident.uuid
@@ -93,26 +114,8 @@ def packageIncident(stored_incident, include_sort_key, include_digraph, include_
 
     if include_associated_simulations:
         incident["simulations"]=[]
-        for sim in stored_incident.simulations:
-            simulation_dict={}
-            simulation_dict["uuid"]=sim.uuid
-            if sim.jobID is not None and sim.jobID != "":
-                simulation_dict["jobID"]=sim.jobID        
-
-            simulation_dict["status"]=sim.status
-            simulation_dict["status_updated"]=sim.status_updated.strftime("%d/%m/%Y, %H:%M:%S")
-
-            if sim.status_message is not None and sim.status_message != "":
-                simulation_dict["status_message"]=sim.status_message
-                
-            simulation_dict["created"]=sim.date_created.strftime("%d/%m/%Y, %H:%M:%S")
-            simulation_dict["walltime"]=sim.walltime
-            simulation_dict["kind"]=sim.kind
-            simulation_dict["num_nodes"]=sim.num_nodes
-            simulation_dict["requested_walltime"]=sim.requested_walltime
-            if sim.machine is not None:
-                simulation_dict["machine"]=sim.machine.machine_name             
-            incident["simulations"].append(simulation_dict)
+        for sim in stored_incident.simulations:                                   
+            incident["simulations"].append(packageSimulation(sim))
 
         incident["simulations"]=sorted(incident["simulations"], key=itemgetter('created'), reverse=True)
 

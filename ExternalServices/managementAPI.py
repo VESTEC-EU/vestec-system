@@ -17,7 +17,7 @@ from Database.job import Job
 from Database.queues import Queue
 from Database.machine import Machine
 from Database.activity import Activity
-from Database.workflow import RegisteredWorkflow
+from Database.workflow import RegisteredWorkflow, Simulation
 from Database.localdatastorage import LocalDataStorage
 from WorkflowManager import workflow
 from pony.orm.serialization import to_dict
@@ -215,8 +215,10 @@ def deleteData(data_uuid, incident_uuid, username):
 @pny.db_session
 def refreshSimulation(request_json):       
     sim_uuid=request_json.get("sim_uuid", None)
-    returned_info = requests.post(SM_URL + '/refresh/'+sim_uuid)    
-    return Response(returned_info.content, returned_info.status_code)
+    returned_info = requests.post(SM_URL + '/refresh/'+sim_uuid)
+    sim = Simulation[sim_uuid]
+    packagedSim=incidents.packageSimulation(sim)
+    return jsonify({"status": 200, "simulation": json.dumps(packagedSim)})     
 
 @pny.db_session
 def cancelSimulation(sim_uuid, username):
