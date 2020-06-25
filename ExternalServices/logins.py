@@ -34,6 +34,14 @@ def get_all_users():
     return user_descriptions
 
 @pny.db_session
+def can_user_access_workflow(username, workflow_kind):
+    userInfo=User.get(username=username)
+    for wf in userInfo.allowed_workflows:
+        if (workflow_kind == wf.kind):
+            return True
+    return False
+
+@pny.db_session
 def get_user_details(user):
     user_descriptions=[]
     users=[User.get(username=user)]

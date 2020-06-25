@@ -110,7 +110,8 @@ def packageIncident(stored_incident, include_sort_key, include_digraph, include_
     incident["date_started"]=stored_incident.date_started.strftime("%d/%m/%Y, %H:%M:%S")    
     
     incident_workflow=RegisteredWorkflow.get(kind=stored_incident.kind)
-    incident["test_workflow"]=incident_workflow.test_workflow
+    if incident_workflow is not None:
+        incident["test_workflow"]=incident_workflow.test_workflow
 
     if include_associated_simulations:
         incident["simulations"]=[]
