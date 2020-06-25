@@ -259,7 +259,8 @@ function getJobWizard() {
         type: "GET",
         headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
         success: function(response) {            
-            var workflows = JSON.parse(response);
+            var workflows = JSON.parse(response.workflows);
+            console.log(workflows);
             $("#incidentType").empty();
             for (item in workflows) {
                 item = workflows[item];                                                   
@@ -882,7 +883,7 @@ function getWorkflows() {
             type: "GET",
             headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
             success: function(response) {
-                var workflows = JSON.parse(response);
+                var workflows = JSON.parse(response.workflows);
                 $("#workflowTable").append("<tbody>");
 
                 for (item in workflows) {
@@ -1137,7 +1138,7 @@ function getUsers() {
             type: "GET",
             headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
             success: function(response) {
-                var users = JSON.parse(response);
+                var users = JSON.parse(response.users);
                 $("#userTable").append("<tbody>");
 
                 for (item in users) {
@@ -1230,7 +1231,7 @@ function manageUser(username) {
         type: "GET",
         headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
         success: function(response) {
-            workflows = JSON.parse(response);
+            workflows = JSON.parse(response.workflows);
         }
     }),
     $.ajax({
@@ -1241,7 +1242,7 @@ function manageUser(username) {
         data: JSON.stringify(wf),
         dataType: "json",
         success: function(response) {
-            users = JSON.parse(JSON.stringify(response));            
+            users = JSON.parse(response.users);            
         },
         error: function(xhr) {
             $("#confirmation").removeClass().addClass("button red self-center");
@@ -1365,7 +1366,7 @@ function getSystemHealth() {
         type: "GET",
         headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
         success: function(response) {
-            var health = JSON.parse(response);
+            var health = JSON.parse(response.health);
             $("#healthTable").append("<tbody>");
 
             for (item in health) {
@@ -1403,7 +1404,7 @@ function getLogs() {
         type: "GET",
         headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
         success: function(response) {
-            var logs = JSON.parse(response);
+            var logs = JSON.parse(response.logs);
             $("#logsTable").append("<tbody>");
 
             for (log in logs) {

@@ -112,7 +112,7 @@ def changePassword():
 
 def getMyWorkflows(username):
     allowed_workflows=logins.get_allowed_workflows(username)
-    return json.dumps(allowed_workflows) 
+    return jsonify({"status": 200, "workflows": json.dumps(allowed_workflows)})
 
 @pny.db_session
 def createIncident(username):
@@ -249,7 +249,7 @@ def getLogs():
         logs.append(lg)
 
     logs.reverse()
-    return json.dumps(logs)
+    return jsonify({"status": 200, "logs": json.dumps(logs)})
 
 def _getHealthOfComponent(component_name, displayname):
     bd={}
@@ -270,7 +270,7 @@ def getComponentHealths():
     component_healths.append(_getHealthOfComponent(SM_URL, "Simulation manager"))    
     component_healths.append(_getHealthOfComponent(MSM_URL, "Machine status manager"))    
     component_healths.append(_getHealthOfComponent(DATA_MANAGER_URL, "Data manager"))
-    return json.dumps(component_healths)
+    return jsonify({"status": 200, "health": json.dumps(component_healths)})
 
 def getEDIInfo():
     edi_info = requests.get(EDI_URL + '/list')    
@@ -326,7 +326,7 @@ def getWorkflowInfo():
         specific_workflow_info["initqueuename"]=workflow.init_queue_name
         specific_workflow_info["dataqueuename"]=workflow.data_queue_name
         workflow_info.append(specific_workflow_info)
-    return json.dumps(workflow_info)
+    return jsonify({"status": 200, "workflows": json.dumps(workflow_info)})
 
 @pny.db_session
 def addWorkflow(retrieved_data):    
@@ -340,12 +340,12 @@ def addWorkflow(retrieved_data):
     return jsonify({"status": 200, "msg": "Workflow added"})
 
 def getAllUsers():
-    return json.dumps(logins.get_all_users())
+    return jsonify({"status": 200, "users": json.dumps(logins.get_all_users())})
 
 def getUserDetails(retrieved_data):    
     username=retrieved_data.get("username", None)
     user_details=logins.get_user_details(username)
-    return json.dumps(user_details) 
+    return jsonify({"status": 200, "users": json.dumps(user_details)})
 
 @pny.db_session
 def deleteUser(retrieved_data):
