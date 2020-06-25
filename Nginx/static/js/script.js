@@ -277,8 +277,8 @@ function getJobWizard() {
 function submitJob() {
     checkAuthStillValid();
     var job = {}
-    job["incidentType"] = $("#incidentType").val();
-    job["incidentName"] = $("#incidentName").val();
+    job["kind"] = $("#incidentType").val();
+    job["name"] = $("#incidentName").val();
     if ($("#upperLeftLatlong").val().length > 0) job["upperLeftLatlong"] = $("#upperLeftLatlong").val();
     if ($("#lowerRightLatlong").val().length > 0) job["lowerRightLatlong"] = $("#lowerRightLatlong").val();
     if ($("#duration").val().length > 0) job["duration"] = $("#duration").val();

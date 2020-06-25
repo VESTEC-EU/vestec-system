@@ -116,8 +116,8 @@ def getMyWorkflows(username):
 
 def createIncident(username):
     incident_request = request.json    
-    incident_name=incident_request.get("incidentName", None)
-    incident_kind=incident_request.get("incidentType", None)
+    incident_name=incident_request.get("name", None)
+    incident_kind=incident_request.get("kind", None)
     incident_upper_left_latlong=incident_request.get("upperLeftLatlong", "")
     incident_lower_right_latlong=incident_request.get("lowerRightLatlong", "")
     incident_duration=incident_request.get("duration", None)
