@@ -38,7 +38,7 @@ class OpenSSHMachineConnection(ThrottlableMixin):
 
     @throttle
     def run(self, command, env=None):
-        cmd = "ssh -t " + self.hostname+" \"cd "+self.remote_base_dir+" ; "+command+"\""        
+        cmd = "ssh -tt " + self.hostname+" \"cd "+self.remote_base_dir+" ; "+command+"\""        
         return self._execute_command(cmd)
 
     @throttle
