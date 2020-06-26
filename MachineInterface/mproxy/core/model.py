@@ -13,6 +13,7 @@ class CmdResult(JsonSerialisable):
             "exited",
             "pty",
             "hide",
+            "error",
         )
     )
 
@@ -27,6 +28,7 @@ class CmdResult(JsonSerialisable):
         exited=0,
         pty=False,
         hide=(),
+        error=False,
     ):
         for attr in self._JSON_ATTRS:
             setattr(self, attr, locals()[attr])

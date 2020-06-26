@@ -96,7 +96,7 @@ def register():
 #instructs the data manager to download data from the internet onto a specified machine. Returns a uuid for that data entity
 @app.route("/DM/getexternal",methods=["PUT"])
 def GetExternal():
-    #get required fields from the header
+    #get required fields from the header    
     fname = flask.request.form["filename"]    
     if "path" in flask.request.form:
         path = flask.request.form["path"]
@@ -112,19 +112,22 @@ def GetExternal():
         storage_technology = "FILESYSTEM"
     url = flask.request.form["url"]
     protocol = flask.request.form["protocol"]
-    options = json.loads(flask.request.form["options"])
+    if "options" in flask.request.form:
+        options = json.loads(flask.request.form["options"])
+    else:
+        options = None    
 
     if _checkExists(machine,fname,path):
         return "File already exists", 406
 
     #instruct the machine to download the file (passes the size of the file back in the "options" dict)
     try:
-        status, message = _download(fname,path,machine,url,protocol,options)
+        status, message = _download(fname, path, storage_technology, machine, url, protocol, options)
     except ConnectionManager.ConnectionError as e:
         return str(e), 500
 
     if status == OK:
-        size=options["size"]
+        size=message
         #register this new file with the data manager
         id=_register(fname,path, machine, description,size, originator, group, storage_technology)
         return id, 201
@@ -317,7 +320,7 @@ def _copy(src, src_machine, src_storage_technology, dest, dest_machine, dest_sto
     else:
         #copy from VESTEC server to remote machine
         if src_machine == "localhost":
-            if src_storage_technology == "FILESYSTEM":                
+            if src_storage_technology == "FILESYSTEM":
                 asyncio.run(transfer_file_to_or_from_machine(dest_machine, src, dest, download=False))
             elif src_storage_technology == "VESTECDB":
                 data_item=LocalDataStorage.get(filename=src)
@@ -374,23 +377,28 @@ async def submit_copy_bytes_to_machine(machine_name, src_bytes, dest):
     await client.put(src_bytes, dest)
 
 #downloads a file to a (possibly remote) location
-def _download(filename,path,machine,url,protocol,options):
+def _download(filename,  path, storage_technology, machine, url, protocol, options):
     #get the filename (with path ) of the file we want created
     dest = os.path.join(path,filename)
 
     #deterine the command we wish to run to download the file
-    if protocol == "http":
+    if protocol == "http" or protocol == "https":
         if options:
             print("Do not know how to deal with non-empty options")
             print(options)
             return NOT_IMPLEMENTED
-        cmd = "curl -f -sS -o %s %s"%(dest,url)
+        if machine == "localhost" and storage_technology == "VESTECDB":
+            # If its localhost and VESTECDB then use a temporary file
+            temp = tempfile.NamedTemporaryFile()
+            cmd = "curl -f -sS -o %s %s"%(temp.name,url)
+        else:
+            cmd = "curl -f -sS -o %s %s"%(dest,url)
     else:
         print("Do not know how to handle protocols that are not http")
         return NOT_IMPLEMENTED, "'%s' protocol not supported (yet?)"%protocol
 
     if machine == "localhost":
-        #run the command locally
+        #run the command locally        
         r=subprocess.run(cmd.split(" "),stdout=subprocess.PIPE,stderr = subprocess.PIPE,text=True)
         if r.returncode != 0:
             print("An error occurred in the local download")
@@ -399,25 +407,42 @@ def _download(filename,path,machine,url,protocol,options):
             return FILE_ERROR, r.stderr
         else:
             #get size of the new file and put this in the options dict
-            size=os.path.getsize(dest)
-            options["size"]=size
-            return OK, "Downloaded"
-    else:
+            size=os.path.getsize(dest)            
+            if storage_technology == "VESTECDB":
+                # Transfer temporary file into the VESTECDB
+                byte_contents=temp.read()
+                temp.close()
+                new_file = LocalDataStorage(contents=byte_contents, filename=dest, filetype="")
+            return OK, size            
+
+    else:        
         #run the command remotely
-        c = ConnectionManager.RemoteConnection(machine)
-        stdout,stderr,exit_code = c.ExecuteCommand(cmd)
-        if exit_code != 0:
-            print("Remote download encountered an error:")
-            print(stderr)
-            c.CloseConnection()
-            return FILE_ERROR, stderr
+        success, size_or_error=asyncio.run(submit_run_command_on_machine(machine, cmd, dest))        
+        if not success:
+            print("Remote download encountered an error:")              
+            return FILE_ERROR, size_or_error
         else:
-            print("Remote download completed successfully")
-            #get the size of the new file and put it in the options dict
-            size = c.size(dest)
-            options["size"]=size
-            c.CloseConnection()
-            return OK, "Downloaded"
+            print("Remote download completed successfully")                                           
+            return OK, size_or_error
+
+async def submit_run_command_on_machine(machine_name, command, listfile):
+    client = await Client.create(machine_name)
+    run_info= await client.run(command)
+    if not run_info.error:
+        list_info=await client.ls(listfile)
+        if len(list_info) == 1:
+            tokens=list_info[0].split()
+            if len(tokens) >= 4:
+                size=tokens[4]
+            else:
+                print("Downloaded file OK, but can not retrieve size as file listing is malformed")
+                size=0
+            return True, size
+        else:
+            print("Downloaded file OK, but can not retrieve size as list command on '"+dest+"' resulted in "+str(len(list_info))+" entries")
+            return True, 0
+    else:
+        return False, run_info.stderr
 
 @pny.db_session
 def _checkExists(machine,filename,path):    

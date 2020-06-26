@@ -41,7 +41,8 @@ class OpenSSHMachineConnection(ThrottlableMixin):
     def run(self, command, env=None):
         cmd = "ssh -tt " + self.hostname+" \"cd "+self.remote_base_dir+" ; "+command+"\""        
         output, errors= self._execute_command(cmd)
-        return CmdResult(stdout=output, stderr=errors)
+        errorRaised=self._checkForErrors(errors)
+        return CmdResult(stdout=output, stderr=errors, error=errorRaised)
 
     @throttle
     def put(self, src_bytes, dest):        
@@ -150,7 +151,13 @@ class OpenSSHMachineConnection(ThrottlableMixin):
 
     @throttle
     def ls(self, d="."):
-        return "" #self.sftp.listdir(d)
+        run_info=self.run("ls -l "+d)
+        self._checkForErrors(run_info.stderr)
+        line_info=[]
+        for line in run_info.stdout.splitlines():
+            if len(line.strip()) > 0:
+                line_info.append(line)
+        return line_info
 
     @throttle
     def mkdir(self, d):
