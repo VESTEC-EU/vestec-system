@@ -2,6 +2,7 @@ import io
 import os
 import logging
 import datetime
+from mproxy.core.model import CmdResult
 from .throttle import ThrottlableMixin, throttle
 from .job_status import JobStatus
 from subprocess import Popen, PIPE
@@ -39,7 +40,8 @@ class OpenSSHMachineConnection(ThrottlableMixin):
     @throttle
     def run(self, command, env=None):
         cmd = "ssh -tt " + self.hostname+" \"cd "+self.remote_base_dir+" ; "+command+"\""        
-        return self._execute_command(cmd)
+        output, errors= self._execute_command(cmd)
+        return CmdResult(stdout=output, stderr=errors)
 
     @throttle
     def put(self, src_bytes, dest):        
@@ -50,8 +52,8 @@ class OpenSSHMachineConnection(ThrottlableMixin):
         temp = tempfile.NamedTemporaryFile()
         temp.write(src_bytes)
         temp.flush()
-        output, errors=self._execute_command("scp "+temp.name+" "+self.hostname+":"+full_destination)
-        self._checkForErrors(errors)
+        run_info=self._execute_command("scp "+temp.name+" "+self.hostname+":"+full_destination)
+        self._checkForErrors(run_info.stderr)
         temp.close()
 
     @throttle
@@ -61,8 +63,8 @@ class OpenSSHMachineConnection(ThrottlableMixin):
         else:
             full_src=self.remote_base_dir+"/"+src
         temp = tempfile.NamedTemporaryFile(mode="rb")
-        output, errors=self._execute_command("scp "+self.hostname+":"+full_src+" "+temp.name)
-        if not self._checkForErrors(errors):
+        run_info=self._execute_command("scp "+self.hostname+":"+full_src+" "+temp.name)
+        if not self._checkForErrors(run_info.stderr):
             read_bytes=temp.read()
             temp.close()
             return read_bytes
@@ -71,18 +73,18 @@ class OpenSSHMachineConnection(ThrottlableMixin):
 
     @throttle
     def upload(src_file, dest_file):
-        output, errors=self._execute_command("scp "+src_file+" "+self.hostname+":"+dest_file)
-        self._checkForErrors(errors)
+        run_info=self._execute_command("scp "+src_file+" "+self.hostname+":"+dest_file)
+        self._checkForErrors(run_info.stderr)
 
     @throttle
     def download(src_file, dest_file):
-        output, errors=self._execute_command("scp "+self.hostname+":"+src_file+" "+dest_file)
-        self._checkForErrors(errors)
+        run_info=self._execute_command("scp "+self.hostname+":"+src_file+" "+dest_file)
+        self._checkForErrors(run_info.stderr)
 
     @throttle
     def remote_copy(src_file, dest_machine, dest_file):
-        output, errors=self.run("scp "+file+" "+dest_machine+":"+dest_file)
-        self._checkForErrors(errors)        
+        run_info=self.run("scp "+file+" "+dest_machine+":"+dest_file)
+        self._checkForErrors(run_info.stderr)        
 
     def checkForUpdateToQueueData(self):
         elapsed=datetime.datetime.now() - self.queue_last_updated
@@ -91,9 +93,9 @@ class OpenSSHMachineConnection(ThrottlableMixin):
 
     def updateQueueInfo(self):
         status_command=self.queue_system.getQueueStatusSummaryCommand()
-        output, errors=self.run(status_command)
-        if not self._checkForErrors(errors):            
-            self.queue_info=self.queue_system.parseQueueStatus(output)
+        run_info=self.run(status_command)        
+        if not self._checkForErrors(run_info.stderr):            
+            self.queue_info=self.queue_system.parseQueueStatus(run_info.stdout)
             self.summary_status=self.queue_system.getSummaryOfMachineStatus(self.queue_info)
             self.queue_last_updated=datetime.datetime.now()
             print("Updated status information")
@@ -109,10 +111,10 @@ class OpenSSHMachineConnection(ThrottlableMixin):
     @throttle
     def getJobStatus(self, queue_ids):        
         status_command=self.queue_system.getQueueStatusForSpecificJobsCommand(queue_ids)
-        output, errors=self.run(status_command)
+        run_info=self.run(status_command)
         to_return={}
-        if not self._checkForErrors(errors):
-            parsed_jobs=self.queue_system.parseQueueStatus(output)        
+        if not self._checkForErrors(run_info.stderr):
+            parsed_jobs=self.queue_system.parseQueueStatus(run_info.stdout)        
             for queue_id in queue_ids:
                 if (queue_id in parsed_jobs):
                     status=parsed_jobs[queue_id]                
@@ -123,8 +125,8 @@ class OpenSSHMachineConnection(ThrottlableMixin):
     @throttle
     def cancelJob(self, queue_id):
         deletion_command=self.queue_system.getJobDeletionCommand(queue_id)
-        output, errors=self.run(deletion_command)
-        self._checkForErrors(errors)  
+        run_info=self.run(deletion_command)
+        self._checkForErrors(run_info.stderr)  
 
     @throttle
     def submitJob(self, num_nodes, requested_walltime, directory, executable):        
@@ -132,11 +134,11 @@ class OpenSSHMachineConnection(ThrottlableMixin):
         if len(directory) > 0:
             command_to_run += "cd "+directory+" ; "
         command_to_run+=self.queue_system.getSubmissionCommand(executable)        
-        output, errors=self.run(command_to_run)
-        if not self._checkForErrors(errors):
-            return [self.queue_system.isStringQueueId(output), output]
+        run_info=self.run(command_to_run)        
+        if not self._checkForErrors(run_info.stderr):
+            return [self.queue_system.isStringQueueId(run_info.stdout), run_info.stdout]
         else:
-            return [False, errors]
+            return [False, run_info.stderr]
 
     @throttle
     def cd(self, dir):
@@ -160,22 +162,22 @@ class OpenSSHMachineConnection(ThrottlableMixin):
 
     @throttle
     def rm(self, file):
-        output, errors=self.run("rm "+file)
-        self._checkForErrors(errors)
+        run_info=self.run("rm "+file)
+        self._checkForErrors(run_info.stderr)
 
     @throttle
     def rmdir(self, dir):
-        output, errors=self.run("rmdir "+dir)
-        self._checkForErrors(errors)
+        run_info=self.run("rmdir "+dir)
+        self._checkForErrors(run_info.stderr)
 
     @throttle
     def mv(self, src, dest):
-        output, errors=self.run("mv "+src+" "+dest)
-        self._checkForErrors(errors)
+        run_info=self.run("mv "+src+" "+dest)
+        self._checkForErrors(run_info.stderr)
 
     @throttle
     def cp(self, src, dest):
-        output, errors=self.run("cp "+src+" "+dest)
-        self._checkForErrors(errors)  
+        run_info=self.run("cp "+src+" "+dest)
+        self._checkForErrors(run_info.stderr)  
 
     pass

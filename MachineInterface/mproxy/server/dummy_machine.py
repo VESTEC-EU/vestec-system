@@ -29,7 +29,7 @@ class DummyMachineConnection(ThrottlableMixin):
     @throttle
     def run(self, command, env=None):
         log.info("%s.run(%s)", self.name, command)
-        return CmdResult(command=command, env=env)
+        return CmdResult(stdout="dummy execution", stderr="none")
 
     @throttle
     def put(self, src_bytes, dest):
