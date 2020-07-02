@@ -6,7 +6,7 @@ import pony.orm as pny
 
 
 import workflow
-from .weatherdata import getLatestURL
+from .weatherdata import getLatestURLs
 
 from Database import Incident
 
@@ -54,24 +54,62 @@ def wildfire_mesonh_init(msg):
 def wildfire_mesonh_getdata(msg):
     IncidentID = msg["IncidentID"]
     print("\nGetting global forecast data...")
-    url = getLatestURL()
-    if url is not None:
-        print("URL is %s"%url)
 
+    #return the two (at most) latest URLs, oldest first
+    urls = getLatestURLs()
     
+    if len(urls) == 0:
+        print("No URLs found")
+        return
+
+    #get the list of URLs we already know about
     logs=workflow.Persist.Get(IncidentID)
-    for log in logs:
-        if log["url"] == url:
-            print("This data has already been fetched. Nothing to do")
-            return
-
-    print('This is new data!')
-    workflow.Persist.Put(IncidentID,{"url": url})
-
-    msg["url"] = url
     
-    workflow.send(msg,"wildfire_mesonh_simulation")
+    #flag to determine if any of the above fetched URLS are new
+    anynew = False
 
+    #for each url, see if it is already known. If not, download it
+    for url in urls:
+        exists = False
+        for log in logs:
+            if log["url"] == url:
+                exists = True
+    
+        
+        if not exists:
+            anynew = True
+            print("New URL: %s"%url)
+            
+            #INSERT CODE HERE TO DOWNLOAD THE FILE WITH THE DM
+
+            #persist this url in the handler's storage
+            ## THIS SHOULD REALLY BE THE UUID OF THE DATA OBJECT FROM THE DM
+            workflow.Persist.Put(IncidentID,{"url": url})
+    
+    #if there is new data, send it onto the MesoNH simulation step
+    if anynew:
+        #get the persisted logs again (this time with any new data added)
+        logs = workflow.Persist.Get(IncidentID)
+        
+        #if we have at least 2 forecasts
+        if len(logs) >= 2:
+            logs = logs[-2:]
+            
+            #get the filenames THIS SHOULD BE THE UUID OF THE FILES IN THE DM
+            files=[]
+            for log in logs:
+                dummy, file = os.path.split(log["url"])
+                files.append(file)
+            
+            msg["files"] = files
+
+            print("Sending latest 2 weather observations to wildfire_mesonh_simulation")
+        
+            workflow.send(msg,"wildfire_mesonh_simulation")
+        else:
+            print("New data, but insufficient observations for a MesoNH simulation")
+    else:
+        print("No new weather observations")
 
 #extracts [not implemented] physiographic data and passes this onto the simulation stage
 @workflow.handler
@@ -117,8 +155,8 @@ def wildfire_mesonh_simulation(msg):
         
 
     elif originator == "wildfire_mesonh_getdata":
-        workflow.Persist.Put(IncidentID,{"originator": originator, "url": msg["url"]})
-        print('New weather forecast received')
+        workflow.Persist.Put(IncidentID,{"originator": originator, "files": msg["files"]})
+        print('New weather forecasts received')
     
     else:
         raise ValueError("Unexpected originator: %s"%originator)
@@ -134,35 +172,39 @@ def wildfire_mesonh_simulation(msg):
             if log["Physiographic"]:
                 physiographic = True
     
-    latest = None
+    weatherfiles = None
     
     #go through logs and get the latest url
     for log in logs:
         if log["originator"] == "wildfire_mesonh_getdata":
-            latest = log["url"]
+            weatherfiles = log["files"]
     
-    if latest is None or physiographic == False:
+    if weatherfiles is None or physiographic == False:
         print("Nothing to be done yet. Missing dependencies")
         return
     
     print("Can now run a simulation!")
 
-    #insert code to write a simulation here
-    
+    #INSERT CODE TO SUBMIT SIMULATION HERE
+    print("Weather files to use are:")
+    for file in weatherfiles:
+        print("%s"%file)
 
-    #this just forwards dummy stuff to the simulation results handler
-    dummy, file = os.path.split(latest)
-    workflow.send({"IncidentID": IncidentID, "file": file},"wildfire_mesonh_results")
+
+
+    #this below bit just forwards to the simulation results handler. In reality this would be the simulation manager doing this
+    workflow.send({"IncidentID": IncidentID},"wildfire_mesonh_results")
     
 
 #handles simulation results from a mesoNH simulation (at)
 @workflow.handler
 def wildfire_mesonh_results(msg):
     IncidentID = msg["IncidentID"]
-    file = msg["file"]
     
     print('\nGot MesoNH results')
-    print("File: %s"%file)
+    
+    print("Forwarding dummy 'weatherforecast.nc' to wildfire analyst step")
+    msg = {"IncidentID": IncidentID, "file": "weatherforecast.nc"}
 
     workflow.send(msg,"wildfire_fire_simulation")
 
