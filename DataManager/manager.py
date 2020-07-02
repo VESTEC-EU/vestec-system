@@ -26,7 +26,7 @@ NOT_IMPLEMENTED = 2
 def get_health():
     return flask.jsonify({"status": 200})
 
-@app.route("/DM/search")
+@app.route("/DM/search",methods=["GET"])
 @pny.db_session
 def search():
     filename=flask.request.args.get("filename", None)
@@ -46,7 +46,7 @@ def search():
 
 #Returns the information for all data entities, or for a specified entity
 @app.route("/DM/info")
-@app.route("/DM/info/<id>")
+@app.route("/DM/info/<id>",methods=["GET"])
 def info(id=None):
     with pny.db_session:
         #get list of all entries and turn them into a list of dictionaries
@@ -65,6 +65,15 @@ def info(id=None):
             data = d.to_dict()
     #return as a json
     return flask.jsonify(data), 200
+
+@app.route("/DM/get/<id>",methods=["GET"])
+@pny.db_session
+def get_data(id):
+    registeredData=Data[id]
+    if registeredData is not None:
+        return _get_data_from_location(registeredData)
+    else:
+        return "Data not found", 400
 
 # puts a stream of data to a location, avoids having to create a temporary file first and transfer it
 @app.route("/DM/put",methods=["PUT"])
@@ -391,6 +400,28 @@ async def submit_copy_bytes_to_machine(machine_name, src_bytes, dest):
     client = await Client.create(machine_name)
     await client.put(src_bytes, dest)
 
+def _get_data_from_location(registered_data):
+    if len(registered_data.path) > 0:
+        target_src=registered_data.path+"/"+registered_data.filename
+    else:
+        target_src=registered_data.filename
+    if registered_data.machine == "localhost":   
+        if registered_data.storage_technology == "FILESYSTEM":
+            readFile = open(target_src, "wb")
+            data_payload=readFile.read()
+            readFile.close()
+            return data_payload, 201
+        elif registered_data.storage_technology == "VESTECDB":
+            localData=LocalDataStorage.get(filename=target_src)
+            return localData.contents, 201
+    else:
+        contents=asyncio.run(submit_remote_get_data(registered_data.machine, target_src))
+        return contents, 201
+
+async def submit_remote_get_data(target_machine_name, src_file):
+    client = await Client.create(target_machine_name)              
+    return await client.get(src_file)     
+
 @pny.db_session
 def _put_data_to_location(data_payload, data_uuid):
     registered_data=Data[data_uuid]
@@ -407,7 +438,7 @@ def _put_data_to_location(data_payload, data_uuid):
                 newFile.write(data_payload)
                 newFile.close()
             elif registered_data.storage_technology == "VESTECDB":                
-                new_data_item=LocalDataStorage(contents=data_payload, filename=target_dest, filetype="unknown")            
+                new_data_item=LocalDataStorage(contents=data_payload, filename=target_dest, filetype="")            
         else:
             asyncio.run(submit_remote_put_data(registered_data.machine, data_payload, target_dest))
         return "Data put completed", 201

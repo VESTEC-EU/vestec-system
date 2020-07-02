@@ -72,6 +72,13 @@ def test_workflow(message):
     x = requests.post(SM_URL+'/submit', json=submitobj)
     print(x.json())
 
+    # Below is an example of looking up the written configuration data and then getting this
+    #myobj = {'filename': "configuration.txt", 'path' : simulation.directory, 'machine':'ARCHER'}
+    #x = requests.get(DATA_MANAGER_URL+'/search?filename=configuration.txt&path=incident-bb3c7b4b1b44/simulation-901c4b305133&machine=ARCHER')
+    #uid = x.json()["id"]
+    #retrieved_data=requests.get(DATA_MANAGER_URL+'/get/'+uid)
+    #print (retrieved_data.text)
+
 @workflow.handler
 def simple_workflow_execution_completed(message):
     print("Stage completed with simulation ID "+message["simulationId"])
