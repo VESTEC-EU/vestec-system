@@ -66,23 +66,39 @@ def info(id=None):
     #return as a json
     return flask.jsonify(data), 200
 
+# puts a stream of data to a location, avoids having to create a temporary file first and transfer it
+@app.route("/DM/put",methods=["PUT"])
+def put_data():    
+    registered_status=_perform_registration(flask.request.form)
+    if registered_status[1] == 201:
+        return _put_data_to_location(flask.request.form["payload"], registered_status[0])        
+    else:
+        return registered_status
 
 #registers a data entity with the DataManager, and returns its uuid
 @app.route("/DM/register",methods=["PUT"])
 def register():
     #get the info from the request
-    fname = flask.request.form["filename"]
-    if "path" in flask.request.form:
-        path = flask.request.form["path"]
+    return _perform_registration(flask.request.form)
+
+def _perform_registration(form_data):
+    fname = form_data["filename"]
+    if "path" in form_data:
+        path = form_data["path"]
     else:
         path = ""
-    machine = flask.request.form["machine"]
-    description = flask.request.form["description"]
-    size = flask.request.form["size"]
-    originator = flask.request.form["originator"]
-    group = flask.request.form["group"]
-    if "storage_technology" in flask.request.form:
-        storage_technology = flask.request.form["storage_technology"]
+    machine = form_data["machine"]
+    description = form_data["description"]
+    if "size" in form_data:
+        size = form_data["size"]
+    elif "payload" in form_data:
+        size=len(form_data["payload"])
+    else:
+        return "No size provided", 400
+    originator = form_data["originator"]
+    group = form_data["group"]
+    if "storage_technology" in form_data:
+        storage_technology = form_data["storage_technology"]
     else:
         storage_technology = "FILESYSTEM"
 
@@ -135,7 +151,6 @@ def GetExternal():
         return message, 501
     elif status==FILE_ERROR:
         return message, 500
-
 
 #Moves a data entity from one location to another
 @app.route("/DM/move/<id>",methods=["POST"])
@@ -375,6 +390,33 @@ async def submit_copy_bytes_from_machine(machine_name, src_file, move=False):
 async def submit_copy_bytes_to_machine(machine_name, src_bytes, dest):        
     client = await Client.create(machine_name)
     await client.put(src_bytes, dest)
+
+@pny.db_session
+def _put_data_to_location(data_payload, data_uuid):
+    registered_data=Data[data_uuid]
+    if registered_data is not None:
+        # If we are provided with a string then perform an implicit conversion to bytes
+        if isinstance(data_payload, str): data_payload=bytes(data_payload, encoding='utf8')
+        if len(registered_data.path) > 0:
+            target_dest=registered_data.path+"/"+registered_data.filename
+        else:
+            target_dest=registered_data.filename
+        if registered_data.machine == "localhost":   
+            if registered_data.storage_technology == "FILESYSTEM":
+                newFile = open(target_dest, "wb")
+                newFile.write(data_payload)
+                newFile.close()
+            elif registered_data.storage_technology == "VESTECDB":                
+                new_data_item=LocalDataStorage(contents=data_payload, filename=target_dest, filetype="unknown")            
+        else:
+            asyncio.run(submit_remote_put_data(registered_data.machine, data_payload, target_dest))
+        return "Data put completed", 201
+    else:
+        return "Registration error", 500    
+
+async def submit_remote_put_data(target_machine_name, data, dest_file):
+    client = await Client.create(target_machine_name)              
+    await client.put(data, dest_file)     
 
 #downloads a file to a (possibly remote) location
 def _download(filename,  path, storage_technology, machine, url, protocol, options):
