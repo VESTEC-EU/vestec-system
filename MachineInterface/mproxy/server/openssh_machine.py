@@ -53,8 +53,8 @@ class OpenSSHMachineConnection(ThrottlableMixin):
         temp = tempfile.NamedTemporaryFile()
         temp.write(src_bytes)
         temp.flush()
-        run_info=self._execute_command("scp "+temp.name+" "+self.hostname+":"+full_destination)
-        self._checkForErrors(run_info.stderr)
+        output, errors=self._execute_command("scp "+temp.name+" "+self.hostname+":"+full_destination)
+        self._checkForErrors(errors)
         temp.close()
 
     @throttle
@@ -64,8 +64,8 @@ class OpenSSHMachineConnection(ThrottlableMixin):
         else:
             full_src=self.remote_base_dir+"/"+src
         temp = tempfile.NamedTemporaryFile(mode="rb")
-        run_info=self._execute_command("scp "+self.hostname+":"+full_src+" "+temp.name)
-        if not self._checkForErrors(run_info.stderr):
+        output, errors=self._execute_command("scp "+self.hostname+":"+full_src+" "+temp.name)
+        if not self._checkForErrors(errors):
             read_bytes=temp.read()
             temp.close()
             return read_bytes
