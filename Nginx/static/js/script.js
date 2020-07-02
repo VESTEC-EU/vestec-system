@@ -611,7 +611,7 @@ function loadIncidentDetails(incident) {
             incident_html+=sim.status;
             if (sim.status_message != null) incident_html+="</span>";
             incident_html+=" <i>("+sim.status_updated+")</i></td><td>";            
-            if (sim.walltime != null && sim.walltime != "" && (sim.status!="QUEUED" || sim.status!="PENDING")) {
+            if (sim.walltime != null && sim.walltime != "" && (sim.status!="QUEUED" || sim.status!="PENDING" || sim.status!="CREATED")) {
                 incident_html+=sim.walltime;
             } else {
                 incident_html+=sim.requested_walltime;
@@ -628,7 +628,7 @@ function loadIncidentDetails(incident) {
             if (sim.status != "COMPLETED" && sim.status != "CANCELLED" && sim.status != "ERROR") {
                 incident_html+="<img id='refresh_icon_"+sim.uuid+"' src='../img/refresh.png' class='click_button' width=26 height=26 title='Refresh status' onClick=\"refreshSimulation('"+sim.uuid+"','"+incident.uuid+"')\">";
             }
-            if (sim.status=="QUEUED" || sim.status=="RUNNING" || sim.status=="PENDING") {                
+            if (sim.status=="QUEUED" || sim.status=="RUNNING" || sim.status=="PENDING" || sim.status=="CREATED") {                
                 incident_html+="&nbsp;&nbsp;&nbsp;&nbsp;";
                 incident_html+="<img src='../img/cross.png' class='click_button' width=26 height=26 title='Cancel simulation' onClick=\"cancelSimulation('"+sim.uuid+"','"+incident.uuid+"')\">";
             }

@@ -58,7 +58,7 @@ class API:
         pass
 
     @rpcmethod
-    def mkdir(d: str) -> None:
+    def mkdir(d: str, args: str = "") -> None:
         pass
 
     @rpcmethod
@@ -74,7 +74,7 @@ class API:
         pass
 
     @rpcmethod
-    def cp(src: str, dest: str) -> None:
+    def cp(src: str, dest: str, args: str = "") -> None:
         pass
 
     pass

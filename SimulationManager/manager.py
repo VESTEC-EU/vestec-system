@@ -43,7 +43,7 @@ def get_health():
 @pny.db_session
 def refresh_sim_state(simulation_id):
     sim=Simulation[simulation_id]
-    if (sim.status=="PENDING" or sim.status=="QUEUED" or sim.status=="RUNNING" or sim.status=="ENDING"):
+    if (sim.status=="PENDING" or sim.status=="CREATED" or sim.status=="QUEUED" or sim.status=="RUNNING" or sim.status=="ENDING"):
         handleRefreshOfSimulations([sim])
     return jsonify({"status": 200})    
 
@@ -62,7 +62,31 @@ def cancel_simulation(simulation_id):
 
 async def delete_simulation_job(machine_name, queue_id):        
     client = await Client.create(machine_name)
-    await client.cancelJob(queue_id)    
+    await client.cancelJob(queue_id)
+
+@app.route("/SM/submit", methods=["POST"])
+@pny.db_session
+def submit_job():
+    data = request.get_json()
+
+    simulation_uuid = data["simulation_uuid"]
+    simulation = Simulation[simulation_uuid]
+    submission_data=asyncio.run(submit_job_to_machine(simulation.machine.machine_name, simulation.num_nodes, simulation.requested_walltime, simulation.directory, simulation.executable))
+    if (submission_data[0]):
+        simulation.jobID=submission_data[1]
+        simulation.status="QUEUED"
+        simulation.status_updated=datetime.datetime.now()
+        return jsonify({"status": 201})
+    else:
+        simulation.status="ERROR"
+        simulation.status_message=submission_data[1]
+        simulation.status_updated=datetime.datetime.now()
+        return jsonify({"status": 401})     
+
+async def submit_job_to_machine(machine_name, num_nodes, requested_walltime, directory, executable):        
+    client = await Client.create(machine_name)
+    queue_id = await client.submitJob(num_nodes, requested_walltime, directory, executable)
+    return queue_id    
 
 @app.route("/SM/create", methods=["POST"])
 @pny.db_session
@@ -75,40 +99,47 @@ def create_job():
     kind = data["kind"]
     requested_walltime = data["requested_walltime"]
     executable = data["executable"]
+
+    incident_dir_id=incident_id.split("-")[-1]
+    simulation_dir_id=uuid.split("-")[-1]
+
     if "directory" in data:
         directory = data["directory"]
     else:
-        directory = ""
+        directory = "incident-"+incident_dir_id+"/simulation-"+simulation_dir_id
 
-    simulation = Simulation(uuid=uuid, incident=incident_id, kind=kind, date_created=datetime.datetime.now(), num_nodes=num_nodes, requested_walltime=requested_walltime, executable=executable, status_updated=datetime.datetime.now())
-    if ("queuestate_calls" in data):
-        for key, value in data["queuestate_calls"].items():
-            simulation.queue_state_calls.create(queue_state=key, call_name=value)
-    pny.commit()
+    if "template_dir" in data:
+        template_dir = data["template_dir"]
+    else:
+        template_dir = ""
 
     matched_machine=requests.get(MSM_URL + '/matchmachine?walltime='+str(requested_walltime)+'&num_nodes='+str(num_nodes))
     if matched_machine.status_code == 200:
-        stored_machine=Machine.get(machine_id=matched_machine.json()["machine_id"])
-        simulation.machine=stored_machine        
-        submission_data=asyncio.run(submit_job_to_machine(stored_machine.machine_name, num_nodes, requested_walltime, directory, executable))
-        if (submission_data[0]):
-            simulation.jobID=submission_data[1]
-            simulation.status="QUEUED"
-        else:
-            simulation.status="ERROR"
-            simulation.status_message=submission_data[1]            
-        simulation.status_updated=datetime.datetime.now()
-    else:
-        # TODO - report this, for now print out
+        stored_machine=Machine.get(machine_id=matched_machine.json()["machine_id"])        
+        asyncio.run(create_job_on_machine(stored_machine.machine_name, directory, template_dir))
+        job_status="CREATED"        
+    else:        
+        job_status="ERROR"
+        status_message="Error allocating machine to job, "+["msg"]
+        stored_machine=None
         print(matched_machine.json()["msg"])
 
-    pny.commit()
+    simulation = Simulation(uuid=uuid, incident=incident_id, kind=kind, date_created=datetime.datetime.now(), num_nodes=num_nodes, requested_walltime=requested_walltime, executable=executable, status=job_status, status_updated=datetime.datetime.now(), directory=directory)
+    if (job_status=="ERROR"):
+        simulation.status_message=status_message
+    if (stored_machine is not None):
+        simulation.machine=stored_machine
+    if ("queuestate_calls" in data):
+        for key, value in data["queuestate_calls"].items():
+            simulation.queue_state_calls.create(queue_state=key, call_name=value)    
+    
     return jsonify({"status": 201, "simulation_id": uuid})
 
-async def submit_job_to_machine(machine_name, num_nodes, requested_walltime, directory, executable):        
+async def create_job_on_machine(machine_name, directory, simulation_template_dir):        
     client = await Client.create(machine_name)
-    queue_id = await client.submitJob(num_nodes, requested_walltime, directory, executable)    
-    return queue_id
+    mk_directory=await client.mkdir(directory, "-p")
+    if (simulation_template_dir != ""):    
+        copy_template_submission = await client.cp(simulation_template_dir+"/*", directory, "-R")    
 
 @pny.db_session
 def poll_outstanding_sim_statuses():

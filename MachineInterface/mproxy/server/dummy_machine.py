@@ -99,7 +99,7 @@ class DummyMachineConnection(ThrottlableMixin):
         return self._ls
 
     @throttle
-    def mkdir(self, dirname):
+    def mkdir(self, dirname, args=""):
         log.info("%s.mkdir(%s)", self.name, dirname)
 
     @throttle
@@ -115,7 +115,7 @@ class DummyMachineConnection(ThrottlableMixin):
         log.info("%s.mv(%s -> %s)", self.name, src, dest)
 
     @throttle
-    def cp(self, src, dest):
+    def cp(self, src, dest, args=""):
         log.info("%s.cp(%s -> %s)", self.name, src, dest)
 
 

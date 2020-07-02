@@ -160,12 +160,10 @@ class OpenSSHMachineConnection(ThrottlableMixin):
         return line_info
 
     @throttle
-    def mkdir(self, d):
-        files = self.ls()
-        if dir not in files:
-            pass #self.sftp.mkdir(d)
-        else:
-            log.info("Directory '%s' already exists. Skipping", d)
+    def mkdir(self, d, args=""):
+        if len(args) > 0: args+=" "
+        run_info=self.run("mkdir "+args+d)
+        self._checkForErrors(run_info.stderr)        
 
     @throttle
     def rm(self, file):
@@ -183,8 +181,9 @@ class OpenSSHMachineConnection(ThrottlableMixin):
         self._checkForErrors(run_info.stderr)
 
     @throttle
-    def cp(self, src, dest):
-        run_info=self.run("cp "+src+" "+dest)
+    def cp(self, src, dest, args=""):
+        if len(args) > 0: args+=" "
+        run_info=self.run("cp "+args+src+" "+dest)
         self._checkForErrors(run_info.stderr)  
 
     pass

@@ -33,6 +33,7 @@ class Client:
     put = proxy(API.put)
     get = proxy(API.get)
     cd = proxy(API.cd)
+    cp = proxy(API.cp)
     getcwd = proxy(API.getcwd)
     ls = proxy(API.ls)
     mkdir = proxy(API.mkdir)
