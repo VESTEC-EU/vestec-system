@@ -8,7 +8,7 @@ import time
 import json
 from base64 import b64decode
 from Database import LocalDataStorage
-from Database.workflow import Incident, StoredDataset, Simulation
+from Database.workflow import Simulation
 from DataManager.client import registerDataWithDM, putByteDataViaDM, DataManagerException
 from SimulationManager.client import createSimulation, submitSimulation, SimulationManagerException
 from ExternalDataInterface.client import registerEndpoint, ExternalDataInterfaceException
@@ -31,15 +31,12 @@ def manually_add_data(message):
     new_file = LocalDataStorage(contents=data, filename=incidentId+"/"+file_contents_to_add["filename"], filetype=filetype)
     pny.commit()        
 
-    data_uuid=registerDataWithDM(file_contents_to_add["filename"], "localhost", "manually uploaded", str(len(data)), "Manually added", storage_technology="VESTECDB", path=incidentId)
-
-    incident=Incident[incidentId]
-    incident.associated_datasets.create(
-        uuid=data_uuid, name=file_contents_to_add["filename"], 
-        type=file_contents_to_add["filetype"], 
-        comment=file_contents_to_add["filecomment"],         
-        date_created=datetime.datetime.now())    
-    pny.commit()
+    try:
+        registerDataWithDM(file_contents_to_add["filename"], "localhost", "manually uploaded", str(len(data)), "Manually added", 
+                storage_technology="VESTECDB", path=incidentId, associate_with_incident=True, incidentId=incidentId, type=file_contents_to_add["filetype"], 
+                comment=file_contents_to_add["filecomment"])
+    except DataManagerException as err:
+        print("Error registering uploaded data with DM, "+err.message)
 
 @workflow.handler
 @pny.db_session
