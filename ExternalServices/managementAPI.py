@@ -24,6 +24,7 @@ from pony.orm.serialization import to_dict
 from flask import Flask, request, jsonify, send_file, Response
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
 from ExternalDataInterface.client import getEDIHealth, getAllEDIEndpoints, removeEndpoint
+import MachineStatusManager.client as MSM
 
 logger = log.VestecLogger("Website")
 
@@ -34,11 +35,6 @@ if "VESTEC_SM_URI" in os.environ:
     SM_URL= os.environ["VESTEC_SM_URI"]
 else:
     SM_URL = 'http://localhost:5505/SM'
-
-if "VESTEC_MSM_URI" in os.environ:
-    MSM_URL = os.environ["VESTEC_MSM_URI"]
-else:
-    MSM_URL= 'http://localhost:5502/MSM'
 
 if "VESTEC_DM_URI" in os.environ:
     DATA_MANAGER_URL = os.environ["VESTEC_DM_URI"]
@@ -264,7 +260,7 @@ def getComponentHealths():
     component_healths=[]    
     component_healths.append({"name" : "External data interface", "status" : getEDIHealth()})
     component_healths.append(_getHealthOfComponent(SM_URL, "Simulation manager"))    
-    component_healths.append(_getHealthOfComponent(MSM_URL, "Machine status manager"))    
+    component_healths.append({"name" : "Machine status manager", "status" : MSM.getMSMHealth()})        
     component_healths.append(_getHealthOfComponent(DATA_MANAGER_URL, "Data manager"))
     return jsonify({"status": 200, "health": json.dumps(component_healths)})
 
@@ -283,32 +279,57 @@ def deleteEDIHandler(retrieved_data):
         return jsonify({"msg": err.message}), err.status_code
 
 def retrieveMachineStatuses():
-    machine_statuses=requests.get(MSM_URL + '/machinestatuses')
-    return jsonify({"status": 200, "machine_statuses": machine_statuses.json()})
+    return jsonify({"status": 200, "machine_statuses": MSM.retrieveMachineStatuses()})
 
 def addNewMachine(retrieved_data):
-    created_info = requests.post(MSM_URL + '/add', json=retrieved_data)    
-    return Response(created_info.content, created_info.status_code)
+    machine_name=retrieved_data.get("machine_name", None)
+    host_name=retrieved_data.get("host_name", None)
+    scheduler=retrieved_data.get("scheduler", None)
+    connection_type=retrieved_data.get("connection_type", None)
+    num_nodes=retrieved_data.get("num_nodes", None)
+    cores_per_node=retrieved_data.get("cores_per_node", None)
+    base_work_dir=retrieved_data.get("base_work_dir", None)
+
+    try:
+        MSM.addNewMachine(machine_name, host_name, scheduler, connection_type, num_nodes, cores_per_node, base_work_dir)
+        return jsonify({"msg": "Machine added"}), 200
+    except MSM.MachineStatusManagerException as err:
+        return jsonify({"msg": err.message}), err.status_code
 
 def deleteMachine(machine_id):
-    deleted_info = requests.delete(MSM_URL + '/machine/'+machine_id)    
-    return Response(deleted_info.content, deleted_info.status_code)    
+    try:
+        MSM.deleteMachine(machine_id)
+        return jsonify({"msg": "Machine deleted"}), 200
+    except MSM.MachineStatusManagerException as err:
+        return jsonify({"msg": err.message}), err.status_code
 
 def enableMachine(machine_id):
-    enabled_info = requests.post(MSM_URL + '/enable/'+machine_id)    
-    return Response(enabled_info.content, enabled_info.status_code)
+    try:
+        MSM.enableMachine(machine_id)
+        return jsonify({"msg": "Machine enabled"}), 200
+    except MSM.MachineStatusManagerException as err:
+        return jsonify({"msg": err.message}), err.status_code
 
 def disableMachine(machine_id):
-    disabled_info = requests.post(MSM_URL + '/disable/'+machine_id)    
-    return Response(disabled_info.content, disabled_info.status_code)
+    try:
+        MSM.disableMachine(machine_id)
+        return jsonify({"msg": "Machine disabled"}), 200
+    except MSM.MachineStatusManagerException as err:
+        return jsonify({"msg": err.message}), err.status_code
 
 def enableTestModeMachine(machine_id):
-    enabled_info = requests.post(MSM_URL + '/enable_testmode/'+machine_id)    
-    return Response(enabled_info.content, enabled_info.status_code)
+    try:
+        MSM.enableTestModeOnMachine(machine_id)
+        return jsonify({"msg": "Test mode enabled"}), 200
+    except MSM.MachineStatusManagerException as err:
+        return jsonify({"msg": err.message}), err.status_code
 
 def disableTestModeMachine(machine_id):
-    disabled_info = requests.post(MSM_URL + '/disable_testmode/'+machine_id)    
-    return Response(disabled_info.content, disabled_info.status_code)    
+    try:
+        MSM.disableTestModeOnMachine(machine_id)
+        return jsonify({"msg": "Test mode disabled"}), 200
+    except MSM.MachineStatusManagerException as err:
+        return jsonify({"msg": err.message}), err.status_code
 
 @pny.db_session
 def deleteWorkflow(retrieved_data):
