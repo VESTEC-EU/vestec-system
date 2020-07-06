@@ -80,7 +80,11 @@ def get_data(id):
 def put_data():    
     registered_status=_perform_registration(flask.request.form)
     if registered_status[1] == 201:
-        return _put_data_to_location(flask.request.form["payload"], registered_status[0])        
+        put_status= _put_data_to_location(flask.request.form["payload"], registered_status[0])
+        if put_status[1] == 201:
+            return registered_status[0]
+        else:
+            return put_status
     else:
         return registered_status
 
