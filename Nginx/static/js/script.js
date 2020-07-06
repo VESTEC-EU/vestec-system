@@ -720,8 +720,8 @@ function editDataItem(data_uuid, incident_uuid) {
             $('#edit-data-dialog-contents').load('templates/editdata.html #editDataScreen', function() {
                 $('#incidentId').val(incident_uuid);
                 $('#dataId').val(data_uuid);
-                $('#filetype').val(meta_data.type);
-                $('#filecomment').val(meta_data.comment);
+                $('#edit-filetype').val(meta_data.type);
+                $('#edit-filecomment').val(meta_data.comment);
                 edit_data_dialog.dialog( "open" );
             });  
         }
@@ -732,8 +732,8 @@ function editProvidedData() {
     var data_description = {};
     data_description["incident_uuid"] = $("#incidentId").val();
     data_description["data_uuid"] = $("#dataId").val();
-    data_description["type"] = $("#filetype").val();
-    data_description["comments"] = $("#filecomment").val();
+    data_description["type"] = $("#edit-filetype").val();
+    data_description["comments"] = $("#edit-filecomment").val();
     $.ajax({
         url: "/flask/metadata",
         type: "POST",
