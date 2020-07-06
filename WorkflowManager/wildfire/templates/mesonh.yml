@@ -1,0 +1,35 @@
+upperleft:
+  lat: 34.05
+  lon: -118.05
+lowerright:
+  lat: 33.95
+  lon: -117.95
+dx: 2000.0
+
+pgd:
+  class: File
+  path: CFIRE02KM.nc
+
+gfs_gribs:
+  - class: File
+    path: /work/d170/shared/data/mesonh/GFS/gfsanl_3_20190711_0000_000.grb2
+  - class: File
+    path: /work/d170/shared/data/mesonh/GFS/gfsanl_3_20190711_0600_000.grb2
+ini_nameroots:
+  - GFS20190711.00
+  - GFS20190711.06
+
+sim_processes: 4
+
+turblen: BL89
+turbdim: 1DIM
+experiment_name: TEST1
+segment_name: S1234
+output_name: fire_input.nc
+
+ncl_root:
+  class: Directory
+  path: /work/y07/y07/cse/ncl/6.4.0
+ncl_resfile:
+  class: File
+  path: /work/y07/y07/cse/ncl/6.4.0/share/hluresfile

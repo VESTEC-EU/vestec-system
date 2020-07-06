@@ -12,23 +12,32 @@ from .weatherdata import getLatestURLs
 from Database import Incident
 from Database.workflow import Simulation
 from ExternalDataInterface.client import registerEndpoint, ExternalDataInterfaceException
-from SimulationManager.client import createSimulation, submitSimulation, SimulationManagerException
-from DataManager.client import putByteDataViaDM, DataManagerException, registerDataWithDM
+from SimulationManager.client import createSimulation, submitSimulation, SimulationManagerException, cancelSimulation
+from DataManager.client import putByteDataViaDM, DataManagerException, registerDataWithDM, downloadDataToTargetViaDM, getInfoForDataInDM
+
+@workflow.handler
+def wildfire_mesonh_init_standalone(msg):
+    IncidentID = msg["IncidentID"]
+    _handle_init(msg)
+    workflow.setIncidentActive(IncidentID)
+
 
 #initialises the mesoNH part of the workflow
 @workflow.handler
 def wildfire_mesonh_init(msg):
+    _handle_init(msg)
+
+def _handle_init(msg):
     IncidentID = msg["IncidentID"]
     print("\nInitialising MesoNH sub-workflow")
 
-    #try:
-    #    registerEndpoint(IncidentID, "https://www.ncei.noaa.gov/data/global-forecast-system/access/grid-003-1.0-degree/analysis", "wildfire_mesonh_getdata", 3600)
-    #    print("Registered EDI to poll for GFS data")
-    #except ExternalDataInterfaceException as err:
-    #    print("Failed to register for GFS download "+err.message)
-    #    return
-    
-    workflow.setIncidentActive(IncidentID)
+    try:
+        registerEndpoint(IncidentID, "https://www.ncei.noaa.gov/data/global-forecast-system/access/grid-003-1.0-degree/analysis", "wildfire_mesonh_getdata", 3600)
+        print("Registered EDI to poll for GFS data")
+    except ExternalDataInterfaceException as err:
+        print("Failed to register for GFS download "+err.message)
+        return
+        
     workflow.send(msg,"wildfire_mesonh_physiographic")
 
 
@@ -58,15 +67,10 @@ def wildfire_mesonh_getdata(msg):
             if log["url"] == url:
                 exists = True
     
-        
         if not exists:
             anynew = True
             print("New URL: %s"%url)
-            
-            #INSERT CODE HERE TO DOWNLOAD THE FILE WITH THE DM
-
-            #persist this url in the handler's storage
-            ## THIS SHOULD REALLY BE THE UUID OF THE DATA OBJECT FROM THE DM
+            # Persist these, will DL onto target machine when we know what it is
             workflow.Persist.Put(IncidentID,{"url": url})
     
     #if there is new data, send it onto the MesoNH simulation step
@@ -79,12 +83,12 @@ def wildfire_mesonh_getdata(msg):
             logs = logs[-2:]
             
             #get the filenames THIS SHOULD BE THE UUID OF THE FILES IN THE DM
-            files=[]
+            urls=[]
             for log in logs:
-                dummy, file = os.path.split(log["url"])
-                files.append(file)
+                #dummy, file = os.path.split(log["url"])
+                urls.append(log["url"])
             
-            msg["files"] = files
+            msg["urls"] = urls
 
             print("Sending latest 2 weather observations to wildfire_mesonh_simulation")
         
@@ -119,9 +123,10 @@ def wildfire_mesonh_physiographic(msg):
         callbacks = {'COMPLETED': 'wildfire_mesonh_simulation'}   
         sim_id=createSimulation(IncidentID, 1, "0:05:00", "PGD pre-processing", "prep_pgd.sh", queuestate_callbacks=callbacks, template_dir="prep_pdg_template")
         with pny.db_session:
-            simulation=Simulation[sim_id]      
+            simulation=Simulation[sim_id]   
+            machine_name=simulation.machine.machine_name   
         try:
-            data_uuid=putByteDataViaDM("prep_pgd.yml", "ARCHER", "PGD pre-processing YAML configuration", "MesoNH workflow", yaml.dump(yaml_template), path=simulation.directory)        
+            data_uuid=putByteDataViaDM("prep_pgd.yml", machine_name, "PGD pre-processing YAML configuration", "MesoNH workflow", yaml.dump(yaml_template), path=simulation.directory)        
         except DataManagerException as err:
             print("Error creating configuration file on machine"+err.message)
             return
@@ -130,14 +135,16 @@ def wildfire_mesonh_physiographic(msg):
         print("Error creating or submitting simulation "+err.message)
         return
 
-
 #logs any new messages appropriately, then sees if the criteria are met to run a simulation. If so, it runs [not implemented] the simulation
 @workflow.atomic
 @workflow.handler
 def wildfire_mesonh_simulation(msg):
     IncidentID = msg["IncidentID"]
     originator = msg["originator"]
-    simulationId = msg["simulationId"]
+    if "simulationId" in msg:
+        simulationId = msg["simulationId"]
+    else:
+        simulationId = None
 
     print("\nMesoNH simulation")
 
@@ -150,7 +157,10 @@ def wildfire_mesonh_simulation(msg):
 
         if simulation is not None:
             try:
-                data_uuid=registerDataWithDM("CFIRE02KM.nc", machine_name, "Physiographic data", 0, "MesoNH PGD pre-processing", path=simulation.directory)
+                print("Physiographic path is "+simulation.directory)
+                registerDataWithDM("CFIRE02KM.nc", machine_name, "Physiographic data", 0, "MesoNH PGD pre-processing", 
+                    path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, type="Physiographic data", 
+                    comment="Created by MesoNH PGD pre-processing which was run on "+machine_name)
             except DataManagerException as err:
                 print("Error registering data with data manager "+err.message)
                 return
@@ -158,17 +168,8 @@ def wildfire_mesonh_simulation(msg):
             print("No such simulation with ID "+simulationId)
             return
 
-        with pny.db_session:
-            incident=Incident[IncidentID]
-            incident.associated_datasets.create(
-                uuid=data_uuid, name="CFIRE02KM.nc", 
-                type="Physiographic data", 
-                comment="Created by MesoNH PGD pre-processing which was run on "+machine_name,         
-                date_created=datetime.datetime.now())
-
     elif originator == "wildfire_mesonh_getdata":
-        workflow.Persist.Put(IncidentID,{"originator": originator, "files": msg["files"]})
-        print('New weather forecasts received')
+        workflow.Persist.Put(IncidentID,{"originator": originator, "urls": msg["urls"]})        
     else:
         raise ValueError("Unexpected originator: %s"%originator)
 
@@ -183,43 +184,115 @@ def wildfire_mesonh_simulation(msg):
             if log["Physiographic"]:
                 physiographic = True
     
-    weatherfiles = None
+    urls = None
     
     #go through logs and get the latest url
     for log in logs:
-        if log["originator"] == "wildfire_mesonh_getdata":
-            weatherfiles = log["files"]
+        if log["originator"] == "wildfire_mesonh_getdata":            
+            urls = log["urls"]    
     
-    if weatherfiles is None or physiographic == False:
+    if urls is None or physiographic == False:
         print("Nothing to be done yet. Missing dependencies")
         return
     
-    print("Can now run a simulation!")
+    try:
+        callbacks = {'COMPLETED': 'wildfire_mesonh_results'}   
+        sim_id=createSimulation(IncidentID, 1, "0:10:00", "MesoNH weather simulation", "run.sh", queuestate_callbacks=callbacks, template_dir="mesonh_template")
+        with pny.db_session:
+            simulation=Simulation[sim_id]    
+            machine_name=simulation.machine.machine_name
+            machine_basedir=simulation.machine.base_work_dir
+            if machine_basedir[-1] != "/": machine_basedir+="/"
+        
+        gfs_data_uuids=[]
+        gfs_data_filenames=[]
+        for url in urls:
+            filename=os.path.split(url)[1]
+            gfs_data_filenames.append(filename)            
+            try:
+                gfs_data_uuids.append(downloadDataToTargetViaDM(filename, machine_name, "GFS global weather data", "NASA website", url, "https", 
+                    path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, type="GFS global weather data", comment="Downloaded from NASA website onto "+machine_name))
+            except DataManagerException as err:
+                print("Error downloading GFS weather data to target machine "+err.message)
+                return
 
-    #INSERT CODE TO SUBMIT SIMULATION HERE
-    print("Weather files to use are:")
-    for file in weatherfiles:
-        print("%s"%file)
+        mesoNHYaml=_buildMesoNHYaml(IncidentID, machine_basedir, simulation.directory, gfs_data_filenames[0],gfs_data_filenames[1], _retrievePGDDataLocation(IncidentID))
 
+        try:
+            data_uuid=putByteDataViaDM("params.yml", machine_name, "MesoNH YAML configuration", "MesoNH workflow", mesoNHYaml, path=simulation.directory)        
+        except DataManagerException as err:
+            print("Error creating configuration file on machine"+err.message)
+            return
+        submitSimulation(sim_id)
+    except SimulationManagerException as err:
+        print("Error creating or submitting MesoNH simulation "+err.message)
+        return
 
-    #this below bit just forwards to the simulation results handler. In reality this would be the simulation manager doing this
-    workflow.send({"IncidentID": IncidentID},"wildfire_mesonh_results")
+@pny.db_session
+def _retrievePGDDataLocation(incidentId):
+    myincident = Incident[incidentId]
+    for stored_ds in myincident.associated_datasets:
+        if stored_ds.type.lower() == "physiographic data":
+            try:
+                data_info=getInfoForDataInDM(stored_ds.uuid)                
+                return data_info["absolute_path"]
+            except DataManagerException as err:
+                print("Can not retrieve DM information for data "+err.message)
+    print("No matching physiographic data")
+    return None
+    
+@pny.db_session
+def _buildMesoNHYaml(incidentId, machine_basedir, simulation_location, gfs_file1, gfs_file2, pdg_file):
+    myincident = Incident[incidentId]
+    upperLeft = myincident.upper_left_latlong
+    lowerRight = myincident.lower_right_latlong
+            
+    upperLeftLon, upperLeftLat = upperLeft.split("/")
+    lowerRightLon, lowerRightLat = lowerRight.split("/")
+
+    sample_configuration_file = open("wildfire/templates/mesonh.yml")
+    yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)    
+    yaml_template["upperleft"]["lat"]=float(upperLeftLat)
+    yaml_template["upperleft"]["lon"]=float(upperLeftLon)
+    yaml_template["lowerright"]["lat"]=float(lowerRightLat)
+    yaml_template["lowerright"]["lon"]=float(lowerRightLon)
+
+    yaml_template["gfs_gribs"][0]["path"]=machine_basedir+simulation_location+"/"+gfs_file1
+    yaml_template["gfs_gribs"][1]["path"]=machine_basedir+simulation_location+"/"+gfs_file2
+    yaml_template["ini_nameroots"][0]="GFS"+gfs_file1.split("_")[-3]+"."+gfs_file1.split("_")[-2][0:2]
+    yaml_template["ini_nameroots"][1]="GFS"+gfs_file2.split("_")[-3]+"."+gfs_file2.split("_")[-2][0:2]
+    yaml_template["pgd"]["path"]=pdg_file
+    return yaml.dump(yaml_template)
     
 #handles simulation results from a mesoNH simulation (at)
 @workflow.handler
 def wildfire_mesonh_results(msg):
     IncidentID = msg["IncidentID"]
-    
-    print('\nGot MesoNH results')
-    
-    print("Forwarding dummy 'weatherforecast.nc' to wildfire analyst step")
-    msg = {"IncidentID": IncidentID, "file": "weatherforecast.nc"}
+    simulationId = msg["simulationId"]    
 
-    workflow.send(msg,"wildfire_fire_simulation")
+    with pny.db_session:
+        simulation=Simulation[simulationId]
+        machine_name=simulation.machine.machine_name
+
+    if simulation is not None:
+        try:                
+            registerDataWithDM("fire_input.nc", machine_name, "MesoNH weather forecast", 0, "MesoNH simulation", 
+                path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, type="Weather forecast", 
+                comment="Created by MesoNH on "+machine_name)
+        except DataManagerException as err:
+            print("Error registering MesoNH result data with data manager "+err.message)                
+    else:
+        print("No such simulation with ID "+simulationId)            
+    
+    #print("Forwarding dummy 'weatherforecast.nc' to wildfire analyst step")
+    #msg = {"IncidentID": IncidentID, "file": "weatherforecast.nc"}
+
+    #workflow.send(msg,"wildfire_fire_simulation")
 
 def RegisterHandlers():
-    #workflow.RegisterHandler(handler = wildfire_mesonh_getdata,queue="wildfire_mesonh_getdata")
+    workflow.RegisterHandler(handler = wildfire_mesonh_getdata,queue="wildfire_mesonh_getdata")
     workflow.RegisterHandler(handler = wildfire_mesonh_init,queue="wildfire_mesonh_init")
+    workflow.RegisterHandler(handler = wildfire_mesonh_init_standalone,queue="wildfire_mesonh_init_standalone")
     workflow.RegisterHandler(handler = wildfire_mesonh_physiographic,queue="wildfire_mesonh_physiographic")
     workflow.RegisterHandler(handler = wildfire_mesonh_simulation,queue="wildfire_mesonh_simulation")
-    #workflow.RegisterHandler(handler = wildfire_mesonh_results,queue="wildfire_mesonh_results")
+    workflow.RegisterHandler(handler = wildfire_mesonh_results,queue="wildfire_mesonh_results")
