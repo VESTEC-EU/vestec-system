@@ -145,7 +145,7 @@ def downloadData(data_uuid):
 @pny.db_session
 @fresh_jwt_required
 def refreshSimulation():    
-    return managementAPI.refreshSimulation(request.json)
+    return managementAPI.performRefreshSimulation(request.json)
 
 @app.route('/flask/simulation', methods=['DELETE'])
 @pny.db_session
@@ -153,7 +153,7 @@ def refreshSimulation():
 def cancelSimulation():
     simulation_uuid = request.args.get("sim_uuid", None)    
     username = get_jwt_identity()  
-    return managementAPI.cancelSimulation(simulation_uuid, username)
+    return managementAPI.performCancelSimulation(simulation_uuid, username)
 
 @app.route('/flask/data', methods=['DELETE'])
 @pny.db_session

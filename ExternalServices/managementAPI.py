@@ -26,16 +26,12 @@ from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fr
 from ExternalDataInterface.client import getEDIHealth, getAllEDIEndpoints, removeEndpoint
 import MachineStatusManager.client as MSM
 from DataManager.client import getInfoForDataInDM, DataManagerException, getDMHealth, deleteDataViaDM
+from SimulationManager.client import refreshSimilation, SimulationManagerException, cancelSimulation, getSMHealth
 
 logger = log.VestecLogger("Website")
 
 VERSION_PRECLUDE="1.2"
 version_number=VERSION_PRECLUDE+"."+VERSION_POSTFIX
-
-if "VESTEC_SM_URI" in os.environ:
-    SM_URL= os.environ["VESTEC_SM_URI"]
-else:
-    SM_URL = 'http://localhost:5505/SM'
 
 def version():
     return jsonify({"status": 200, "version": version_number})
@@ -221,18 +217,24 @@ def deleteData(data_uuid, incident_uuid, username):
         return jsonify({"msg": "Data deletion failed, no incident data set that you can edit"}), 401
 
 @pny.db_session
-def refreshSimulation(request_json):       
+def performRefreshSimulation(request_json):       
     sim_uuid=request_json.get("sim_uuid", None)
-    returned_info = requests.post(SM_URL + '/refresh/'+sim_uuid)
-    sim = Simulation[sim_uuid]
-    packagedSim=incidents.packageSimulation(sim)
-    return jsonify({"status": 200, "simulation": json.dumps(packagedSim)})     
-
+    try:
+        refreshSimilation(sim_uuid)
+        sim = Simulation[sim_uuid]
+        packagedSim=incidents.packageSimulation(sim)
+        return jsonify({"simulation": json.dumps(packagedSim)}), 200
+    except SimulationManagerException as err:
+        return jsonify({"msg" : err.message}), err.status_code
+ 
 @pny.db_session
-def cancelSimulation(sim_uuid, username):
-    returned_info = requests.delete(SM_URL + '/simulation/'+sim_uuid)    
-    return Response(returned_info.content, returned_info.status_code)
-
+def performCancelSimulation(sim_uuid, username):
+    try:
+        cancelSimulation(sim_uuid)
+        return "Similation cancelled successfully", 200
+    except SimulationManagerException as err:
+        return jsonify({"msg" : err.message}), err.status_code
+    
 @pny.db_session
 def getLogs():
     logs = []
@@ -251,23 +253,10 @@ def getLogs():
     logs.reverse()
     return jsonify({"status": 200, "logs": json.dumps(logs)})
 
-def _getHealthOfComponent(component_name, displayname):
-    bd={}
-    bd["name"]=displayname
-    try:
-        edi_health = requests.get(component_name + '/health')        
-        if edi_health.status_code == 200:
-            bd["status"]=True
-        else:
-            bd["status"]=False
-    except:
-        bd["status"]=False
-    return bd
-
 def getComponentHealths():
     component_healths=[]    
-    component_healths.append({"name" : "External data interface", "status" : getEDIHealth()})
-    component_healths.append(_getHealthOfComponent(SM_URL, "Simulation manager"))    
+    component_healths.append({"name" : "External data interface", "status" : getEDIHealth()})    
+    component_healths.append({"name" : "Simulation manager", "status" : getSMHealth()})
     component_healths.append({"name" : "Machine status manager", "status" : MSM.getMSMHealth()})
     component_healths.append({"name" : "Data manager", "status" : getDMHealth()})        
     return jsonify({"status": 200, "health": json.dumps(component_healths)})
