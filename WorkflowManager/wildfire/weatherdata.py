@@ -25,7 +25,7 @@ def tryURL(url):
         return True
 
 
-def getLatestURL(verbose = False):
+def getLatestURLs(verbose = False):
 
 
     baseURL = "https://www.ncei.noaa.gov/data/global-forecast-system/access/grid-003-1.0-degree/analysis"
@@ -34,6 +34,8 @@ def getLatestURL(verbose = False):
 
     today = datetime.date.today()
     oneday = datetime.timedelta(days=1)
+
+    urls = []
 
     if verbose: print("Checking for new weather data...")
 
@@ -59,19 +61,26 @@ def getLatestURL(verbose = False):
             fileURL = os.path.join(dayURL,base)
             # print("    %s"%fileURL)
             if tryURL(fileURL):
-                if verbose: print('Latest timestamp is %s'%time)
-                return fileURL
+                if verbose: print('Timestamp is %s'%time)
+                urls.append(fileURL)
+                #if we have 2 urls, we are done and can return this
+                if len(urls) == 2:
+                    #reverse the order so the oldest is first
+                    urls.reverse()
+                    return urls
             else:
                 continue
                 # print("Does not exist")
 
-    if verbose: print("No data found")
-    return None
+    if verbose: print("Only %s url found"%len(urls))
+    return urls
 
 
 if __name__ == "__main__":
-    URL = getLatestURL()
-    print("URL = %s"%URL)
+    URLs = getLatestURLs()
+    print("Two latest URLs are:")
+    for url in URLs:
+        print(url)
 
 
 
