@@ -16,7 +16,6 @@ from Database.workflow import RegisteredWorkflow, Simulation
 import datetime
 from uuid import uuid4
 import Utils.log as log
-import requests
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
 from WorkflowManager import workflow

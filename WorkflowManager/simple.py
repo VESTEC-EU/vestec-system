@@ -5,7 +5,6 @@ import os
 import pony.orm as pny
 import datetime
 import time
-import requests
 import json
 from base64 import b64decode
 from Database import LocalDataStorage

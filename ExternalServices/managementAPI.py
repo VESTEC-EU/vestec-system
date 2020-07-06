@@ -3,7 +3,6 @@ import os
 import io
 sys.path.append("../")
 import json
-import requests
 import pony.orm as pny
 import Utils.log as log
 import Database
