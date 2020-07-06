@@ -25,7 +25,7 @@ def removeEndpoint(incidentid, endpoint, queuename, pollperiod=None):
     if status.status_code != 200:
         raise ExternalDataInterfaceException(status.status_code, status.json()["msg"])
 
-def registerEndpoint(incidentid, queuename, endpoint, pollperiod=None):
+def registerEndpoint(incidentid, endpoint, queuename, pollperiod=None):
     arguments = {   'queuename': queuename, 
                     'incidentid':incidentid,
                     'endpoint' : endpoint }
