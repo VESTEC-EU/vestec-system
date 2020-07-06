@@ -274,35 +274,35 @@ def post_edi_data(sourceid):
 @fresh_jwt_required
 @logins.admin_required
 def getMachineStatuses():    
-   return managementAPI.retrieveMachineStatuses()
+   return managementAPI.performRetrieveMachineStatuses()
 
 @app.route('/flask/machine/<machineid>', methods=['DELETE'])
 @pny.db_session
 @fresh_jwt_required
 @logins.admin_required
 def deleteMachine(machineid):    
-   return managementAPI.deleteMachine(machineid)   
+   return managementAPI.performDeleteMachine(machineid)   
 
 @app.route("/flask/addmachine", methods=["POST"])
 @pny.db_session
 @fresh_jwt_required
 @logins.admin_required
 def add_new_machine():        
-    return managementAPI.addNewMachine(request.json)
+    return managementAPI.performAddNewMachine(request.json)
 
 @app.route("/flask/enablemachine/<machineid>", methods=["POST"])
 @pny.db_session
 @fresh_jwt_required
 @logins.admin_required
 def enable_machine(machineid):
-    return managementAPI.enableMachine(machineid)
+    return managementAPI.performEnableMachine(machineid)
 
 @app.route("/flask/disablemachine/<machineid>", methods=["POST"])
 @pny.db_session
 @fresh_jwt_required
 @logins.admin_required
 def disable_machine(machineid):
-    return managementAPI.disableMachine(machineid)
+    return managementAPI.performDisableMachine(machineid)
 
 @app.route("/flask/enabletestmodemachine/<machineid>", methods=["POST"])
 @pny.db_session

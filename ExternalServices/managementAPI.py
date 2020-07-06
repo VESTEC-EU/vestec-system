@@ -24,7 +24,7 @@ from pony.orm.serialization import to_dict
 from flask import Flask, request, jsonify, send_file, Response
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
 from ExternalDataInterface.client import getEDIHealth, getAllEDIEndpoints, removeEndpoint
-import MachineStatusManager.client as MSM
+from MachineStatusManager.client import retrieveMachineStatuses, addNewMachine, MachineStatusManagerException, deleteMachine, enableMachine, disableMachine, enableTestModeOnMachine, disableTestModeOnMachine, getMSMHealth
 from DataManager.client import getInfoForDataInDM, DataManagerException, getDMHealth, deleteDataViaDM
 from SimulationManager.client import refreshSimilation, SimulationManagerException, cancelSimulation, getSMHealth
 
@@ -257,7 +257,7 @@ def getComponentHealths():
     component_healths=[]    
     component_healths.append({"name" : "External data interface", "status" : getEDIHealth()})    
     component_healths.append({"name" : "Simulation manager", "status" : getSMHealth()})
-    component_healths.append({"name" : "Machine status manager", "status" : MSM.getMSMHealth()})
+    component_healths.append({"name" : "Machine status manager", "status" : getMSMHealth()})
     component_healths.append({"name" : "Data manager", "status" : getDMHealth()})        
     return jsonify({"status": 200, "health": json.dumps(component_healths)})
 
@@ -273,12 +273,12 @@ def deleteEDIHandler(retrieved_data):
         removeEndpoint(incidentid, endpoint, queuename, pollperiod)
         return jsonify({"msg": "Handler removed"}), 200
     except ExternalDataInterfaceException as err:
-        return jsonify({"msg": err.message}), err.status_code
+        return jsonify({"msg": err.message}), err.status_code        
 
-def retrieveMachineStatuses():
-    return jsonify({"status": 200, "machine_statuses": MSM.retrieveMachineStatuses()})
+def performRetrieveMachineStatuses():
+    return jsonify({"status": 200, "machine_statuses": retrieveMachineStatuses()})
 
-def addNewMachine(retrieved_data):
+def performAddNewMachine(retrieved_data):
     machine_name=retrieved_data.get("machine_name", None)
     host_name=retrieved_data.get("host_name", None)
     scheduler=retrieved_data.get("scheduler", None)
@@ -288,44 +288,44 @@ def addNewMachine(retrieved_data):
     base_work_dir=retrieved_data.get("base_work_dir", None)
 
     try:
-        MSM.addNewMachine(machine_name, host_name, scheduler, connection_type, num_nodes, cores_per_node, base_work_dir)
+        addNewMachine(machine_name, host_name, scheduler, connection_type, num_nodes, cores_per_node, base_work_dir)
         return jsonify({"msg": "Machine added"}), 200
-    except MSM.MachineStatusManagerException as err:
+    except MachineStatusManagerException as err:
         return jsonify({"msg": err.message}), err.status_code
 
-def deleteMachine(machine_id):
+def performDeleteMachine(machine_id):
     try:
-        MSM.deleteMachine(machine_id)
+        deleteMachine(machine_id)
         return jsonify({"msg": "Machine deleted"}), 200
-    except MSM.MachineStatusManagerException as err:
+    except MachineStatusManagerException as err:
         return jsonify({"msg": err.message}), err.status_code
 
-def enableMachine(machine_id):
+def performEnableMachine(machine_id):
     try:
-        MSM.enableMachine(machine_id)
+        enableMachine(machine_id)
         return jsonify({"msg": "Machine enabled"}), 200
-    except MSM.MachineStatusManagerException as err:
+    except MachineStatusManagerException as err:
         return jsonify({"msg": err.message}), err.status_code
 
-def disableMachine(machine_id):
+def performDisableMachine(machine_id):
     try:
-        MSM.disableMachine(machine_id)
+        disableMachine(machine_id)
         return jsonify({"msg": "Machine disabled"}), 200
-    except MSM.MachineStatusManagerException as err:
+    except MachineStatusManagerException as err:
         return jsonify({"msg": err.message}), err.status_code
 
 def enableTestModeMachine(machine_id):
     try:
-        MSM.enableTestModeOnMachine(machine_id)
+        enableTestModeOnMachine(machine_id)
         return jsonify({"msg": "Test mode enabled"}), 200
-    except MSM.MachineStatusManagerException as err:
+    except MachineStatusManagerException as err:
         return jsonify({"msg": err.message}), err.status_code
 
 def disableTestModeMachine(machine_id):
     try:
-        MSM.disableTestModeOnMachine(machine_id)
+        disableTestModeOnMachine(machine_id)
         return jsonify({"msg": "Test mode disabled"}), 200
-    except MSM.MachineStatusManagerException as err:
+    except MachineStatusManagerException as err:
         return jsonify({"msg": err.message}), err.status_code
 
 @pny.db_session
