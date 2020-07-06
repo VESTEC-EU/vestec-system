@@ -2,7 +2,6 @@ import sys
 sys.path.append("../")
 sys.path.append("../../")
 import workflow
-import requests
 import os
 import uuid
 import datetime
@@ -12,6 +11,8 @@ import pony.orm as pny
 from Database import LocalDataStorage
 import geopandas as gpd
 import time
+from ExternalDataInterface.client import registerEndpoint, ExternalDataInterfaceException
+from DataManager.client import downloadDataToTargetViaDM, registerDataWithDM, DataManagerException
 
 from Database import Incident
 
@@ -43,22 +44,6 @@ from Database import Incident
 #
 # Presently you run a workflow by executing this file. It will create a new incident, register pull handlers on the EDI and will generate hotspots for the specified region.
 
-
-if "VESTEC_SM_URI" in os.environ:
-    SM_URL= os.environ["VESTEC_SM_URI"]
-else:
-    SM_URL = 'http://localhost:5505/SM'
-
-if "VESTEC_EDI_URI" in os.environ:
-    EDI_URL = os.environ["VESTEC_EDI_URI"]
-else:
-    EDI_URL= 'http://localhost:5501/EDImanager'
-
-if "VESTEC_DM_URI" in os.environ:
-    DATA_MANAGER_URL = os.environ["VESTEC_DM_URI"]
-else:
-    DATA_MANAGER_URL = 'http://localhost:5000/DM'
-
 #URLS to download the data from
 MODISurl = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/c6/shapes/zips/MODIS_C6_Europe_48h.zip"
 
@@ -85,37 +70,27 @@ def wildfire_hotspot_init(msg):
             raise ValueError("Region coordinates not provided with incident")
 
     # workflow.setIncidentActive(incident)
-    
-    #register EDI to poll for MODIS data
-    myobj = {
-        'queuename': 'wildfire_modis_newdata',
-        'incidentid': incident, 
-        'endpoint': MODISurl,
-        "pollperiod": 300
-            }
-    x = requests.post(EDI_URL+"/register", json = myobj)
-    # print("EDI response for MODIS data arrival" + x.text)
 
-    if x.status_code != 200:
-        raise Exception("Failed to register for modis download")
+    #register EDI to poll for MODIS data
+    try:
+        registerEndpoint(incident, MODISurl, "wildfire_modis_newdata", 300)
+    except ExternalDataInterfaceException as err:
+        print("Failed to register for modis download "+err.message)
+        return
+
     print("Registered EDI to poll for MODIS data")
     time.sleep(1)
-    #register EDI to poll for VIIRS data
-    myobj = {
-        'queuename': 'wildfire_viirs_newdata',
-        'incidentid': incident, 
-        'endpoint': VIIRSurl,
-        "pollperiod": 300
-            }
-    x = requests.post(EDI_URL+"/register", json = myobj)
-    # print("EDI response for VIIRS data arrival" + x.text)
 
-    if x.status_code != 200:
-        raise Exception("Failed to register for modis download")
+    #register EDI to poll for VIIRS data
+    try:
+        registerEndpoint(incident, VIIRSurl, "wildfire_viirs_newdata", 300)
+    except ExternalDataInterfaceException as err:
+        print("Failed to register for VIIRS download "+err.message)
+        return
+
     print("Registered EDI to poll for VIIRS data")
     
     time.sleep(1)
-
 
 
 #called when there is new MODIS data
@@ -334,20 +309,11 @@ def dm_register(file,machine,description,originator,group, incident, storage_tec
     else:
         size = os.path.getsize(file)
 
-    data = {
-        "filename": filename,
-        "path": path,
-        "machine": machine,
-        "size": size,
-        "description": description,
-        "originator": originator,
-        "group": group,
-        "storage_technology": storage_technology
-    }
-    r = requests.put(os.path.join(DATA_MANAGER_URL,"register"),data=data)
-    if r.status_code != 201:
-        print("ERROR! %s"%r.text)
-        raise Exception("DM could not register file")
+    try:
+        registerDataWithDM(filename, machine, description, size, originator, group = group, storage_technology=storage_technology, path=path)
+    except DataManagerException as err:
+        print("Error registering data with DM, "+err.message)
+        return
 
     with pny.db_session:
         I = Incident[incident]
@@ -365,24 +331,11 @@ def dm_download(file,machine,description,originator,group,url,incident):
     print("Asking dm to download %s"%url)
     path, filename = os.path.split(file)
 
-
-    data ={
-        "filename": filename,
-        "path": path,
-        "machine": machine,
-        "description": description,
-        "originator": originator,
-        "group": group,
-        "url": url,
-        "protocol": "http",
-        "options": json.dumps({})
-    }
-
-    r = requests.put(os.path.join(DATA_MANAGER_URL,"getexternal"),data=data)
-
-    if r.status_code != 201:
-        print("ERROR! %s"%r.text)
-        raise Exception("DM could not download file")
+    try:
+        downloadDataToTargetViaDM(filename, machine, description, originator, url, "http", group = group, path=path)
+    except DataManagerException as err:
+        print("Error downloading data to target machine, "+err.message)
+        return
 
     with pny.db_session:
         I = Incident[incident]
