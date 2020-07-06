@@ -72,6 +72,17 @@ def generateIncidentDiGraph(incident_uuid):
             else:
                 tooltip_msg+=", stage completed on "+m.date_completed.strftime("%d/%m/%Y, %H:%M:%S")            
 
+        for node in G:
+            completion_time = sum(
+                (
+                    m.completion_time
+                    for m in messages
+                    if node in [m.destination, m.dest_tag]
+                ),
+                datetime.timedelta(0),
+            )
+            G.nodes[node]["label"] = node + "\n" + "(" + str(completion_time) + ")"
+
             G.add_node(destination,style="filled",fillcolor=colour, tooltip=tooltip_msg)
             G.add_edge(originator,destination)
     return to_agraph(G)
