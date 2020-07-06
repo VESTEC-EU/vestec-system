@@ -21,14 +21,10 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
 from WorkflowManager import workflow
 from mproxy.client import Client
+from MachineStatusManager.client import matchBestMachine, MachineStatusManagerException
 import asyncio
 import aio_pika
 import os
-
-if "VESTEC_MSM_URI" in os.environ:
-    MSM_URL = os.environ["VESTEC_MSM_URI"]
-else:
-    MSM_URL= 'http://localhost:5502/MSM'
 
 poll_scheduler=BackgroundScheduler(executors={"default": ThreadPoolExecutor(1)})
 
@@ -113,16 +109,15 @@ def create_job():
     else:
         template_dir = ""
 
-    matched_machine=requests.get(MSM_URL + '/matchmachine?walltime='+str(requested_walltime)+'&num_nodes='+str(num_nodes))
-    if matched_machine.status_code == 200:
-        stored_machine=Machine.get(machine_id=matched_machine.json()["machine_id"])        
+    try:
+        matched_machine_id=matchBestMachine(requested_walltime, num_nodes)
+        stored_machine=Machine.get(machine_id=matched_machine_id)        
         asyncio.run(create_job_on_machine(stored_machine.machine_name, directory, template_dir))
-        job_status="CREATED"        
-    else:        
+        job_status="CREATED"
+    except MachineStatusManagerException as err:
         job_status="ERROR"
-        status_message="Error allocating machine to job, "+["msg"]
+        status_message="Error allocating machine to job, "+err.message
         stored_machine=None
-        print(matched_machine.json()["msg"])
 
     simulation = Simulation(uuid=uuid, incident=incident_id, kind=kind, date_created=datetime.datetime.now(), num_nodes=num_nodes, requested_walltime=requested_walltime, executable=executable, status=job_status, status_updated=datetime.datetime.now(), directory=directory)
     if (job_status=="ERROR"):
