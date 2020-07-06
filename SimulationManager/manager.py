@@ -39,9 +39,14 @@ def get_health():
 @pny.db_session
 def refresh_sim_state(simulation_id):
     sim=Simulation[simulation_id]
-    if (sim.status=="PENDING" or sim.status=="CREATED" or sim.status=="QUEUED" or sim.status=="RUNNING" or sim.status=="ENDING"):
-        handleRefreshOfSimulations([sim])
-    return jsonify({"status": 200})    
+    if (sim is not None):
+        if (sim.status=="PENDING" or sim.status=="CREATED" or sim.status=="QUEUED" or sim.status=="RUNNING" or sim.status=="ENDING"):
+            handleRefreshOfSimulations([sim])
+            return "Status refreshed", 201
+        else:
+            return "Simulation state is invalid for refresh operation", 401
+    else:
+        return "Simulation not found with that identifier", 401
 
 @app.route("/SM/simulation/<simulation_id>", methods=["DELETE"])
 @pny.db_session
@@ -52,9 +57,9 @@ def cancel_simulation(simulation_id):
         sim.status="CANCELLED"
         sim.status_updated=datetime.datetime.now()
         pny.commit()
-        return jsonify({"status": 201})
+        return "Simulation deleted", 201
     else:
-        return jsonify({"status": 401})
+        return "Simulation not found with that identifier", 401
 
 async def delete_simulation_job(machine_name, queue_id):        
     client = await Client.create(machine_name)
@@ -72,12 +77,12 @@ def submit_job():
         simulation.jobID=submission_data[1]
         simulation.status="QUEUED"
         simulation.status_updated=datetime.datetime.now()
-        return jsonify({"status": 201})
+        return "Job submitted", 201
     else:
         simulation.status="ERROR"
         simulation.status_message=submission_data[1]
         simulation.status_updated=datetime.datetime.now()
-        return jsonify({"status": 401})     
+        return submission_data[1], 401
 
 async def submit_job_to_machine(machine_name, num_nodes, requested_walltime, directory, executable):        
     client = await Client.create(machine_name)
@@ -118,6 +123,7 @@ def create_job():
         job_status="ERROR"
         status_message="Error allocating machine to job, "+err.message
         stored_machine=None
+        return "Error allocating job to machine", 400
 
     simulation = Simulation(uuid=uuid, incident=incident_id, kind=kind, date_created=datetime.datetime.now(), num_nodes=num_nodes, requested_walltime=requested_walltime, executable=executable, status=job_status, status_updated=datetime.datetime.now(), directory=directory)
     if (job_status=="ERROR"):
@@ -128,7 +134,7 @@ def create_job():
         for key, value in data["queuestate_calls"].items():
             simulation.queue_state_calls.create(queue_state=key, call_name=value)    
     
-    return jsonify({"status": 201, "simulation_id": uuid})
+    return jsonify({"simulation_id": uuid}), 201
 
 async def create_job_on_machine(machine_name, directory, simulation_template_dir):        
     client = await Client.create(machine_name)
