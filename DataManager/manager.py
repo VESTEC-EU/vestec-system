@@ -82,7 +82,7 @@ def put_data():
     if registered_status[1] == 201:
         put_status= _put_data_to_location(flask.request.form["payload"], registered_status[0])
         if put_status[1] == 201:
-            return registered_status[0]
+            return registered_status[0], 201
         else:
             return put_status
     else:
