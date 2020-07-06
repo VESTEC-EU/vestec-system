@@ -4,12 +4,16 @@ sys.path.append("../../")
 import os
 import requests
 import pony.orm as pny
-
+import yaml
+import datetime
 import workflow
 from .weatherdata import getLatestURLs
 
 from Database import Incident
+from Database.workflow import Simulation
 from ExternalDataInterface.client import registerEndpoint, ExternalDataInterfaceException
+from SimulationManager.client import createSimulation, submitSimulation, SimulationManagerException
+from DataManager.client import putByteDataViaDM, DataManagerException, registerDataWithDM
 
 #initialises the mesoNH part of the workflow
 @workflow.handler
@@ -17,13 +21,14 @@ def wildfire_mesonh_init(msg):
     IncidentID = msg["IncidentID"]
     print("\nInitialising MesoNH sub-workflow")
 
-    try:
-        registerEndpoint(IncidentID, "https://www.ncei.noaa.gov/data/global-forecast-system/access/grid-003-1.0-degree/analysis", "wildfire_mesonh_getdata", 3600)
-        print("Registered EDI to poll for GFS data")
-    except ExternalDataInterfaceException as err:
-        print("Failed to register for GFS download "+err.message)
-        return
+    #try:
+    #    registerEndpoint(IncidentID, "https://www.ncei.noaa.gov/data/global-forecast-system/access/grid-003-1.0-degree/analysis", "wildfire_mesonh_getdata", 3600)
+    #    print("Registered EDI to poll for GFS data")
+    #except ExternalDataInterfaceException as err:
+    #    print("Failed to register for GFS download "+err.message)
+    #    return
     
+    workflow.setIncidentActive(IncidentID)
     workflow.send(msg,"wildfire_mesonh_physiographic")
 
 
@@ -94,28 +99,36 @@ def wildfire_mesonh_getdata(msg):
 def wildfire_mesonh_physiographic(msg):
     IncidentID = msg["IncidentID"]
     
-    print("\nExtracting physiographic data from region for MesoNH")
-    try:
-        with pny.db_session:
-            i = Incident[IncidentID]
-            upperLeft = i.upper_left_latlong
-            lowerRight = i.lower_right_latlong
+    print("\nExtracting physiographic data from region for MesoNH")  
+    with pny.db_session:      
+        i = Incident[IncidentID]
+    upperLeft = i.upper_left_latlong
+    lowerRight = i.lower_right_latlong
             
-            lonmin, latmax = upperLeft.split("/")
-            lonmax, latmin = lowerRight.split("/")
+    upperLeftLon, upperLeftLat = upperLeft.split("/")
+    lowerRightLon, lowerRightLat = lowerRight.split("/")
 
-            lonmin = float(lonmin)
-            latmax = float(latmax)
-            lonmax = float(lonmax)
-            latmin = float(latmin)
-    except Exception as e:
-        raise ValueError("Unable to parse region coordinates") from e
-    print("Latmin,latmax = %f, %f"%(latmin,latmax))
-    print("Lonmin,Lonmax = %f, %f"%(lonmin,lonmax))
+    sample_configuration_file = open("wildfire/templates/prep_pgd.yml")
+    yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)
+    yaml_template["upperleft"]["lat"]=float(upperLeftLat)
+    yaml_template["upperleft"]["lon"]=float(upperLeftLon)
+    yaml_template["lowerright"]["lat"]=float(lowerRightLat)
+    yaml_template["lowerright"]["lon"]=float(lowerRightLon)
 
-    #do something here to clip the physiographic data
-    
-    workflow.send(msg,"wildfire_mesonh_simulation")
+    try:
+        callbacks = {'COMPLETED': 'wildfire_mesonh_simulation'}   
+        sim_id=createSimulation(IncidentID, 1, "0:05:00", "PGD pre-processing", "prep_pgd.sh", queuestate_callbacks=callbacks, template_dir="prep_pdg_template")
+        with pny.db_session:
+            simulation=Simulation[sim_id]      
+        try:
+            data_uuid=putByteDataViaDM("prep_pgd.yml", "ARCHER", "PGD pre-processing YAML configuration", "MesoNH workflow", yaml.dump(yaml_template), path=simulation.directory)        
+        except DataManagerException as err:
+            print("Error creating configuration file on machine"+err.message)
+            return
+        submitSimulation(sim_id)
+    except SimulationManagerException as err:
+        print("Error creating or submitting simulation "+err.message)
+        return
 
 
 #logs any new messages appropriately, then sees if the criteria are met to run a simulation. If so, it runs [not implemented] the simulation
@@ -124,18 +137,38 @@ def wildfire_mesonh_physiographic(msg):
 def wildfire_mesonh_simulation(msg):
     IncidentID = msg["IncidentID"]
     originator = msg["originator"]
+    simulationId = msg["simulationId"]
 
     print("\nMesoNH simulation")
 
-    if originator == "wildfire_mesonh_physiographic":
-        workflow.Persist.Put(IncidentID,{"originator": originator, "Physiographic": True})
-        print("Physiographic data received")
-        
+    if originator == "issueWorkFlowStageCalls":
+        workflow.Persist.Put(IncidentID,{"originator": "wildfire_mesonh_physiographic", "Physiographic": True})
+        print("Physiographic data received "+ simulationId)
+        with pny.db_session:
+            simulation=Simulation[simulationId]
+            machine_name=simulation.machine.machine_name
+
+        if simulation is not None:
+            try:
+                data_uuid=registerDataWithDM("CFIRE02KM.nc", machine_name, "Physiographic data", 0, "MesoNH PGD pre-processing", path=simulation.directory)
+            except DataManagerException as err:
+                print("Error registering data with data manager "+err.message)
+                return
+        else:
+            print("No such simulation with ID "+simulationId)
+            return
+
+        with pny.db_session:
+            incident=Incident[IncidentID]
+            incident.associated_datasets.create(
+                uuid=data_uuid, name="CFIRE02KM.nc", 
+                type="Physiographic data", 
+                comment="Created by MesoNH PGD pre-processing which was run on "+machine_name,         
+                date_created=datetime.datetime.now())
 
     elif originator == "wildfire_mesonh_getdata":
         workflow.Persist.Put(IncidentID,{"originator": originator, "files": msg["files"]})
         print('New weather forecasts received')
-    
     else:
         raise ValueError("Unexpected originator: %s"%originator)
 
@@ -185,8 +218,8 @@ def wildfire_mesonh_results(msg):
     workflow.send(msg,"wildfire_fire_simulation")
 
 def RegisterHandlers():
-    workflow.RegisterHandler(handler = wildfire_mesonh_getdata,queue="wildfire_mesonh_getdata")
+    #workflow.RegisterHandler(handler = wildfire_mesonh_getdata,queue="wildfire_mesonh_getdata")
     workflow.RegisterHandler(handler = wildfire_mesonh_init,queue="wildfire_mesonh_init")
     workflow.RegisterHandler(handler = wildfire_mesonh_physiographic,queue="wildfire_mesonh_physiographic")
     workflow.RegisterHandler(handler = wildfire_mesonh_simulation,queue="wildfire_mesonh_simulation")
-    workflow.RegisterHandler(handler = wildfire_mesonh_results,queue="wildfire_mesonh_results")
+    #workflow.RegisterHandler(handler = wildfire_mesonh_results,queue="wildfire_mesonh_results")
