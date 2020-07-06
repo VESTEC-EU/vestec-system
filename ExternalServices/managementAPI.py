@@ -25,6 +25,7 @@ from flask import Flask, request, jsonify, send_file, Response
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
 from ExternalDataInterface.client import getEDIHealth, getAllEDIEndpoints, removeEndpoint
 import MachineStatusManager.client as MSM
+from DataManager.client import getInfoForDataInDM, DataManagerException, getDMHealth, deleteDataViaDM
 
 logger = log.VestecLogger("Website")
 
@@ -35,11 +36,6 @@ if "VESTEC_SM_URI" in os.environ:
     SM_URL= os.environ["VESTEC_SM_URI"]
 else:
     SM_URL = 'http://localhost:5505/SM'
-
-if "VESTEC_DM_URI" in os.environ:
-    DATA_MANAGER_URL = os.environ["VESTEC_DM_URI"]
-else:
-    DATA_MANAGER_URL = 'http://localhost:5000/DM'
 
 def version():
     return jsonify({"status": 200, "version": version_number})
@@ -191,26 +187,38 @@ def getDataMetadata(data_uuid, incident_uuid, username):
     else:
         return jsonify({"status": 200, "metadata": meta_data}) 
 
-def downloadData(data_uuid):
-    data_info=requests.get(DATA_MANAGER_URL+"/info/" + data_uuid)
-    file_info=data_info.json()
+def downloadData(data_uuid):    
+    try:
+        file_info=getInfoForDataInDM(data_uuid)
+    except DataManagerException as err:
+        return jsonify({"msg" : err.message}), err.status_code
+
     if (file_info["storage_technology"]=="VESTECDB" and file_info["machine"]=="localhost"):
-        data_dump=LocalDataStorage[file_info["filename"]]
-        return send_file(io.BytesIO(data_dump.contents),
+        print(file_info["path"]+"/"+file_info["filename"])
+        if "path" in file_info and file_info["path"] is not None:
+            data_dump=LocalDataStorage.get(filename=file_info["path"]+"/"+file_info["filename"])
+        else:
+            data_dump=LocalDataStorage.get(filename=file_info["filename"])
+        if data_dump is not None:
+            return send_file(io.BytesIO(data_dump.contents),
                      attachment_filename=data_dump.filename,
                      mimetype=data_dump.filetype)
-    return jsonify({"status": 400, "msg" : "Only datasets stored on VESTEC server currently supported"})
+        else:
+            return jsonify({"msg" : "File not found"}), 400
+
+    return jsonify({"msg" : "Only datasets stored on VESTEC server currently supported"}), 400
 
 @pny.db_session
 def deleteData(data_uuid, incident_uuid, username):
     success=incidents.removeDataFromIncident(data_uuid, incident_uuid, username)
     if success:
-        data_info=requests.get(DATA_MANAGER_URL+"/info/" + data_uuid)
-        file_info=data_info.json()
-        requests.delete(DATA_MANAGER_URL+"/remove/" + data_uuid)    
-        return jsonify({"status": 200, "msg": "Data deleted"}) 
+        try:
+            deleteDataViaDM(data_uuid)        
+            return jsonify({"msg": "Data deleted"}), 200
+        except DataManagerException as err:
+            return jsonify({"msg" : err.message}), err.status_code
     else:
-        return jsonify({"status": 401, "msg": "Data deletion failed, no incident data set that you can edit"}) 
+        return jsonify({"msg": "Data deletion failed, no incident data set that you can edit"}), 401
 
 @pny.db_session
 def refreshSimulation(request_json):       
@@ -260,8 +268,8 @@ def getComponentHealths():
     component_healths=[]    
     component_healths.append({"name" : "External data interface", "status" : getEDIHealth()})
     component_healths.append(_getHealthOfComponent(SM_URL, "Simulation manager"))    
-    component_healths.append({"name" : "Machine status manager", "status" : MSM.getMSMHealth()})        
-    component_healths.append(_getHealthOfComponent(DATA_MANAGER_URL, "Data manager"))
+    component_healths.append({"name" : "Machine status manager", "status" : MSM.getMSMHealth()})
+    component_healths.append({"name" : "Data manager", "status" : getDMHealth()})        
     return jsonify({"status": 200, "health": json.dumps(component_healths)})
 
 def getEDIInfo():    
