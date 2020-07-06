@@ -188,7 +188,7 @@ def remove(id):
         file = os.path.join(d.path,d.filename)
 
     #delete this file
-    status, message =_delete(file,machine, d.storage_technology)    
+    status, message =_delete(file, machine, d.storage_technology)    
 
     if status == FILE_ERROR:
         with pny.db_session:
@@ -293,6 +293,7 @@ def _register(fname,path,machine,description,size,originator,group,storage_techn
     return id
 
 #deletes a file, and marks its entry in the database as deleted
+@pny.db_session
 def _delete(file, machine, storage_technology):
     if machine == "localhost":  
         if storage_technology == "FILESYSTEM":
@@ -300,8 +301,8 @@ def _delete(file, machine, storage_technology):
                 os.remove(file)
             except OSError as e:
                 return FILE_ERROR, str(e)            
-        elif storage_technology == "VESTECDB":
-            data_item=LocalDataStorage.get(filename=src)
+        elif storage_technology == "VESTECDB":            
+            data_item=LocalDataStorage.get(filename=file)
             data_item.delete()
     else:
         asyncio.run(submit_remove_file_on_machine(machine, file))
