@@ -67,7 +67,8 @@ def get_allowed_workflows(user):
         if not user == None:
             for wf in user.allowed_workflows:
                 workflows.append(wf.kind)
-    return workflows
+    
+    return sorted(workflows)
 
 @pny.db_session
 def add_user(username, name, email, password):
