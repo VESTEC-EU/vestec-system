@@ -1,6 +1,11 @@
 import os
 import requests
 
+class ExternalDataInterfaceException(Exception):
+    def __init__(self, status_code, message):
+        self.status_code = status_code
+        self.message = message
+
 def getAllEDIEndpoints():
     edi_info = requests.get(_get_EDI_URL() + '/list')    
     return edi_info.json()
@@ -16,18 +21,22 @@ def removeEndpoint(incidentid, endpoint, queuename, pollperiod=None):
     if pollperiod is not None:
         arguments["pollperiod"]=pollperiod
 
-    requests.post(_get_EDI_URL()+'/remove', data=arguments)
+    status=requests.post(_get_EDI_URL()+'/remove', json=arguments)
+    if status.status_code != 200:
+        raise ExternalDataInterfaceException(status.status_code, status.json()["msg"])
 
-def registerEndpoint(incidentid, queuename, endpoint, pollperiod=None)
+def registerEndpoint(incidentid, queuename, endpoint, pollperiod=None):
     arguments = {   'queuename': queuename, 
                     'incidentid':incidentid,
                     'endpoint' : endpoint }
     if pollperiod is not None:
         arguments["pollperiod"]=pollperiod
 
-    requests.post(_get_EDI_URL()+'/register', data=arguments)
+    status=requests.post(_get_EDI_URL()+'/register', json=arguments)
+    if status.status_code != 200:
+        raise ExternalDataInterfaceException(status.status_code, status.json()["msg"])
 
-def getHealth():
+def getEDIHealth():
     try:
         health_status = requests.get(_get_EDI_URL() + '/health')        
         return health_status.status_code == 200            

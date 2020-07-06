@@ -23,6 +23,7 @@ from WorkflowManager import workflow
 from pony.orm.serialization import to_dict
 from flask import Flask, request, jsonify, send_file, Response
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
+from ExternalDataInterface.client import getEDIHealth, getAllEDIEndpoints, removeEndpoint
 
 logger = log.VestecLogger("Website")
 
@@ -33,11 +34,6 @@ if "VESTEC_SM_URI" in os.environ:
     SM_URL= os.environ["VESTEC_SM_URI"]
 else:
     SM_URL = 'http://localhost:5505/SM'
-
-if "VESTEC_EDI_URI" in os.environ:
-    EDI_URL = os.environ["VESTEC_EDI_URI"]
-else:
-    EDI_URL= 'http://localhost:5501/EDImanager'
 
 if "VESTEC_MSM_URI" in os.environ:
     MSM_URL = os.environ["VESTEC_MSM_URI"]
@@ -266,19 +262,25 @@ def _getHealthOfComponent(component_name, displayname):
 
 def getComponentHealths():
     component_healths=[]    
-    component_healths.append(_getHealthOfComponent(EDI_URL, "External data interface"))    
+    component_healths.append({"name" : "External data interface", "status" : getEDIHealth()})
     component_healths.append(_getHealthOfComponent(SM_URL, "Simulation manager"))    
     component_healths.append(_getHealthOfComponent(MSM_URL, "Machine status manager"))    
     component_healths.append(_getHealthOfComponent(DATA_MANAGER_URL, "Data manager"))
     return jsonify({"status": 200, "health": json.dumps(component_healths)})
 
-def getEDIInfo():
-    edi_info = requests.get(EDI_URL + '/list')    
-    return jsonify({"status": 200, "handlers": edi_info.json()})
+def getEDIInfo():    
+    return jsonify({"status": 200, "handlers": getAllEDIEndpoints()})
 
-def deleteEDIHandler(retrieved_data):    
-    deleted_info = requests.post(EDI_URL + '/remove', json=retrieved_data)    
-    return Response(deleted_info.content, deleted_info.status_code)
+def deleteEDIHandler(retrieved_data): 
+    incidentid = retrieved_data.get("incidentid", None)
+    endpoint = retrieved_data.get("endpoint", None)
+    queuename = retrieved_data.get("queuename", None)
+    pollperiod = retrieved_data.get("pollperiod", None)   
+    try:
+        removeEndpoint(incidentid, endpoint, queuename, pollperiod)
+        return jsonify({"msg": "Handler removed"}), 200
+    except ExternalDataInterfaceException as err:
+        return jsonify({"msg": err.message}), err.status_code
 
 def retrieveMachineStatuses():
     machine_statuses=requests.get(MSM_URL + '/machinestatuses')
