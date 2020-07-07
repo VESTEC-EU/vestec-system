@@ -53,10 +53,18 @@ VIIRSurl = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/viirs/shapes/z
 #set up the hotspots workdir
 wkdir = os.path.abspath("hotspots")
 
+@workflow.handler
+def wildfire_hotspot_init_standalone(msg):
+    IncidentID = msg["IncidentID"]
+    _handle_init(msg)
+    workflow.setIncidentActive(IncidentID)
 
 #initialise the workflow
 @workflow.handler
 def wildfire_hotspot_init(msg):
+    _handle_init(msg)
+
+def _handle_init(msg):
     print("\nInitialising hotspot sub-workflow")
     incident = msg["IncidentID"]
     
@@ -310,21 +318,11 @@ def dm_register(file,machine,description,originator,group, incident, storage_tec
         size = os.path.getsize(file)
 
     try:
-        registerDataWithDM(filename, machine, description, size, originator, group = group, storage_technology=storage_technology, path=path)
+        return registerDataWithDM(filename, machine, description, size, originator, group = group, storage_technology=storage_technology, path=path, 
+            associate_with_incident=True, incidentId=incident, type=group)
     except DataManagerException as err:
         print("Error registering data with DM, "+err.message)
-        return
-
-    with pny.db_session:
-        I = Incident[incident]
-        I.associated_datasets.create(
-            uuid=r.text,
-            name=file, 
-            type=group, 
-            comment=description,         
-            date_created=datetime.datetime.now()
-        )
-    return r.text
+        return None
 
 #download a file with the DM
 def dm_download(file,machine,description,originator,group,url,incident):
@@ -332,21 +330,10 @@ def dm_download(file,machine,description,originator,group,url,incident):
     path, filename = os.path.split(file)
 
     try:
-        downloadDataToTargetViaDM(filename, machine, description, originator, url, "http", group = group, path=path)
+        downloadDataToTargetViaDM(filename, machine, description, originator, url, "http", group = group, path=path, 
+            associate_with_incident=True, incidentId=incident, type=group)
     except DataManagerException as err:
-        print("Error downloading data to target machine, "+err.message)
-        return
-
-    with pny.db_session:
-        I = Incident[incident]
-        I.associated_datasets.create(
-            uuid=r.text,
-            name=file, 
-            type=group, 
-            comment=description,         
-            date_created=datetime.datetime.now()
-        )
-    return    
+        print("Error downloading data to target machine, "+err.message)        
 
 #from a MODIS/VIIRS "modified" timestamp, produce a more 'friendly' datestring
 def parse_timestamp(datestr):
@@ -449,6 +436,7 @@ def wildfire_tecnosylva_hotspots(msg):
 #register the handlers with the workflow system
 def RegisterHandlers():
     workflow.RegisterHandler(wildfire_hotspot_init, "wildfire_hotspot_init")
+    workflow.RegisterHandler(wildfire_hotspot_init, "wildfire_hotspot_init_standalone")
     workflow.RegisterHandler(wildfire_modis_newdata, "wildfire_modis_newdata")
     workflow.RegisterHandler(wildfire_viirs_newdata, "wildfire_viirs_newdata")
     workflow.RegisterHandler(wildfire_process_hotspots, "wildfire_process_hotspots")
