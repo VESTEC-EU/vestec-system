@@ -485,9 +485,11 @@ function getIncidentDetails(incident_uuid) {
             incident_details = JSON.parse(response.incident);            
             $("#body-container").html(loadIncidentDetails(incident_details));           
             var viz = new Viz();
-            viz.renderSVGElement(incident_details.digraph).then(function(element) {
+
+            viz.renderImageElement(incident_details.digraph).then(function(element) {                
+                element.setAttribute("style", "max-width:100%;");
                 $("#workflow_diagram").append(element);                
-            });
+              });
         },
         error: function(xhr) {
             $("#confirmation").removeClass().addClass("button red self-center");
