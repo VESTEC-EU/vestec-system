@@ -107,7 +107,7 @@ def handlePostOfData(endpoint, data, headers):
         return jsonify({"status": 200, "msg": "Data received"}) 
     else:
         logger.Log(log.LogType.Error, "Data posted from '"+endpoint+"' and ignoring as there are no handlers that match")      
-        return jsonify({"status": 400, "msg": "No matching handler registered"})
+        return jsonify({"msg": "No matching handler registered"}), 404
 
 #if we register a remote host (e.g. www.website.com) as an endpoint and this pushes
 #useful for data which is not necessarily incident specific but which should be pushed
@@ -148,7 +148,7 @@ def register():
         else:
             pollperiod=None
     except KeyError:
-        return jsonify({"status": 400, "msg": "The request header does not contain the required fields"}), 400
+        return jsonify({"msg": "The request header does not contain the required fields"}), 500
     
     #See if this handler already exists. If so, do nothing and return a 400
     handlers = EDIHandler.select(lambda d: d.queuename==queuename
@@ -156,7 +156,7 @@ def register():
                              and d.endpoint==endpoint 
                              and d.pollperiod==pollperiod)
     if len(handlers) >0:
-        return jsonify({"status":400, "msg": "Handler already registered"}), 400
+        return jsonify({"msg": "Handler already registered"}), 400
 
 
     if pollperiod is None:
@@ -181,7 +181,7 @@ def register():
         scheduleHandler(id = handler.id, seconds = pollperiod)
         logger.Log(log.LogType.Activity, "Poll based handler registered for '"+endpoint+"' with period "+str(pollperiod)+"s")
     
-    return jsonify({"status": 200, "msg": "Handler registered"}), 200
+    return jsonify({"msg": "Handler registered"}), 201
         
 
 #Remove a handler
@@ -199,7 +199,7 @@ def remove():
         else:
             pollperiod=None
     except KeyError:
-        return jsonify({"status": 400, "msg": "The request header does not contain the required fields"}), 400
+        return jsonify({"msg": "The request header does not contain the required fields"}), 500
     
     #get any handlers that match this
     if (pollperiod != "null" and pollperiod is not None):        
@@ -217,7 +217,7 @@ def remove():
     #if there are no such handlers, return an error
     if len(handlers) == 0:
         logger.Log(log.LogType.Error, "No handler found for removal for '"+endpoint+"'")
-        return jsonify({"status": 400, "msg": "No existing handler registered"}), 400
+        return jsonify({"msg": "No existing handler registered"}), 404
 
     
     #loop through handlers (should just be one...) and delete them
@@ -232,7 +232,7 @@ def remove():
 
         logger.Log(log.LogType.Activity, "Handler removed for '"+endpoint+"'")
 
-    return jsonify({"status": 200, "msg": "Handler removed"}), 200
+    return jsonify({"msg": "Handler removed"}), 200
 
 
 
