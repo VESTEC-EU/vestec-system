@@ -38,9 +38,10 @@ def get_health():
 @pny.db_session
 def refresh_sim_state(simulation_id):
     sim=Simulation[simulation_id]
-    if (sim is not None):
-        if (sim.status=="PENDING" or sim.status=="CREATED" or sim.status=="QUEUED" or sim.status=="RUNNING" or sim.status=="ENDING"):
-            handleRefreshOfSimulations([sim])
+    if (sim is not None):        
+        if sim.status=="PENDING" or sim.status=="CREATED" or sim.status=="QUEUED" or sim.status=="RUNNING" or sim.status=="ENDING":
+            if sim.status!="CREATED":
+                handleRefreshOfSimulations([sim])
             return "Status refreshed", 201
         else:
             return "Simulation state is invalid for refresh operation", 401
