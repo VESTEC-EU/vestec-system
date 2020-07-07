@@ -576,7 +576,7 @@ function loadIncidentDetails(incident) {
     }
 
     incident_html += '</div>';
-    if (incident.status != "ARCHIVED") {
+    if (incident.status != "ARCHIVED" && incident.status != "ERROR") {
         incident_html+='<div class="jobDetails self-center">';
         if (incident.status == "PENDING") {
             incident_html += "<button class=\"button blue self-center\" onClick=\"activateIncident(\'"+incident.uuid+"\')\">Activate Incident</button>";
@@ -595,7 +595,7 @@ function loadIncidentDetails(incident) {
         if (incident.status == "ACTIVE" && incident.test_workflow) {
             incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button id=\"test_workflow\" class=\"button blue self-center\" onClick=\"testIncident('"+incident.uuid+"')\">Initiate test stage</button>";
         }
-        
+
         incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" style=\"float: right;\" onClick=\"getIncidentDetails(\'"+incident.uuid+"\')\">Refresh Status</button></div>";
     }
 
