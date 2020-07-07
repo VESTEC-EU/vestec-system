@@ -1,7 +1,6 @@
-FROM python:3-slim
-EXPOSE 5500
+FROM python:3.7-slim
+EXPOSE 5505
 COPY . /app
 WORKDIR /app/SimulationManager
 RUN pip install -r /app/SimulationManager/requirements.txt
-ENTRYPOINT ["python"]
-CMD ["manager.py"]
+CMD python manager.py

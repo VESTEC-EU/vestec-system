@@ -3,7 +3,6 @@ import os
 import io
 sys.path.append("../")
 import json
-import requests
 import pony.orm as pny
 import Utils.log as log
 import Database
@@ -17,26 +16,21 @@ from Database.job import Job
 from Database.queues import Queue
 from Database.machine import Machine
 from Database.activity import Activity
-from Database.workflow import RegisteredWorkflow
+from Database.workflow import RegisteredWorkflow, Simulation
 from Database.localdatastorage import LocalDataStorage
 from WorkflowManager import workflow
 from pony.orm.serialization import to_dict
 from flask import Flask, request, jsonify, send_file, Response
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
+from ExternalDataInterface.client import getEDIHealth, getAllEDIEndpoints, removeEndpoint
+from MachineStatusManager.client import retrieveMachineStatuses, addNewMachine, MachineStatusManagerException, deleteMachine, enableMachine, disableMachine, enableTestModeOnMachine, disableTestModeOnMachine, getMSMHealth
+from DataManager.client import getInfoForDataInDM, DataManagerException, getDMHealth, deleteDataViaDM
+from SimulationManager.client import refreshSimilation, SimulationManagerException, cancelSimulation, getSMHealth
 
 logger = log.VestecLogger("Website")
 
-VERSION_PRECLUDE="1.1"
+VERSION_PRECLUDE="1.2"
 version_number=VERSION_PRECLUDE+"."+VERSION_POSTFIX
-
-if "VESTEC_MANAGER_URI" in os.environ:
-    JOB_MANAGER_URI = os.environ["VESTEC_MANAGER_URI"]
-    EDI_URL = os.environ["VESTEC_EDI_URI"]
-    DATA_MANAGER_URI = os.environ["VESTEC_DM_URI"]
-else:
-    JOB_MANAGER_URI = 'http://127.0.0.1:5500/jobs'
-    EDI_URL= 'http://127.0.0.1:5501/EDImanager'
-    DATA_MANAGER_URI = 'http://localhost:5000/DM'
 
 def version():
     return jsonify({"status": 200, "version": version_number})
@@ -75,16 +69,15 @@ def login():
     authorise = False
 
     if username and password:
-        authorise = logins.verify_user(username, password)
+        authorise, message = logins.verify_user(username, password)
 
     if authorise:
-        access_token = create_access_token(identity=username, fresh=True)
-        response = jsonify({"status": 200, "access_token": access_token})
-        set_access_cookies(response, access_token)
+        access_token = create_access_token(identity=username, fresh=True, expires_delta=False)
+        response = jsonify({"status": 200, "access_token": access_token})        
 
         return response
     else:
-        return jsonify({"status": 400, "msg": "Incorrect username or password. Please try again."})
+        return jsonify({"status": 400, "msg": message})
 
     logger.Log(log.LogType.Website, str(request), user=username)
 
@@ -102,20 +95,29 @@ def changePassword():
 
 def getMyWorkflows(username):
     allowed_workflows=logins.get_allowed_workflows(username)
-    return json.dumps(allowed_workflows) 
+    return jsonify({"status": 200, "workflows": json.dumps(allowed_workflows)})
 
+@pny.db_session
 def createIncident(username):
     incident_request = request.json    
-    incident_name=incident_request.get("incidentName", None)
-    incident_kind=incident_request.get("incidentType", None)
-    incident_upper_right_latlong=incident_request.get("upperRightLatlong", "")
-    incident_lower_left_latlong=incident_request.get("lowerLeftLatlong", "")
-    if incident_name and incident_kind:
-        job_id = incidents.createIncident(incident_name, incident_kind, username, incident_upper_right_latlong, incident_lower_left_latlong)
-        logger.Log(log.LogType.Website, ("Creation of incident kind %s of name %s by %s" % (incident_name, incident_kind, username)), user=username)
-        return jsonify({"status": 201, "msg": "Incident successfully created.", "incidentid" : job_id})    
-    else:
-        return jsonify({"status": 400, "msg": "Incident name or type is missing"})
+    incident_name=incident_request.get("name", None)
+    incident_kind=incident_request.get("kind", None)
+    incident_upper_left_latlong=incident_request.get("upperLeftLatlong", "")
+    incident_lower_right_latlong=incident_request.get("lowerRightLatlong", "")
+    incident_duration=incident_request.get("duration", None)
+
+    if RegisteredWorkflow.get(kind=incident_kind) is None:
+        return jsonify({"status": 400, "msg": "Incident kind is unknown, this must match a registered workflow that you have permission to access"})
+    else:        
+        if logins.can_user_access_workflow(username, incident_kind):
+            if incident_name and incident_kind:
+                job_id = incidents.createIncident(incident_name, incident_kind, username, incident_upper_left_latlong, incident_lower_right_latlong)
+                logger.Log(log.LogType.Website, ("Creation of incident kind %s of name %s by %s" % (incident_name, incident_kind, username)), user=username)
+                return jsonify({"status": 201, "msg": "Incident successfully created.", "incidentid" : job_id})    
+            else:
+                return jsonify({"status": 400, "msg": "Incident name or type is missing"})
+        else:
+            return jsonify({"status": 400, "msg": "Permission denied to access the workflow kind that this incident is created with, you will need this added for your user"})
 
 def getAllMyIncidents(username, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter):
     incident_summaries=incidents.retrieveMyIncidentSummary(username, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter)
@@ -180,29 +182,58 @@ def getDataMetadata(data_uuid, incident_uuid, username):
     else:
         return jsonify({"status": 200, "metadata": meta_data}) 
 
-def downloadData(data_uuid):
-    data_info=requests.get(DATA_MANAGER_URI+"/info/" + data_uuid)
-    file_info=data_info.json()
-    if (file_info["path"]=="vestecDB" and file_info["machine"]=="VESTECSERVER"):
-        data_dump=LocalDataStorage[file_info["filename"]]
-        return send_file(io.BytesIO(data_dump.contents),
+def downloadData(data_uuid):    
+    try:
+        file_info=getInfoForDataInDM(data_uuid)
+    except DataManagerException as err:
+        return jsonify({"msg" : err.message}), err.status_code
+
+    if (file_info["storage_technology"]=="VESTECDB" and file_info["machine"]=="localhost"):
+        print(file_info["path"]+"/"+file_info["filename"])
+        if "path" in file_info and file_info["path"] is not None:
+            data_dump=LocalDataStorage.get(filename=file_info["path"]+"/"+file_info["filename"])
+        else:
+            data_dump=LocalDataStorage.get(filename=file_info["filename"])
+        if data_dump is not None:
+            return send_file(io.BytesIO(data_dump.contents),
                      attachment_filename=data_dump.filename,
                      mimetype=data_dump.filetype)
-    return jsonify({"status": 400, "msg" : "Only datasets stored on VESTEC server currently supported"})
+        else:
+            return jsonify({"msg" : "File not found"}), 400
+
+    return jsonify({"msg" : "Only datasets stored on VESTEC server currently supported"}), 400
 
 @pny.db_session
 def deleteData(data_uuid, incident_uuid, username):
     success=incidents.removeDataFromIncident(data_uuid, incident_uuid, username)
     if success:
-        data_info=requests.get(DATA_MANAGER_URI+"/info/" + data_uuid)
-        file_info=data_info.json()
-        if (file_info["path"]=="vestecDB" and file_info["machine"]=="VESTECSERVER"):
-            LocalDataStorage[file_info["filename"]].delete()
-        requests.delete(DATA_MANAGER_URI+"/remove/" + data_uuid)    
-        return jsonify({"status": 200, "msg": "Data deleted"}) 
+        try:
+            deleteDataViaDM(data_uuid)        
+            return jsonify({"msg": "Data deleted"}), 200
+        except DataManagerException as err:
+            return jsonify({"msg" : err.message}), err.status_code
     else:
-        return jsonify({"status": 401, "msg": "Data deletion failed, no incident data set that you can edit"}) 
+        return jsonify({"msg": "Data deletion failed, no incident data set that you can edit"}), 401
 
+@pny.db_session
+def performRefreshSimulation(request_json):       
+    sim_uuid=request_json.get("sim_uuid", None)
+    try:
+        refreshSimilation(sim_uuid)
+        sim = Simulation[sim_uuid]
+        packagedSim=incidents.packageSimulation(sim)
+        return jsonify({"simulation": json.dumps(packagedSim)}), 200
+    except SimulationManagerException as err:
+        return jsonify({"msg" : err.message}), err.status_code
+ 
+@pny.db_session
+def performCancelSimulation(sim_uuid, username):
+    try:
+        cancelSimulation(sim_uuid)
+        return "Similation cancelled successfully", 200
+    except SimulationManagerException as err:
+        return jsonify({"msg" : err.message}), err.status_code
+    
 @pny.db_session
 def getLogs():
     logs = []
@@ -219,34 +250,82 @@ def getLogs():
         logs.append(lg)
 
     logs.reverse()
-    return json.dumps(logs)
-
-def _getHealthOfComponent(component_name, displayname):
-    bd={}
-    bd["name"]=displayname
-    try:
-        edi_health = requests.get(component_name + '/health')        
-        if edi_health.status_code == 200:
-            bd["status"]=True
-        else:
-            bd["status"]=False
-    except:
-        bd["status"]=False
-    return bd
+    return jsonify({"status": 200, "logs": json.dumps(logs)})
 
 def getComponentHealths():
     component_healths=[]    
-    component_healths.append(_getHealthOfComponent(EDI_URL, "External data interface"))    
-    component_healths.append(_getHealthOfComponent(JOB_MANAGER_URI, "Simulation manager"))    
-    return json.dumps(component_healths)
+    component_healths.append({"name" : "External data interface", "status" : getEDIHealth()})    
+    component_healths.append({"name" : "Simulation manager", "status" : getSMHealth()})
+    component_healths.append({"name" : "Machine status manager", "status" : getMSMHealth()})
+    component_healths.append({"name" : "Data manager", "status" : getDMHealth()})        
+    return jsonify({"status": 200, "health": json.dumps(component_healths)})
 
-def getEDIInfo():
-    edi_info = requests.get(EDI_URL + '/list')    
-    return jsonify({"status": 200, "handlers": edi_info.json()})
+def getEDIInfo():    
+    return jsonify({"status": 200, "handlers": getAllEDIEndpoints()})
 
-def deleteEDIHandler(retrieved_data):    
-    deleted_info = requests.post(EDI_URL + '/remove', json=retrieved_data)    
-    return Response(deleted_info.content, deleted_info.status_code)
+def deleteEDIHandler(retrieved_data): 
+    incidentid = retrieved_data.get("incidentid", None)
+    endpoint = retrieved_data.get("endpoint", None)
+    queuename = retrieved_data.get("queuename", None)
+    pollperiod = retrieved_data.get("pollperiod", None)   
+    try:
+        removeEndpoint(incidentid, endpoint, queuename, pollperiod)
+        return jsonify({"msg": "Handler removed"}), 200
+    except ExternalDataInterfaceException as err:
+        return jsonify({"msg": err.message}), err.status_code        
+
+def performRetrieveMachineStatuses():
+    return jsonify({"status": 200, "machine_statuses": retrieveMachineStatuses()})
+
+def performAddNewMachine(retrieved_data):
+    machine_name=retrieved_data.get("machine_name", None)
+    host_name=retrieved_data.get("host_name", None)
+    scheduler=retrieved_data.get("scheduler", None)
+    connection_type=retrieved_data.get("connection_type", None)
+    num_nodes=retrieved_data.get("num_nodes", None)
+    cores_per_node=retrieved_data.get("cores_per_node", None)
+    base_work_dir=retrieved_data.get("base_work_dir", None)
+
+    try:
+        addNewMachine(machine_name, host_name, scheduler, connection_type, num_nodes, cores_per_node, base_work_dir)
+        return jsonify({"msg": "Machine added"}), 200
+    except MachineStatusManagerException as err:
+        return jsonify({"msg": err.message}), err.status_code
+
+def performDeleteMachine(machine_id):
+    try:
+        deleteMachine(machine_id)
+        return jsonify({"msg": "Machine deleted"}), 200
+    except MachineStatusManagerException as err:
+        return jsonify({"msg": err.message}), err.status_code
+
+def performEnableMachine(machine_id):
+    try:
+        enableMachine(machine_id)
+        return jsonify({"msg": "Machine enabled"}), 200
+    except MachineStatusManagerException as err:
+        return jsonify({"msg": err.message}), err.status_code
+
+def performDisableMachine(machine_id):
+    try:
+        disableMachine(machine_id)
+        return jsonify({"msg": "Machine disabled"}), 200
+    except MachineStatusManagerException as err:
+        return jsonify({"msg": err.message}), err.status_code
+
+def enableTestModeMachine(machine_id):
+    try:
+        enableTestModeOnMachine(machine_id)
+        return jsonify({"msg": "Test mode enabled"}), 200
+    except MachineStatusManagerException as err:
+        return jsonify({"msg": err.message}), err.status_code
+
+def disableTestModeMachine(machine_id):
+    try:
+        disableTestModeOnMachine(machine_id)
+        return jsonify({"msg": "Test mode disabled"}), 200
+    except MachineStatusManagerException as err:
+        return jsonify({"msg": err.message}), err.status_code
 
 @pny.db_session
 def deleteWorkflow(retrieved_data):
@@ -266,25 +345,26 @@ def getWorkflowInfo():
         specific_workflow_info["initqueuename"]=workflow.init_queue_name
         specific_workflow_info["dataqueuename"]=workflow.data_queue_name
         workflow_info.append(specific_workflow_info)
-    return json.dumps(workflow_info)
+    return jsonify({"status": 200, "workflows": json.dumps(workflow_info)})
 
 @pny.db_session
 def addWorkflow(retrieved_data):    
     workflow_kind = retrieved_data.get("kind", None)
     init_queue_name = retrieved_data.get("initqueuename", None)
     data_queue_name = retrieved_data.get("dataqueuename", None)
-    newwf = RegisteredWorkflow(kind=workflow_kind, init_queue_name=init_queue_name, data_queue_name=data_queue_name)
+    istestWorkflow = retrieved_data.get("testworkflow", None)    
+    newwf = RegisteredWorkflow(kind=workflow_kind, init_queue_name=init_queue_name, data_queue_name=data_queue_name, test_workflow=istestWorkflow)
 
     pny.commit()    
     return jsonify({"status": 200, "msg": "Workflow added"})
 
 def getAllUsers():
-    return json.dumps(logins.get_all_users())
+    return jsonify({"status": 200, "users": json.dumps(logins.get_all_users())})
 
 def getUserDetails(retrieved_data):    
     username=retrieved_data.get("username", None)
     user_details=logins.get_user_details(username)
-    return json.dumps(user_details) 
+    return jsonify({"status": 200, "users": json.dumps(user_details)})
 
 @pny.db_session
 def deleteUser(retrieved_data):

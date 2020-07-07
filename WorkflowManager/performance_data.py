@@ -7,13 +7,7 @@ import pony.orm as pny
 import requests
 import json
 from Database import PerformanceData, Simulation
-
-if "VESTEC_EDI_URI" in os.environ:
-    EDI_URL = os.environ["VESTEC_EDI_URI"]
-    DATA_MANAGER_URI = os.environ["VESTEC_DM_URI"]
-else:
-    EDI_URL = "http://localhost:5501/EDImanager"
-    DATA_MANAGER_URI = "http://localhost:5000/DM"
+from ExternalDataInterface.client import registerEndpoint, ExternalDataInterfaceException
 
 # we now want to define some handlers
 @workflow.handler
@@ -46,18 +40,17 @@ def add_performance_data(message):
 
 @workflow.handler
 def initialise_performance_data(message):
-    print("Initialise simple workflow for " + message["IncidentID"])
-    myobj = {
-        "queuename": "add_performance_data",
-        "incidentid": message["IncidentID"],
-        "endpoint": "add_performance_data",
-    }
-    x = requests.post(EDI_URL + "/register", json=myobj)
-    print("EDI response for manually add data" + x.text)
+    print("Initialise performance workflow for " + message["IncidentID"])
+
+    try:
+        registerEndpoint(message["IncidentID"], "add_performance_data", "add_performance_data")
+    except ExternalDataInterfaceException as err:
+        print("Error from EDI on registration for performance data "+err.message)
+
     workflow.setIncidentActive(message["IncidentID"])
 
 
 # we have to register them with the workflow system
 def RegisterHandlers():
-    workflow.RegisterHandler(add_performance_data, "add_data_simple")
-    workflow.RegisterHandler(initialise_performance_data, "initialise_simple")
+    workflow.RegisterHandler(add_performance_data, "add_performance_data")
+    workflow.RegisterHandler(initialise_performance_data, "initialise_performance_gathering")

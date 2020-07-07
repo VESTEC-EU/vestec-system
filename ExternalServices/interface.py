@@ -20,9 +20,7 @@ app = Flask(__name__)  # create an instance if the imported Flask class
 
 # Initialise JWT
 app.config["JWT_SECRET_KEY"] = os.environ["JWT_PASSWD"]
-app.config["JWT_TOKEN_LOCATION"] = ["cookies"]
-app.config["JWT_ACCESS_COOKIE_PATH"] = "/flask/"
-app.config["JWT_COOKIE_CSRF_PROTECT"] = False
+app.config["JWT_TOKEN_LOCATION"] = ["headers"]
 jwt = JWTManager(app)
 
 @app.route('/flask/version', methods=["GET"])
@@ -143,6 +141,20 @@ def updateDataMetadata():
 def downloadData(data_uuid):
     return managementAPI.downloadData(data_uuid)
 
+@app.route('/flask/refreshsimulation', methods=['POST'])
+@pny.db_session
+@fresh_jwt_required
+def refreshSimulation():    
+    return managementAPI.performRefreshSimulation(request.json)
+
+@app.route('/flask/simulation', methods=['DELETE'])
+@pny.db_session
+@fresh_jwt_required
+def cancelSimulation():
+    simulation_uuid = request.args.get("sim_uuid", None)    
+    username = get_jwt_identity()  
+    return managementAPI.performCancelSimulation(simulation_uuid, username)
+
 @app.route('/flask/data', methods=['DELETE'])
 @pny.db_session
 @fresh_jwt_required
@@ -256,6 +268,55 @@ def post_edi_data_anon():
 @app.route("/EDI/<sourceid>", methods=["POST"])
 def post_edi_data(sourceid):    
     return EDIconnector.pushDataToEDI(sourceid)
+
+@app.route('/flask/getmachinestatuses', methods=['GET'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def getMachineStatuses():    
+   return managementAPI.performRetrieveMachineStatuses()
+
+@app.route('/flask/machine/<machineid>', methods=['DELETE'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def deleteMachine(machineid):    
+   return managementAPI.performDeleteMachine(machineid)   
+
+@app.route("/flask/addmachine", methods=["POST"])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def add_new_machine():        
+    return managementAPI.performAddNewMachine(request.json)
+
+@app.route("/flask/enablemachine/<machineid>", methods=["POST"])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def enable_machine(machineid):
+    return managementAPI.performEnableMachine(machineid)
+
+@app.route("/flask/disablemachine/<machineid>", methods=["POST"])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def disable_machine(machineid):
+    return managementAPI.performDisableMachine(machineid)
+
+@app.route("/flask/enabletestmodemachine/<machineid>", methods=["POST"])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def enable_testmode_machine(machineid):
+    return managementAPI.enableTestModeMachine(machineid)
+
+@app.route("/flask/disabletestmodemachine/<machineid>", methods=["POST"])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def disable_test_mode_machine(machineid):
+    return managementAPI.disableTestModeMachine(machineid)
 
 if __name__ == '__main__':    
     app.run(host='0.0.0.0', port=8000)    

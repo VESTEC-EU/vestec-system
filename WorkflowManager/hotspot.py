@@ -8,85 +8,54 @@ import datetime
 import zipfile
 import json
 import pony.orm as pny
+from Database import LocalDataStorage
+import geopandas as gpd
 
 from Database import Incident
-
-from christian import Get_Fire_Hotspots
 
 
 ######### ATTENTION #################
 #For this to work, you need to have a subdirectory inside WorkflwoManager called `hotspots`
-#This directory must contain a directory called `static` which contains the unsipped admin files from Christian
-#For now, it must also contain the zipped "northern_italy.zip" area of interest file (Also from Christian)
-#So the directory structure is...
-#   hotspots
-# ├──  northern_italy.zip
-# └──  static
-#    ├──   ne_10m_admin_1_states_provinces.cpg
-#    ├──   ne_10m_admin_1_states_provinces.dbf
-#    ├──   ne_10m_admin_1_states_provinces.prj
-#    ├──   ne_10m_admin_1_states_provinces.README.html
-#    ├──   ne_10m_admin_1_states_provinces.shp
-#    ├──   ne_10m_admin_1_states_provinces.shx
-#    └──   ne_10m_admin_1_states_provinces.VERSION.txt
 #
-# For each incident, we create a directory in hotspots. This directory will contain
-# - a 'region' directory where the region zipfile will be placed and extracted
+# For each incident a directory is in hotspots. This directory will contain
 # - a MODIS directory for MODIS data
 # - a VIIRS directory for VIIRS data
 # Each sensor's directory will then contain subdirectories for each input data timestamp
-# These subdirectories will contain an input and output directory with the shape files
+# These subdirectories will contain an input and output directory with the shape file
+# downloaded from the internet in input, and the geojson in the output
 # The directory structure for an incident is therefore:
 #   .
-# ├──   region
-# │  ├──   northern_italy.cpg
-# │  ├──   northern_italy.dbf
-# │  ├──   northern_italy.prj
-# │  ├──   northern_italy.shp
-# │  ├──   northern_italy.shx
-# │  └──   northern_italy.zip
 # ├──   MODIS
 # │  └──   2020-05-21_144339
 # │     ├──   input
-# │     │  ├──   MODIS_C6_Europe_48h.cpg
-# │     │  ├──   MODIS_C6_Europe_48h.dbf
-# │     │  ├──   MODIS_C6_Europe_48h.prj
-# │     │  ├──   MODIS_C6_Europe_48h.shp
-# │     │  ├──   MODIS_C6_Europe_48h.shx
 # │     │  └──   MODIS_C6_Europe_48h.zip
 # │     └──   output
-# │        ├──   MODIS-FIRE.cpg
-# │        ├──   MODIS-FIRE.dbf
-# │        ├──   MODIS-FIRE.prj
-# │        ├──   MODIS-FIRE.shp
-# │        ├──   MODIS-FIRE.shx
-# │        └──   MODIS-FIRE.zip
+# │        └──   MODIS_hotspots.json
+# │        
 # └──   VIIRS
 #    └──   2020-05-21_144900
 #       ├──   input
-#       │  ├──   VNP14IMGTDL_NRT_Europe_48h.cpg
-#       │  ├──   VNP14IMGTDL_NRT_Europe_48h.dbf
-#       │  ├──   VNP14IMGTDL_NRT_Europe_48h.prj
-#       │  ├──   VNP14IMGTDL_NRT_Europe_48h.shp
-#       │  ├──   VNP14IMGTDL_NRT_Europe_48h.shx
 #       │  └──   VNP14IMGTDL_NRT_Europe_48h.zip
 #       └──   output
-#          ├──   VIIRS-FIRE.cpg
-#          ├──   VIIRS-FIRE.dbf
-#          ├──   VIIRS-FIRE.prj
-#          ├──   VIIRS-FIRE.shp
-#          ├──   VIIRS-FIRE.shx
-#          └──   VIIRS-FIRE.zip
+#          └──   VIIRS_hotspots.json
 #
-# Presently you run a workflow by executing this file. It will create a new incident, register pull handlers on the EDI and will generate hotspots for the region described in  "northern_italy.shp" for each new MODIS/VIIRs observation
+# Presently you run a workflow by executing this file. It will create a new incident, register pull handlers on the EDI and will generate hotspots for the specified region.
 
 
-if "VESTEC_EDI_URI" in os.environ:    
-    EDI_URL= os.environ["VESTEC_EDI_URI"]
-    DATA_MANAGER_URI = os.environ["VESTEC_DM_URI"]
-else:    
+if "VESTEC_SM_URI" in os.environ:
+    SM_URL= os.environ["VESTEC_SM_URI"]
+else:
+    SM_URL = 'http://localhost:5505/SM'
+
+if "VESTEC_EDI_URI" in os.environ:
+    EDI_URL = os.environ["VESTEC_EDI_URI"]
+else:
     EDI_URL= 'http://localhost:5501/EDImanager'
-    DATA_MANAGER_URI = 'http://localhost:5000/DM'
+
+if "VESTEC_DM_URI" in os.environ:
+    DATA_MANAGER_URL = os.environ["VESTEC_DM_URI"]
+else:
+    DATA_MANAGER_URL = 'http://localhost:5000/DM'
 
 #URLS to download the data from
 MODISurl = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/c6/shapes/zips/MODIS_C6_Europe_48h.zip"
@@ -97,8 +66,6 @@ VIIRSurl = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/viirs/shapes/z
 #set up the hotspots workdir
 wkdir = os.path.abspath("hotspots")
 
-#
-admin_filepath = os.path.join(wkdir,"static","ne_10m_admin_1_states_provinces.shp")
 
 #initialise the workflow
 @workflow.handler
@@ -107,21 +74,12 @@ def init(msg):
     
     #make the working directory for this incident
     os.mkdir(os.path.join(wkdir,incident))
-    
-    #get the region zip and move into its correct directory, register it with the DM, and unzip it
-    #in reality this would be provided at startup of the incident, but for now we're just copying an existing one into place
-    os.mkdir(os.path.join(wkdir,incident,"region"))
-    os.system("cp %s %s"%(os.path.join(wkdir,"northern_italy.zip"),os.path.join(wkdir,incident,"region")))
-    regionfile = os.path.join(wkdir,incident,"region","northern_italy.zip")
-    dm_register(file=regionfile,
-                machine="localhost",
-                description = "Region",
-                originator = "hotspot init",
-                group = "hotspot",
-                incident = incident)
 
-    unzip(regionfile,os.path.join(wkdir,incident,"region"))
-
+    #make sure the coordinates are in the incident DB
+    with pny.db_session:
+        i = Incident[incident]
+        if i.lower_right_latlong == "" or i.upper_left_latlong=="":
+            raise ValueError("Region coordinates not provided with incident")
 
     workflow.setIncidentActive(incident)
     
@@ -280,34 +238,58 @@ def process_hotspots(msg):
     incident = msg["IncidentID"]
     inputfile = os.path.splitext(msg["inputFile"])[0]+".shp"
     sensor = msg["sensor"]
-    regionfile = msg["regionFile"]
     outputdir = os.path.join(msg["baseDir"],"output")
     date = msg["date"]
+    
+    try:
+        with pny.db_session:
+            i = Incident[incident]
+            upperLeft = i.upper_left_latlong
+            lowerRight = i.lower_right_latlong
+            
+            lonmin, latmax = upperLeft.split("/")
+            lonmax, latmin = lowerRight.split("/")
+
+            lonmin = float(lonmin)
+            latmax = float(latmax)
+            lonmax = float(lonmax)
+            latmin = float(latmin)
+    except Exception as e:
+        raise ValueError("Unable to parse region coordinates") from e
+
+    points = [lonmin,latmax,lonmax,latmin]
+
+    
+    #This needs to be taken from the Incident table in the DB eventually
+    # print(points)
+    # print([1.8347167968750002, 53.38332836757156, 11.744384765625, 48.75618876280552])
+    #points = [1.8347167968750002, 53.38332836757156, 11.744384765625, 48.75618876280552]
     
     #make the directry to place the hotspots files
     os.mkdir(outputdir)
 
     print("\n")
-    outfile = Get_Fire_Hotspots(inputfile = inputfile, sensor = sensor, regionfile = regionfile, adminfile = admin_filepath, outputdir=outputdir)
-    
-    #This returns files without prepending path...
-    files = os.listdir(outputdir)
-    #create a new list with the apsolute filepaths
-    absfiles = []
-    for file in files:
-        absfiles.append(os.path.join(outputdir,file))
-    
-    #zip the hotspot files
-    zipped = os.path.splitext(outfile)[0]+".zip"
 
-    zip(absfiles,zipped)
+    outfile = extract_hotspots(points=points,inputshp = inputfile,sensor = sensor, outputdir=outputdir)
 
-    dm_register(file=zipped,
+    dm_register(file=outfile,
                 machine="localhost",
                 description = "%s hotspots for region on %s"%(sensor,date),
                 originator = "process hotspots handler",
                 group = "hotspot",
+                storage_technology= "VESTECDB",
                 incident = incident)
+
+    #clean up files we no longer need
+    removedir = os.path.dirname(inputfile)
+    files = os.listdir(removedir)
+    toremove = []
+    for file in files:
+        if ".zip" not in file:
+            toremove.append(file)
+    for file in toremove:
+        print("Deleting %s"%file)
+        os.remove(os.path.join(removedir,file))
 
 
 
@@ -331,7 +313,7 @@ def zip(files,target):
     file.close()
 
 #register a file with the DM
-def dm_register(file,machine,description,originator,group, incident):
+def dm_register(file,machine,description,originator,group, incident, storage_technology):
     print("Registering %s with DataManager"%file)
     path, filename = os.path.split(file)
     size = os.path.getsize(file)
@@ -343,9 +325,10 @@ def dm_register(file,machine,description,originator,group, incident):
         "size": size,
         "description": description,
         "originator": originator,
-        "group": group
+        "group": group,
+        "storage_technology": storage_technology
     }
-    r = requests.put(os.path.join(DATA_MANAGER_URI,"register"),data=data)
+    r = requests.put(os.path.join(DATA_MANAGER_URL,"register"),data=data)
     if r.status_code != 201:
         print("ERROR! %s"%r.text)
         raise Exception("DM could not register file")
@@ -379,7 +362,7 @@ def dm_download(file,machine,description,originator,group,url,incident):
         "options": json.dumps({})
     }
 
-    r = requests.put(os.path.join(DATA_MANAGER_URI,"getexternal"),data=data)
+    r = requests.put(os.path.join(DATA_MANAGER_URL,"getexternal"),data=data)
 
     if r.status_code != 201:
         print("ERROR! %s"%r.text)
@@ -402,6 +385,89 @@ def parse_timestamp(datestr):
     newstring = date.strftime("%Y-%m-%d_%H%M%S")
     return newstring
 
+def convert_to_geojson(input_shapefile_path, output_geojson_path):
+    """ Creates a GeoJSON file from an existent Shapefile with the same name.
+    Given a shapefile path, creates it's GeoJSON version and writes it to the disk
+    with the path and name of the given output_geojson_path (e.g 'test/new_geojson.geojson)
+
+    Args:
+        input_shapefile_path (str): The path of the input shapefile. The
+                                    new file will be created in the same path.
+        output_geojson_path (str): The path of the ouput GeoJSON.
+    """
+    print("Creating geojson from %s"%os.path.basename(input_shapefile_path))
+    current_shape = gpd.read_file(input_shapefile_path)
+    current_shape.to_file(output_geojson_path, driver="GeoJSON")
+
+#extracts hotspots found in the satellite data shapefile form sensor within points. 
+def extract_hotspots(points, inputshp, sensor, outputdir):
+    dir = os.path.dirname(inputshp)
+    basename = os.path.basename(inputshp)
+    name, ext = os.path.splitext(basename)
+    inputjson = name + ".json"
+    inputjson = os.path.join(dir,inputjson)
+    convert_to_geojson(inputshp,inputjson)
+    f = open(inputjson,"r")
+    data = json.load(f)
+    f.close()
+
+    hotspots = []
+
+    print("Looking for hotspots in %s"%os.path.basename(inputjson))
+
+    for feature in data["features"]:
+        if feature["geometry"]["type"] == "Point":
+            coords = feature["geometry"]["coordinates"]
+            #check that the feature is within the geagraphical range described by points
+            if (coords[0] >= points[0] and coords[0] <= points[2]):
+                if (coords[1] >= points[3] and coords[1] <= points[1]):
+                    
+                    #now check that the condifence is high enough
+                    confidence = feature["properties"]["CONFIDENCE"]
+                    if sensor == "MODIS": #MODIS
+                        if confidence < 50:
+                            continue
+                    elif sensor == "VIIRS":
+                        if confidence == "low": #VIIRS
+                            continue
+                    else:
+                        raise ValueError("Unknown Sensor")
+                    #create the dict for this hotspot
+                    d={}
+                    FRP = feature["properties"]["FRP"]
+                    DATE = feature["properties"]["ACQ_DATE"]
+                    TIME = feature["properties"]["ACQ_TIME"]
+
+                    d["type"] =  "Feature"
+                    d["properties"] = {
+                                        "FRP": FRP,
+                                        "DATE": DATE,
+                                        "TIME": TIME
+                                       }
+                    d["geometry"] = feature["geometry"]
+
+                    hotspots.append(d)
+
+
+    print("Found %d hotspots"%len(hotspots))
+
+    d = {}
+    d["type"] = "FeatureCollection"
+    d["crs"] = data["crs"]
+    d["features"] = hotspots
+
+    outfile = os.path.join(outputdir,"%s_hotspots.json"%sensor)
+    
+    contents=json.dumps(d,indent=1)
+    with pny.db_session:
+        new_file = LocalDataStorage(contents=contents, filename=outfile, filetype="application/json")    
+    
+    #delete the input json file (no longer needed)
+    os.remove(inputjson)
+
+    return outfile
+
+    
 
 #register the handlers with the workflow system
 def RegisterHandlers():
@@ -414,7 +480,9 @@ def RegisterHandlers():
 
 #kick off an incident for the hotspot workflow
 if __name__ == "__main__":
-    incident = workflow.CreateIncident("hotspot", "test_hotspot")
+    upperLeft = "1.8347167968750002/53.38332836757156"
+    lowerRight = "11.744384765625/48.75618876280552"
+    incident = workflow.CreateIncident("hotspot", "test_hotspot",upper_left_latlong=upperLeft,lower_right_latlong=lowerRight)
 
     workflow.OpenConnection()
     workflow.send({"IncidentID": incident},"hotspot_init")

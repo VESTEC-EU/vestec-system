@@ -34,6 +34,14 @@ def get_all_users():
     return user_descriptions
 
 @pny.db_session
+def can_user_access_workflow(username, workflow_kind):
+    userInfo=User.get(username=username)
+    for wf in userInfo.allowed_workflows:
+        if (workflow_kind == wf.kind):
+            return True
+    return False
+
+@pny.db_session
 def get_user_details(user):
     user_descriptions=[]
     users=[User.get(username=user)]
@@ -59,7 +67,8 @@ def get_allowed_workflows(user):
         if not user == None:
             for wf in user.allowed_workflows:
                 workflows.append(wf.kind)
-    return workflows
+    
+    return sorted(workflows)
 
 @pny.db_session
 def add_user(username, name, email, password):
@@ -93,27 +102,21 @@ def change_user_password(username, password):
         pny.commit()
         return True
 
-
 @pny.db_session
 def verify_user(username, password):
-    user = User.get(username=username)
-    if user is None: return False
-    if not user.enabled: return False
-    verified = False
+    user = User.get(username=username)            
 
-    if user is None:
-        print("User does not exist!")
-        return False
+    if user is None:        
+        return False, "No such user exists"
     else:
-        password_hash = user.password_hash
-        verified = sha256.verify(password, password_hash)
-
-    if verified:
-        print("User '%s' is authenticated :)" % username)
-        return True
-    else:
-        print("User '%s' is not authenticated :(" % username)
-        return False
+        if not user.enabled: 
+            return False, "User account is not enabled, it must be enabled before you can login"
+        else:            
+            password_hash = user.password_hash            
+            if sha256.verify(password, password_hash):        
+                return True, "Success"
+            else:                
+                return False, "Incorrect password"
 
 
 #checks if the user is an admin. Is used as a function decorator

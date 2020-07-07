@@ -8,6 +8,11 @@ from functools import wraps
 import networkx as nx
 from networkx.drawing.nx_agraph import to_agraph
 import datetime
+from operator import itemgetter
+import sys
+sys.path.append("../")
+from DataManager.client import getInfoForDataInDM, DataManagerException
+
 
 def checkIfUserCanAccessIncident(incident, user):
     if (incident is not None and user is not None):
@@ -16,9 +21,12 @@ def checkIfUserCanAccessIncident(incident, user):
     return False
 
 @pny.db_session
-def createIncident(incident_name, incident_kind, username, incident_upper_right_latlong="", incident_lower_left_latlong=""):
+def createIncident(incident_name, incident_kind, username, incident_upper_left_latlong="", incident_lower_right_latlong="", duration=None):
     user_id = User.get(username=username)
-    job_id = workflow.CreateIncident(incident_name, incident_kind, user_id=user_id, upper_right_latlong=incident_upper_right_latlong, lower_left_latlong=incident_lower_left_latlong)
+    if duration is not None:
+        job_id = workflow.CreateIncident(incident_name, incident_kind, user_id=user_id, upper_left_latlong=incident_upper_left_latlong, lower_right_latlong=incident_lower_right_latlong, duration=duration)
+    else:
+        job_id = workflow.CreateIncident(incident_name, incident_kind, user_id=user_id, upper_left_latlong=incident_upper_left_latlong, lower_right_latlong=incident_lower_right_latlong)
 
     return job_id
 
@@ -72,7 +80,43 @@ def generateIncidentDiGraph(incident_uuid):
             G.add_edge(originator,destination)
     return to_agraph(G)
 
-def packageIncident(stored_incident, include_sort_key, include_digraph, include_manual_data_queuename, include_associated_data):
+def packageSimulation(sim):
+    simulation_dict={}
+    simulation_dict["uuid"]=sim.uuid
+    if sim.jobID is not None and sim.jobID != "":
+        simulation_dict["jobID"]=sim.jobID        
+
+    simulation_dict["status"]=sim.status
+    simulation_dict["status_updated"]=sim.status_updated.strftime("%d/%m/%Y, %H:%M:%S")
+
+    if sim.status_message is not None and sim.status_message != "":
+        simulation_dict["status_message"]=sim.status_message
+                
+    simulation_dict["created"]=sim.date_created.strftime("%d/%m/%Y, %H:%M:%S")
+    simulation_dict["walltime"]=sim.walltime
+    simulation_dict["kind"]=sim.kind
+    simulation_dict["num_nodes"]=sim.num_nodes
+    simulation_dict["requested_walltime"]=sim.requested_walltime
+    if sim.machine is not None:
+        simulation_dict["machine"]=sim.machine.machine_name
+    return simulation_dict
+
+def packageDataset(stored_ds):
+    stored_ds_dict={}
+    stored_ds_dict["uuid"]=stored_ds.uuid
+    stored_ds_dict["name"]=stored_ds.name
+    stored_ds_dict["type"]=stored_ds.type
+    stored_ds_dict["comment"]=stored_ds.comment
+    stored_ds_dict["date_created"]=stored_ds.date_created.strftime("%d/%m/%Y, %H:%M:%S")
+    try:
+        data_info=getInfoForDataInDM(stored_ds.uuid)                
+        stored_ds_dict["machine"]=data_info["machine"]
+    except DataManagerException as err:
+        print("Can not retrive data info from DM "+err.message)
+        stored_ds_dict["machine"]=""
+    return stored_ds_dict
+
+def packageIncident(stored_incident, include_sort_key, include_digraph, include_manual_data_queuename, include_associated_data, include_associated_simulations):
     incident={}
     incident["uuid"]=stored_incident.uuid
     incident["kind"]=stored_incident.kind
@@ -80,30 +124,39 @@ def packageIncident(stored_incident, include_sort_key, include_digraph, include_
     incident["status"]=stored_incident.status
     incident["comment"]=stored_incident.comment         
     incident["creator"]=stored_incident.user_id.username
+    if stored_incident.duration is not None:
+        incident["duration"]=stored_incident.duration
     incident["date_started"]=stored_incident.date_started.strftime("%d/%m/%Y, %H:%M:%S")    
+    
+    incident_workflow=RegisteredWorkflow.get(kind=stored_incident.kind)
+    if incident_workflow is not None:
+        incident["test_workflow"]=incident_workflow.test_workflow
+
+    if include_associated_simulations:
+        incident["simulations"]=[]
+        for sim in stored_incident.simulations:                                   
+            incident["simulations"].append(packageSimulation(sim))
+
+        incident["simulations"]=sorted(incident["simulations"], key=itemgetter('created'), reverse=True)
+
     if (stored_incident.date_completed is not None):
         incident["date_completed"]=stored_incident.date_completed.strftime("%d/%m/%Y, %H:%M:%S")
     incident["incident_date"]=stored_incident.incident_date.strftime("%d/%m/%Y, %H:%M:%S")
-    if (stored_incident.upper_right_latlong is not ""):
-        incident["upper_right_latlong"]=stored_incident.upper_right_latlong
-    if (stored_incident.lower_left_latlong is not ""):
-        incident["lower_left_latlong"]=stored_incident.lower_left_latlong
+    if (stored_incident.upper_left_latlong != ""):
+        incident["upper_left_latlong"]=stored_incident.upper_left_latlong
+    if (stored_incident.lower_right_latlong != ""):
+        incident["lower_right_latlong"]=stored_incident.lower_right_latlong
     if (include_sort_key): incident["srt_key"]=stored_incident.incident_date
     if (include_digraph):
         incident["digraph"]=str(generateIncidentDiGraph(stored_incident.uuid))
-    if (include_manual_data_queuename):
-        incident_workflow=RegisteredWorkflow.get(kind=stored_incident.kind)
+    if (include_manual_data_queuename):        
         incident["data_queue_name"]=incident_workflow.data_queue_name
     if (include_associated_data):
         incident["data_sets"]=[]
         for stored_ds in stored_incident.associated_datasets:
-            stored_ds_dict={}
-            stored_ds_dict["uuid"]=stored_ds.uuid
-            stored_ds_dict["name"]=stored_ds.name
-            stored_ds_dict["type"]=stored_ds.type
-            stored_ds_dict["comment"]=stored_ds.comment
-            stored_ds_dict["date_created"]=stored_ds.date_created.strftime("%d/%m/%Y, %H:%M:%S")
-            incident["data_sets"].append(stored_ds_dict)
+            incident["data_sets"].append(packageDataset(stored_ds))
+
+        incident["data_sets"]=sorted(incident["data_sets"], key=itemgetter('date_created'), reverse=True)
     return incident
 
 @pny.db_session
@@ -239,7 +292,7 @@ def retrieveMyIncidentSummary(username, pending_filter, active_filter, completed
     user = User.get(username=username)
     for stored_incident in user.incidents:
         if doesStoredIncidentMatchFilter(stored_incident, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter):
-            incidents.append(packageIncident(stored_incident, True, False, False, False))
+            incidents.append(packageIncident(stored_incident, True, False, False, False, False))
     sorted_incidents=sorted(incidents, key = lambda i: (i['status'], i['srt_key']),reverse=True)
     for d in sorted_incidents:
         del d['srt_key']
@@ -250,5 +303,5 @@ def retrieveIncident(incident_uuid, username):
     user = User.get(username=username)
     incident = Incident.get(uuid=incident_uuid)
     if checkIfUserCanAccessIncident(incident, user):    
-        return packageIncident(incident, False, True, True, True)    
+        return packageIncident(incident, False, True, True, True, True)    
     return None

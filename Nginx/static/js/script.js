@@ -6,7 +6,7 @@ var add_data_dialog;
 var edit_data_dialog;
 var edit_user_dialog;
 
-const ConfirmationTypeEnum = Object.freeze({"DELETEEDIHANDLER":1, "DELETEDATAITEM":2, "DELETEUSER":3});
+const ConfirmationTypeEnum = Object.freeze({"DELETEEDIHANDLER":1, "DELETEDATAITEM":2, "DELETEUSER":3, "CANCELSIMULATION":4, "DELETEMACHINE":5});
 var confirmation_box_type=null;
 var confirmation_box_data={};
 
@@ -26,6 +26,18 @@ $( function() {
         
     }
     });
+    
+    $( "#dialog-message" ).dialog({
+        modal: true,
+        autoOpen: false,
+        height: "auto",
+        width: "auto",
+        buttons: {
+            Ok: function() {
+              $( this ).dialog( "close" );
+            }
+        }
+    });      
 
     edit_data_dialog = $("#edit-data-dialog-form").dialog({
         autoOpen: false,
@@ -58,6 +70,10 @@ $( function() {
                 performDataSetDeletion();
               } else if (confirmation_box_type == ConfirmationTypeEnum.DELETEUSER) {
                 performUserDeletion();
+              } else if (confirmation_box_type == ConfirmationTypeEnum.CANCELSIMULATION) {
+                performSimulationCancel();
+              } else if (confirmation_box_type == ConfirmationTypeEnum.DELETEMACHINE) {
+                performMachineDelete();
               }
             },
             Cancel: function() {
@@ -80,6 +96,24 @@ $( function() {
                 
             }
             });            
+
+        edit_machine_dialog = $("#edit-machine-dialog-form").dialog({
+                autoOpen: false,
+                height: "auto",
+                width: 500,
+                modal: true,
+                buttons: {     
+                    "OK": function() {
+                        performAddMachine();                        
+                    },
+                    Cancel: function() {
+                        edit_machine_dialog.dialog( "close" );
+                    }
+                },
+                close: function() {        
+                    
+                }
+                }); 
     });
 
 
@@ -201,11 +235,12 @@ function userLogin() {
                     window.location.href = "/home";
                 } else {
                     $("#login-message").html(response.msg);
+                    $("#login-message").removeClass().addClass("button white-btn red-high-btn self-left");
                     $("#login-message").show();
                 }
             },
             error: function(xhr) {
-                $("#login-message").html("Sorry, there seems to be a problem with our system");
+                $("#login-message").html("Internal system error, consult the logs for more details");
                 $("#login-message").removeClass().addClass("button white-btn red-high-btn self-left");
                 $("#login-message").show();
             }
@@ -224,7 +259,8 @@ function getJobWizard() {
         type: "GET",
         headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
         success: function(response) {            
-            var workflows = JSON.parse(response);
+            var workflows = JSON.parse(response.workflows);
+            console.log(workflows);
             $("#incidentType").empty();
             for (item in workflows) {
                 item = workflows[item];                                                   
@@ -242,10 +278,11 @@ function getJobWizard() {
 function submitJob() {
     checkAuthStillValid();
     var job = {}
-    job["incidentType"] = $("#incidentType").val();
-    job["incidentName"] = $("#incidentName").val();
-    if ($("#upperRightLatlong").val().length > 0) job["upperRightLatlong"] = $("#upperRightLatlong").val();
-    if ($("#lowerLeftLatlong").val().length > 0) job["lowerLeftLatlong"] = $("#lowerLeftLatlong").val();
+    job["kind"] = $("#incidentType").val();
+    job["name"] = $("#incidentName").val();
+    if ($("#upperLeftLatlong").val().length > 0) job["upperLeftLatlong"] = $("#upperLeftLatlong").val();
+    if ($("#lowerRightLatlong").val().length > 0) job["lowerRightLatlong"] = $("#lowerRightLatlong").val();
+    if ($("#duration").val().length > 0) job["duration"] = $("#duration").val();
     
     $.ajax({
         url: "/flask/createincident",
@@ -312,11 +349,11 @@ function generateNavigationBar() {
           user_type = JSON.parse(response.access_level);
           generateNavigationBar();
         } else {
-          console.log({"status": 400, "msg": "Sorry, there seems to be a problem with the look up of user authorisation level"});
+          console.log({"status": 400, "msg": "Internal system error, can not retrieve user authorisation level"});
         }
       },
       error: function(xhr) {
-        console.log({"status": 500, "msg": "Sorry, there seems to be a problem with our system."});
+        console.log({"status": 500, "msg": "Internal system error, consult the logs for more details"});
       }
     });
     user_type
@@ -335,6 +372,7 @@ function generateAdminDropdown() {
   admin_html+="<div class=\"admin_item\" onClick=\"getWorkflows()\">Workflows</div>";
   admin_html+="<div class=\"admin_item\" onClick=\"getUsers()\">Users</div>";
   admin_html+="<div class=\"admin_item\" onClick=\"getEDIInfo()\">EDI</div>";
+  admin_html+="<div class=\"admin_item\" onClick=\"getMachineInfo()\">Machines</div>";
   admin_html+="</div></div>";
   return admin_html;
 }
@@ -370,11 +408,11 @@ function getJobsDashboard() {
                 all_incidents = JSON.parse(response.incidents);
                 loadIncidentCards(all_incidents, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter);
             } else {
-                console.log({"status": 400, "msg": "Sorry, there seems to be a problem with the extraction of activities."});
+                console.log({"status": 400, "msg": "Internal system error, cannot extract activities."});
             }
         },
         error: function(xhr) {
-            console.log({"status": 500, "msg": "Sorry, there seems to be a problem with our system."});
+            console.log({"status": 500, "msg": "Internal system error, consult the logs for more details"});
         }
     });
 }
@@ -497,6 +535,28 @@ function addProvidedData() {
     reader.readAsDataURL($('#fileToUpload').prop('files')[0])
 }
 
+function testIncident(incidentID) {
+    var wf = {}; 
+    wf["data"]="Test from the web-UI"
+    $.ajax({
+        url: "/EDI/test_stage_"+incidentID,
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify(wf),
+        dataType: "json",
+        success: function(response) {
+            $('#test_workflow').prop('disabled', true);
+            $('#test_workflow').removeClass('blue');
+            setTimeout(function() {
+                $('#test_workflow').prop('disabled', false);
+                $('#test_workflow').addClass('blue');
+            }, 5000);
+        },
+        error: function(response) {            
+        }
+    }); 
+}
+
 function loadIncidentDetails(incident) {
     var incident_html = '<div class="jobDetails self-center">';
     incident_html += '<div class="jobLine"><b>UUID: </b><div>' + incident.uuid + '</div></div>';
@@ -505,11 +565,11 @@ function loadIncidentDetails(incident) {
     incident_html += '<div class="jobLine"><b>Created On: </b><div>' + incident.incident_date + '</div></div>';
     incident_html += '<div class="jobLine"><b>Created By: </b><div>' + incident.creator + '</div></div>';
     incident_html += '<div class="jobLine"><b>Status: </b><div>' + incident.status + '</div></div>';
-    if ("upper_right_latlong" in incident) {
-        incident_html += '<div class="jobLine"><b>Upper right Lat/Long: </b><div>' + incident.upper_right_latlong + '</div></div>';
+    if ("upper_left_latlong" in incident) {
+        incident_html += '<div class="jobLine"><b>Upper left Lat/Long: </b><div>' + incident.upper_left_latlong + '</div></div>';
     }
-    if ("lower_left_latlong" in incident) {
-        incident_html += '<div class="jobLine"><b>Lower left Lat/Long: </b><div>' + incident.lower_left_latlong + '</div></div>';
+    if ("lower_right_latlong" in incident) {
+        incident_html += '<div class="jobLine"><b>Lower right Lat/Long: </b><div>' + incident.lower_right_latlong + '</div></div>';
     }
     incident_html += '<div class="jobLine"><b>Associated datasets: </b><div>' + incident.data_sets.length + '</div></div>';
     if (incident.status == "COMPLETE") {
@@ -532,17 +592,62 @@ function loadIncidentDetails(incident) {
         if (incident.status == "ACTIVE" && incident.data_queue_name.length > 0) {
             incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" onClick=\"addDataForIncident('"+incident.uuid+"','"+incident.data_queue_name+"')\">Add data</button>";
         }
+
+        if (incident.status == "ACTIVE" && incident.test_workflow) {
+            incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button id=\"test_workflow\" class=\"button blue self-center\" onClick=\"testIncident('"+incident.uuid+"')\">Initiate test stage</button>";
+        }
         
         incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" style=\"float: right;\" onClick=\"getIncidentDetails(\'"+incident.uuid+"\')\">Refresh Status</button></div>";
-    }    
+    }
+
+    if (incident.simulations.length > 0) {
+        incident_html+="<div id=\"incident_data\" class=\"jobDetails self-center\"><table id='incidentSimulationsTable' class='self-center displayTable'>";
+        incident_html+="<thead><tr><th>Kind</th><th>Created</th><th>Status</th><th>Walltime</th><th>Number nodes</th><th>Machine</th><th>Job ID</th><th>Actions</th></tr></thead>";
+        for (sim of incident.simulations) {    
+            incident_html+="<td>"+sim.kind+"</td><td>"+sim.created+"</td><td>";
+            if (sim.status_message != null) {
+                incident_html+="<span class=\"link\" onclick=\"displayInfoMessage('"+sim.status_message+"');\">";
+            }
+            incident_html+=sim.status;
+            if (sim.status_message != null) incident_html+="</span>";
+            incident_html+=" <i>("+sim.status_updated+")</i></td><td>";            
+            if (sim.walltime != null && sim.walltime != "" && (sim.status!="QUEUED" || sim.status!="PENDING" || sim.status!="CREATED")) {
+                incident_html+=sim.walltime;
+            } else {
+                incident_html+=sim.requested_walltime;
+            }
+            incident_html+="</td><td>"+sim.num_nodes+"</td><td>";
+            if ("machine" in sim) {
+                incident_html+=sim.machine;
+            }
+            incident_html+="</td><td>";
+            if ("jobID" in sim) {
+                incident_html+=sim.jobID;
+            }
+            incident_html+="</td><td>";
+            if (sim.status != "COMPLETED" && sim.status != "CANCELLED" && sim.status != "ERROR") {
+                incident_html+="<img id='refresh_icon_"+sim.uuid+"' src='../img/refresh.png' class='click_button' width=26 height=26 title='Refresh status' onClick=\"refreshSimulation('"+sim.uuid+"','"+incident.uuid+"')\">";
+            }
+            if (sim.status=="QUEUED" || sim.status=="RUNNING" || sim.status=="PENDING" || sim.status=="CREATED") {                
+                incident_html+="&nbsp;&nbsp;&nbsp;&nbsp;";
+                incident_html+="<img src='../img/cross.png' class='click_button' width=26 height=26 title='Cancel simulation' onClick=\"cancelSimulation('"+sim.uuid+"','"+incident.uuid+"')\">";
+            }
+            incident_html+="</td></tr>";
+        }
+        incident_html+="</table></div>";
+    }
 
     if (incident.data_sets.length > 0) {
         incident_html+="<div id=\"incident_data\" class=\"jobDetails self-center\"><table id='incidentDataTable' class='self-center displayTable'>";
-        incident_html+="<thead><tr><th>Filename</th><th>File type</th><th>Date Created</th><th>Actions</th></tr></thead>";        
-        for (data_set of incident.data_sets) {            
-            incident_html+="<tr><td>"+data_set.name+"</td><td>"+data_set.type+"</td><td>"+data_set.date_created+"</td><td>";
-            incident_html+="<img src='../img/download.png' class='click_button' title='Download dataset' width=26 height=26 onClick=\"downloadData('"+data_set.uuid+"','"+data_set.name+"')\">";
-            incident_html+="&nbsp;&nbsp;&nbsp;";
+        incident_html+="<thead><tr><th>Filename</th><th>File type</th><th>Location</th><th>Date Created</th><th>Actions</th></tr></thead>";        
+        for (data_set of incident.data_sets) {
+            locally_held=data_set.machine == "localhost";
+            machine_name=locally_held ? "VESTEC system" : data_set.machine;
+            incident_html+="<tr><td>"+data_set.name+"</td><td>"+data_set.type+"</td><td>"+machine_name+"</td><td>"+data_set.date_created+"</td><td>";
+            if (locally_held) {
+                incident_html+="<img src='../img/download.png' class='click_button' title='Download dataset' width=26 height=26 onClick=\"downloadData('"+data_set.uuid+"','"+data_set.name+"')\">";
+                incident_html+="&nbsp;&nbsp;&nbsp;";
+            }
             incident_html+="<img src='../img/edit.png' class='click_button' width=26 height=26 onClick=\"editDataItem('"+data_set.uuid+"','"+incident.uuid+"')\">";
             incident_html+="&nbsp;&nbsp;&nbsp;";
             incident_html+="<img src='../img/cross.png' class='click_button' width=26 height=26 onClick=\"deleteDataItem('"+data_set.uuid+"','"+incident.uuid+"')\">";
@@ -556,6 +661,54 @@ function loadIncidentDetails(incident) {
     return incident_html;
 }
 
+function displayInfoMessage(message) {
+    $("#dialog-message-text").text(message);
+    $( "#dialog-message" ).dialog("open");    
+}
+
+function refreshSimulation(sim_uuid, incident_uuid) {
+    var data_description = {};
+    data_description["sim_uuid"] = sim_uuid;
+    $('#refresh_icon_'+sim_uuid).css('opacity', 0.2);
+    $.ajax({
+        url: "/flask/refreshsimulation",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},   
+        contentType: "application/json",
+        data: JSON.stringify(data_description),
+        dataType: "json",     
+        success: function(response) {
+            getIncidentDetails(incident_uuid);
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> Simulation refresh failed");
+        }
+    });
+}
+
+function cancelSimulation(sim_uuid, incident_uuid) {
+    confirmation_box_type=ConfirmationTypeEnum.CANCELSIMULATION;
+    confirmation_box_data={"sim_uuid" : sim_uuid, "incident_uuid" : incident_uuid};
+    $("#dialog-confirm-text").text("Are you sure you want to cancel this simulation?");
+    $( "#dialog-confirm" ).dialog("open");
+}
+
+function performSimulationCancel() {    
+    $.ajax({
+        url: "/flask/simulation?sim_uuid="+confirmation_box_data["sim_uuid"],
+        type: "DELETE",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
+        success: function(response) {
+            getIncidentDetails(confirmation_box_data["incident_uuid"]);
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> Simulation cancel failed");
+        }
+    });   
+}
+
 function editDataItem(data_uuid, incident_uuid) {
     $.ajax({
         url: "/flask/metadata?data_uuid="+data_uuid+"&incident_uuid="+incident_uuid,
@@ -567,8 +720,8 @@ function editDataItem(data_uuid, incident_uuid) {
             $('#edit-data-dialog-contents').load('templates/editdata.html #editDataScreen', function() {
                 $('#incidentId').val(incident_uuid);
                 $('#dataId').val(data_uuid);
-                $('#filetype').val(meta_data.type);
-                $('#filecomment').val(meta_data.comment);
+                $('#edit-filetype').val(meta_data.type);
+                $('#edit-filecomment').val(meta_data.comment);
                 edit_data_dialog.dialog( "open" );
             });  
         }
@@ -579,8 +732,8 @@ function editProvidedData() {
     var data_description = {};
     data_description["incident_uuid"] = $("#incidentId").val();
     data_description["data_uuid"] = $("#dataId").val();
-    data_description["type"] = $("#filetype").val();
-    data_description["comments"] = $("#filecomment").val();
+    data_description["type"] = $("#edit-filetype").val();
+    data_description["comments"] = $("#edit-filecomment").val();
     $.ajax({
         url: "/flask/metadata",
         type: "POST",
@@ -683,6 +836,7 @@ function createWorkflow() {
     wf["kind"] = $("#workflowname").val();
     wf["initqueuename"] = $("#workflowqueuename").val();
     wf["dataqueuename"] = $("#manualdataqueuename").val();
+    wf["testworkflow"] = $("#test_workflow").is(':checked');
     $.ajax({
         url: "/flask/addworkflow",
         type: "POST",
@@ -733,7 +887,7 @@ function getWorkflows() {
             type: "GET",
             headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
             success: function(response) {
-                var workflows = JSON.parse(response);
+                var workflows = JSON.parse(response.workflows);
                 $("#workflowTable").append("<tbody>");
 
                 for (item in workflows) {
@@ -755,6 +909,177 @@ function getWorkflows() {
                 $("#confirmation").html("<span>&#10007</span> Workflow retrieval failed");
             }
         });
+    });
+}
+
+function getMachineInfo() {
+    checkAuthStillValid();
+    $("#nav-home").removeClass("blue");
+    $("#nav-dash").removeClass("blue");
+    $("#nav-logout").removeClass("blue");
+    $("#body-container").load("../templates/machineinfo.html", function() {
+        $.ajax({
+            url: "/flask/getmachinestatuses",
+            type: "GET",
+            headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
+            success: function(response) {
+                var machine_infos = response.machine_statuses;
+                $("#MachineInfotable").append("<tbody>");
+
+                for (machine_info in machine_infos) {
+                    var handler_entry = "<tr>";
+                    item = machine_infos[machine_info];
+                    handler_entry += "<td>"+item.name + "</td>";
+                    handler_entry += "<td>"+item.host_name + "</td>";
+                    handler_entry += "<td>"+item.connection_type + "</td>";                    
+                    handler_entry += "<td>"+item.scheduler + "</td>";
+                    handler_entry += "<td>"+parseInt(item.nodes) * parseInt(parseInt(item.cores_per_node)) + "</td>";
+                    handler_entry += "<td>";
+
+                    if ("status" in item && "status_last_checked" in item) {
+                        handler_entry += item.status+"<i>&nbsp;&nbsp;("+item.status_last_checked+")</i>";
+                    } else if ("status" in item) {
+                        handler_entry += item.status;
+                    } else {
+                        handler_entry += "unknown";                    
+                    }
+
+                    handler_entry += "</td><td>";                    
+                    if (item.enabled) {
+                        handler_entry += "<img src='../img/enabled_icon.png' onclick=\"disableMachine('"+item.uuid+"')\" height='24' title='Disable machine' style='cursor: pointer;'>";
+                    } else {
+                        handler_entry += "<img src='../img/disabled_icon.png' onclick=\"enableMachine('"+item.uuid+"')\" height='24' title='Enable machine' style='cursor: pointer;'>";
+                    }
+                    handler_entry += "</td><td>";
+                    if (item.test_mode) {
+                        handler_entry += "<img src='../img/enabled_icon.png' onclick=\"disableTestModeMachine('"+item.uuid+"')\" height='24' title='Disable test mode' style='cursor: pointer;'>";
+                    } else {
+                        handler_entry += "<img src='../img/disabled_icon.png' onclick=\"enableTestModeMachine('"+item.uuid+"')\" height='24' title='Enable test mode' style='cursor: pointer;'>";
+                    }
+                    handler_entry += "<td>";                                        
+                    handler_entry += "<img src='../img/cross.png' onclick=\"deleteMachine('"+item.uuid+"')\" height='24' title='Delete machine' style='cursor: pointer;'>";
+                    handler_entry += "</td>";
+                    handler_entry += "</tr>";
+                    $("#MachineInfotable").append(handler_entry);
+                }
+                $("#MachineInfotable").append("</tbody>");
+            }
+        });
+    });
+}
+
+function deleteMachine(machine_uuid) {
+    confirmation_box_type=ConfirmationTypeEnum.DELETEMACHINE;
+    confirmation_box_data={"machine_uuid" : machine_uuid};
+    $("#dialog-confirm-text").text("Are you sure you want to delete this machine?");
+    $( "#dialog-confirm" ).dialog("open");
+}
+
+function performMachineDelete() {    
+    $.ajax({
+        url: "/flask/machine/"+confirmation_box_data["machine_uuid"],
+        type: "DELETE",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
+        success: function(response) {
+            getMachineInfo();
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> Machine deletion failed");
+        }
+    });   
+}
+
+function enableTestModeMachine(machine_id) {
+    $.ajax({
+        url: "/flask/enabletestmodemachine/"+machine_id,
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},       
+        success: function(response) {            
+            getMachineInfo();
+        },
+        error: function(xhr) {
+            //$("#userEditErrorMessage").removeClass().addClass("red self-center");
+            //$("#userEditErrorMessage").html("<span>&#10007</span> User edit failed");
+        }
+    });
+}
+
+function disableTestModeMachine(machine_id) {
+    $.ajax({
+        url: "/flask/disabletestmodemachine/"+machine_id,
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},       
+        success: function(response) {            
+            getMachineInfo();
+        },
+        error: function(xhr) {
+            //$("#userEditErrorMessage").removeClass().addClass("red self-center");
+            //$("#userEditErrorMessage").html("<span>&#10007</span> User edit failed");
+        }
+    });
+}
+
+function enableMachine(machine_id) {
+    $.ajax({
+        url: "/flask/enablemachine/"+machine_id,
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},       
+        success: function(response) {            
+            getMachineInfo();
+        },
+        error: function(xhr) {
+            //$("#userEditErrorMessage").removeClass().addClass("red self-center");
+            //$("#userEditErrorMessage").html("<span>&#10007</span> User edit failed");
+        }
+    });
+}
+
+function disableMachine(machine_id) {
+    $.ajax({
+        url: "/flask/disablemachine/"+machine_id,
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},       
+        success: function(response) {            
+            getMachineInfo();
+        },
+        error: function(xhr) {
+            //$("#userEditErrorMessage").removeClass().addClass("red self-center");
+            //$("#userEditErrorMessage").html("<span>&#10007</span> User edit failed");
+        }
+    });
+}
+
+function showAddMachine() {
+    $('#edit-machine-dialog-contents').load('templates/addmachine.html #addMachineScreen', function() {
+        edit_machine_dialog.dialog( "open" );
+    }); 
+}
+
+function performAddMachine() {
+    var data = {};    
+    data["machine_name"] = $('#machinename').val();
+    data["host_name"] = $('#hostname').val();
+    data["scheduler"] = $('#scheduler').val();
+    data["connection_type"] = $('#connectionType').val();
+    data["num_nodes"] = $('#number_nodes').val();
+    data["cores_per_node"] = $('#number_cores').val();
+    data["base_work_dir"] = $('#basedir').val();
+    $.ajax({
+        url: "/flask/addmachine",
+        type: "POST",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        contentType: "application/json",
+        data: JSON.stringify(data),
+        dataType: "json",
+        success: function(response) {
+            edit_machine_dialog.dialog( "close" );
+            getMachineInfo();
+        },
+        error: function(xhr) {
+            //$("#userEditErrorMessage").removeClass().addClass("red self-center");
+            //$("#userEditErrorMessage").html("<span>&#10007</span> User edit failed");
+        }
     });
 }
 
@@ -793,7 +1118,7 @@ function getEDIInfo() {
                 $("#EDIInfotable").append("</tbody>");
             },
             error: function(xhr) {
-                console.log({"status": 500, "msg": "Sorry, there seems to be a problem with our system."});
+                console.log({"status": 500, "msg": "Internal system error, consult the logs for more details"});
             }
         });
     });
@@ -817,7 +1142,7 @@ function getUsers() {
             type: "GET",
             headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
             success: function(response) {
-                var users = JSON.parse(response);
+                var users = JSON.parse(response.users);
                 $("#userTable").append("<tbody>");
 
                 for (item in users) {
@@ -910,7 +1235,7 @@ function manageUser(username) {
         type: "GET",
         headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
         success: function(response) {
-            workflows = JSON.parse(response);
+            workflows = JSON.parse(response.workflows);
         }
     }),
     $.ajax({
@@ -921,7 +1246,7 @@ function manageUser(username) {
         data: JSON.stringify(wf),
         dataType: "json",
         success: function(response) {
-            users = JSON.parse(JSON.stringify(response));            
+            users = JSON.parse(response.users);            
         },
         error: function(xhr) {
             $("#confirmation").removeClass().addClass("button red self-center");
@@ -1045,7 +1370,7 @@ function getSystemHealth() {
         type: "GET",
         headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
         success: function(response) {
-            var health = JSON.parse(response);
+            var health = JSON.parse(response.health);
             $("#healthTable").append("<tbody>");
 
             for (item in health) {
@@ -1083,7 +1408,7 @@ function getLogs() {
         type: "GET",
         headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
         success: function(response) {
-            var logs = JSON.parse(response);
+            var logs = JSON.parse(response.logs);
             $("#logsTable").append("<tbody>");
 
             for (log in logs) {
