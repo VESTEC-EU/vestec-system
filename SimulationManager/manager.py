@@ -42,11 +42,11 @@ def refresh_sim_state(simulation_id):
         if sim.status=="PENDING" or sim.status=="CREATED" or sim.status=="QUEUED" or sim.status=="RUNNING" or sim.status=="ENDING":
             if sim.status!="CREATED":
                 handleRefreshOfSimulations([sim])
-            return "Status refreshed", 201
+            return "Status refreshed", 200
         else:
             return "Simulation state is invalid for refresh operation", 401
     else:
-        return "Simulation not found with that identifier", 401
+        return "Simulation not found with that identifier", 404
 
 @app.route("/SM/simulation/<simulation_id>", methods=["DELETE"])
 @pny.db_session
@@ -58,9 +58,9 @@ def cancel_simulation(simulation_id):
         sim.status="CANCELLED"
         sim.status_updated=datetime.datetime.now()
         pny.commit()
-        return "Simulation deleted", 201
+        return "Simulation deleted", 200
     else:
-        return "Simulation not found with that identifier", 401
+        return "Simulation not found with that identifier", 404
 
 async def delete_simulation_job(machine_name, queue_id):        
     client = await Client.create(machine_name)
@@ -79,14 +79,14 @@ def submit_job():
             simulation.jobID=submission_data[1]
             simulation.status="QUEUED"
             simulation.status_updated=datetime.datetime.now()
-            return "Job submitted", 201
+            return "Job submitted", 200
         else:
             simulation.status="ERROR"
             simulation.status_message=submission_data[1]
             simulation.status_updated=datetime.datetime.now()
-            return submission_data[1], 401
+            return submission_data[1], 400
     else:
-        return "Simulation can only be submitted when in created state", 401
+        return "Simulation can only be submitted when in created state", 400
 
 async def submit_job_to_machine(machine_name, num_nodes, requested_walltime, directory, executable):        
     client = await Client.create(machine_name)
