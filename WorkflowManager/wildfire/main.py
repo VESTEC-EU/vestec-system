@@ -20,7 +20,7 @@ def wildfire_init(msg):
 
     workflow.send(queue="wildfire_mesonh_init",message=msg)
     workflow.send(queue="wildfire_hotspot_init",message=msg)
-    workflow.send(queue="wildfire_fire_static",message=msg)
+    #workflow.send(queue="wildfire_fire_static",message=msg)
 
     
 

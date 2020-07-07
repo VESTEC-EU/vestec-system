@@ -446,10 +446,12 @@ def wildfire_tecnosylva_hotspots(msg):
                 comment="WFA provided hotspot data")
     except DataManagerException as err:
         print("Error registering hotspot data with DM, "+err.message)
+        return
 
     print("Hotspot data stored")
 
-    #workflow.send(msg,"wildfire_fire_simulation")
+    fwdmsg={"IncidentID" : incidentId, "hotspot_data_uuid" : data_uuid}
+    workflow.send(fwdmsg,"wildfire_fire_simulation")
 
 
 #register the handlers with the workflow system
