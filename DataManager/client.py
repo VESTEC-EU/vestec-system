@@ -57,7 +57,7 @@ def getInfoForDataInDM(data_uuid=None):
 
 def getByteDataViaDM(data_uuid):
     retrieved_data=requests.get(_get_DM_URL()+'/get/'+data_uuid)
-    if retrieved_data.status_code == 201:
+    if retrieved_data.status_code == 200:
         return retrieved_data.text
     else:
         raise DataManagerException(retrieved_data.status_code, retrieved_data.text)

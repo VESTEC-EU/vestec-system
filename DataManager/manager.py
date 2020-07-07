@@ -433,13 +433,13 @@ def _get_data_from_location(registered_data):
             readFile = open(target_src, "wb")
             data_payload=readFile.read()
             readFile.close()
-            return data_payload, 201
+            return data_payload, 200
         elif registered_data.storage_technology == "VESTECDB":
             localData=LocalDataStorage.get(filename=target_src)
-            return localData.contents, 201
+            return localData.contents, 200
     else:
         contents=asyncio.run(submit_remote_get_data(registered_data.machine, target_src))
-        return contents, 201
+        return contents, 200
 
 async def submit_remote_get_data(target_machine_name, src_file):
     client = await Client.create(target_machine_name)              
