@@ -52,7 +52,8 @@ def refresh_sim_state(simulation_id):
 def cancel_simulation(simulation_id):
     sim=Simulation[simulation_id]
     if (sim is not None):
-        asyncio.run(delete_simulation_job(sim.machine.machine_name, sim.jobID))
+        if (sim.status=="PENDING" or sim.status=="QUEUED" or sim.status=="RUNNING" or sim.status=="ENDING"):
+            asyncio.run(delete_simulation_job(sim.machine.machine_name, sim.jobID))
         sim.status="CANCELLED"
         sim.status_updated=datetime.datetime.now()
         pny.commit()
@@ -71,17 +72,20 @@ def submit_job():
 
     simulation_uuid = data["simulation_uuid"]
     simulation = Simulation[simulation_uuid]
-    submission_data=asyncio.run(submit_job_to_machine(simulation.machine.machine_name, simulation.num_nodes, simulation.requested_walltime, simulation.directory, simulation.executable))
-    if (submission_data[0]):
-        simulation.jobID=submission_data[1]
-        simulation.status="QUEUED"
-        simulation.status_updated=datetime.datetime.now()
-        return "Job submitted", 201
+    if simulation.status == "CREATED":
+        submission_data=asyncio.run(submit_job_to_machine(simulation.machine.machine_name, simulation.num_nodes, simulation.requested_walltime, simulation.directory, simulation.executable))
+        if (submission_data[0]):
+            simulation.jobID=submission_data[1]
+            simulation.status="QUEUED"
+            simulation.status_updated=datetime.datetime.now()
+            return "Job submitted", 201
+        else:
+            simulation.status="ERROR"
+            simulation.status_message=submission_data[1]
+            simulation.status_updated=datetime.datetime.now()
+            return submission_data[1], 401
     else:
-        simulation.status="ERROR"
-        simulation.status_message=submission_data[1]
-        simulation.status_updated=datetime.datetime.now()
-        return submission_data[1], 401
+        return "Simulation can only be submitted when in created state", 401
 
 async def submit_job_to_machine(machine_name, num_nodes, requested_walltime, directory, executable):        
     client = await Client.create(machine_name)
@@ -113,12 +117,12 @@ def create_job():
     else:
         template_dir = ""
 
-    try:
-        matched_machine_id=matchBestMachine(requested_walltime, num_nodes)
-        stored_machine=Machine.get(machine_id=matched_machine_id)        
-        asyncio.run(create_job_on_machine(stored_machine.machine_name, directory, template_dir))
+    try:                
+        matched_machine_id=matchBestMachine(requested_walltime, num_nodes)        
+        stored_machine=Machine.get(machine_id=matched_machine_id)                
+        asyncio.run(create_job_on_machine(stored_machine.machine_name, directory, template_dir))        
         job_status="CREATED"
-    except MachineStatusManagerException as err:
+    except MachineStatusManagerException as err:        
         job_status="ERROR"
         status_message="Error allocating machine to job, "+err.message
         stored_machine=None
@@ -175,7 +179,7 @@ def issueWorkFlowStageCalls(workflow_stages_to_run):
     workflow.OpenConnection()
     for wf_call in workflow_stages_to_run:            
         msg={}    
-        msg["IncidentID"] = wf_call["incidentId"]
+        msg["IncidentID"] = wf_call["incidentId"]        
         msg["simulationId"]=wf_call["simulationId"]
         workflow.send(message=msg, queue=wf_call["targetName"])
 

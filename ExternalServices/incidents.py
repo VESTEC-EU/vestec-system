@@ -9,6 +9,10 @@ import networkx as nx
 from networkx.drawing.nx_agraph import to_agraph
 import datetime
 from operator import itemgetter
+import sys
+sys.path.append("../")
+from DataManager.client import getInfoForDataInDM, DataManagerException
+
 
 def checkIfUserCanAccessIncident(incident, user):
     if (incident is not None and user is not None):
@@ -108,6 +112,21 @@ def packageSimulation(sim):
         simulation_dict["machine"]=sim.machine.machine_name
     return simulation_dict
 
+def packageDataset(stored_ds):
+    stored_ds_dict={}
+    stored_ds_dict["uuid"]=stored_ds.uuid
+    stored_ds_dict["name"]=stored_ds.name
+    stored_ds_dict["type"]=stored_ds.type
+    stored_ds_dict["comment"]=stored_ds.comment
+    stored_ds_dict["date_created"]=stored_ds.date_created.strftime("%d/%m/%Y, %H:%M:%S")
+    try:
+        data_info=getInfoForDataInDM(stored_ds.uuid)                
+        stored_ds_dict["machine"]=data_info["machine"]
+    except DataManagerException as err:
+        print("Can not retrive data info from DM "+err.message)
+        stored_ds_dict["machine"]=""
+    return stored_ds_dict
+
 def packageIncident(stored_incident, include_sort_key, include_digraph, include_manual_data_queuename, include_associated_data, include_associated_simulations):
     incident={}
     incident["uuid"]=stored_incident.uuid
@@ -146,13 +165,9 @@ def packageIncident(stored_incident, include_sort_key, include_digraph, include_
     if (include_associated_data):
         incident["data_sets"]=[]
         for stored_ds in stored_incident.associated_datasets:
-            stored_ds_dict={}
-            stored_ds_dict["uuid"]=stored_ds.uuid
-            stored_ds_dict["name"]=stored_ds.name
-            stored_ds_dict["type"]=stored_ds.type
-            stored_ds_dict["comment"]=stored_ds.comment
-            stored_ds_dict["date_created"]=stored_ds.date_created.strftime("%d/%m/%Y, %H:%M:%S")
-            incident["data_sets"].append(stored_ds_dict)
+            incident["data_sets"].append(packageDataset(stored_ds))
+
+        incident["data_sets"]=sorted(incident["data_sets"], key=itemgetter('date_created'), reverse=True)
     return incident
 
 @pny.db_session

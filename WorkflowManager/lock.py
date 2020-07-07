@@ -104,7 +104,7 @@ def ReleaseLock(name, incident):
 def atomic(f):
     @functools.wraps(f)
     def wrapper(ch, method, properties, body, **kwargs):
-        msg = json.loads(body)
+        msg = json.loads((body.decode('ascii')))
         # If we get the lock, run the handler
         if CheckLock(f.__name__, msg["IncidentID"]):
             try:

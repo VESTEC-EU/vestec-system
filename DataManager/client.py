@@ -1,12 +1,19 @@
 import os
 import requests
+import pony.orm as pny
+from Database import Incident
+import datetime
 
 class DataManagerException(Exception):
     def __init__(self, status_code, message):
         self.status_code = status_code
         self.message = message
 
-def registerDataWithDM(filename, machine, description, size, originator, group = "none", storage_technology=None, path=None):
+def registerDataWithDM(filename, machine, description, size, originator, group = "none", storage_technology=None, path=None, 
+        associate_with_incident=False, incidentId=None, type="", comment=None):
+    if associate_with_incident and incidentId is None:
+        raise DataManagerException(400, "Must supply an incident ID when associating dataset with an incident")
+
     arguments = {   'filename': filename, 
                     'machine':machine,
                     'storage_technology' : storage_technology, 
@@ -17,10 +24,13 @@ def registerDataWithDM(filename, machine, description, size, originator, group =
     if storage_technology is not None:
         arguments["storage_technology"]=storage_technology
     if path is not None:
-        arguments["path"]=path
+        arguments["path"]=path        
 
     returnUUID = requests.put(_get_DM_URL()+'/register', data=arguments)
     if returnUUID.status_code == 201:
+        if associate_with_incident:
+            if comment is None: comment=description
+            _associateDataWithIncident(incidentId, returnUUID.text, filename, type, comment)
         return returnUUID.text
     else:
         raise DataManagerException(returnUUID.status_code, returnUUID.text)
@@ -52,7 +62,11 @@ def getByteDataViaDM(data_uuid):
     else:
         raise DataManagerException(retrieved_data.status_code, retrieved_data.text)
 
-def putByteDataViaDM(filename, machine, description, originator, payload, group = "none", storage_technology=None, path=None):
+def putByteDataViaDM(filename, machine, description, originator, payload, group = "none", storage_technology=None, path=None, 
+        associate_with_incident=False, incidentId=None, type="", comment=None):
+    if associate_with_incident and incidentId is None:
+        raise DataManagerException(400, "Must supply an incident ID when associating dataset with an incident")
+
     arguments = {   'filename': filename, 
                     'machine':machine,
                     'storage_technology' : storage_technology, 
@@ -67,17 +81,24 @@ def putByteDataViaDM(filename, machine, description, originator, payload, group 
 
     response=requests.put(_get_DM_URL()+'/put', data=arguments)
     if response.status_code == 201:
+        if associate_with_incident:
+            if comment is None: comment=description
+            _associateDataWithIncident(incidentId, returnUUID.text, filename, type, comment)
         return response.text
     else:
         raise DataManagerException(response.status_code, response.text)
 
-def downloadDataToTargetViaDM(filename, machine, description, originator, url, protocol, group = "none", storage_technology=None, path=None, options=None ):
+def downloadDataToTargetViaDM(filename, machine, description, originator, url, protocol, group = "none", storage_technology=None, path=None, options=None,
+        associate_with_incident=False, incidentId=None, type="", comment=None):
+    if associate_with_incident and incidentId is None:
+        raise DataManagerException(400, "Must supply an incident ID when associating dataset with an incident")
+
     arguments = {   'filename': filename, 
                     'machine':machine,
                     'storage_technology' : storage_technology, 
                     'description':description, 
                     'url':url, 
-                    'protcol':protcol, 
+                    'protocol':protocol, 
                     'originator':originator,
                     'group' : group }
     if storage_technology is not None:
@@ -89,6 +110,9 @@ def downloadDataToTargetViaDM(filename, machine, description, originator, url, p
 
     returnUUID = requests.put(_get_DM_URL()+'/getexternal', data=arguments)
     if returnUUID.status_code == 201:
+        if associate_with_incident:
+            if comment is None: comment=description
+            _associateDataWithIncident(incidentId, returnUUID.text, filename, type, comment)
         return returnUUID.text
     else:
         raise DataManagerException(returnUUID.status_code, returnUUID.text)
@@ -124,3 +148,8 @@ def _get_DM_URL():
         return os.environ["VESTEC_DM_URI"]
     else:
         return 'http://localhost:5000/DM'
+
+@pny.db_session
+def _associateDataWithIncident(IncidentID, data_uuid, name, type, comment):
+    incident=Incident[IncidentID]
+    incident.associated_datasets.create(uuid=data_uuid, name=name, type=type, comment=comment, date_created=datetime.datetime.now())

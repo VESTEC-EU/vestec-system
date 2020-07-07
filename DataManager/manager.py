@@ -5,7 +5,7 @@ import flask
 import uuid
 import pony.orm as pny
 from pony.orm.serialization import to_dict
-from Database import db, initialiseDatabase, Data, DataTransfer
+from Database import db, initialiseDatabase, Data, DataTransfer, Machine
 import datetime
 import os
 import ConnectionManager
@@ -54,8 +54,10 @@ def info(id=None):
             records = pny.select(d for d in Data)[:]
             data=[]
             for r in records:
-                print(r.to_dict())
-                data.append(r.to_dict())
+                data_info=r.to_dict()                
+                data_info["absolute_path"]=_retrieveAbsolutePath(data_info)
+                data.append(data_info)
+
         #get a specific data item and turn it into a dictionary
         else:
             try:
@@ -63,6 +65,7 @@ def info(id=None):
             except pny.ObjectNotFound:
                 return "%s does not exist"%id, 404
             data = d.to_dict()
+            data["absolute_path"]=_retrieveAbsolutePath(data)
     #return as a json
     return flask.jsonify(data), 200
 
@@ -216,6 +219,22 @@ def activate(id):
 
 
 #--------------------- helper functions --------------------------
+
+@pny.db_session
+def _retrieveAbsolutePath(data_info):
+    if data_info["machine"] == "localhost":
+        if len(data_info["path"]) > 0: 
+            absolute_path=data_info["path"]+"/"+data_info["filename"]
+        else:
+            absolute_path=data_info["filename"]
+    else:
+        machine=Machine.get(machine_name=data_info["machine"])
+        absolute_path=machine.base_work_dir.strip()
+        if absolute_path[-1] != "/": absolute_path+="/"
+        if len(data_info["path"]) > 0: 
+            absolute_path+=data_info["path"]+"/"                    
+        absolute_path+=data_info["filename"]
+    return absolute_path
 
 def _handle_copy_or_move(id, move):
     #get details of the data object

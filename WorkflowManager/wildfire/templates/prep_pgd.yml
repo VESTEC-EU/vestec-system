@@ -1,0 +1,20 @@
+output_basename: CFIRE02KM
+clay:
+  class: File
+  path: /work/d170/shared/data/mesonh/PREP_PGD_FILES_WWW/CLAY_HWSD_MOY.dir
+cover:
+  class: File
+  path: /work/d170/shared/data/mesonh/PREP_PGD_FILES_WWW/ECOCLIMAP_v2.0.dir
+zs:
+  class: File
+  path: /work/d170/shared/data/mesonh/PREP_PGD_FILES_WWW/gtopo30.dir
+sand:
+  class: File
+  path: /work/d170/shared/data/mesonh/PREP_PGD_FILES_WWW/SAND_HWSD_MOY.dir
+upperleft:
+  lat: 34.05
+  lon: -118.05
+lowerright:
+  lat: 33.95
+  lon: -117.95
+dx: 2000.0
