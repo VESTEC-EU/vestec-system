@@ -18,16 +18,16 @@ from DataManager.client import putByteDataViaDM, DataManagerException, registerD
 @workflow.handler
 def wildfire_mesonh_init_standalone(msg):
     IncidentID = msg["IncidentID"]
-    _handle_init(msg)
+    _handle_init(msg, "wildfire_mesonh_init_standalone")
     workflow.setIncidentActive(IncidentID)
 
 
 #initialises the mesoNH part of the workflow
 @workflow.handler
 def wildfire_mesonh_init(msg):
-    _handle_init(msg)
+    _handle_init(msg, "wildfire_mesonh_init")
 
-def _handle_init(msg):
+def _handle_init(msg, providedCaller):
     IncidentID = msg["IncidentID"]
     print("\nInitialising MesoNH sub-workflow")
 
@@ -38,7 +38,7 @@ def _handle_init(msg):
         print("Failed to register for GFS download "+err.message)
         return
         
-    workflow.send(msg,"wildfire_mesonh_physiographic")
+    workflow.send(msg,"wildfire_mesonh_physiographic", providedCaller=providedCaller)
 
 
 #Sees if there is new GFS data available. If so, downloads it [not implemented yet] and sends this on to the simulation stage
@@ -148,7 +148,7 @@ def wildfire_mesonh_simulation(msg):
 
     print("\nMesoNH simulation")
 
-    if originator == "issueWorkFlowStageCalls":
+    if originator == "Simulation Completed":
         workflow.Persist.Put(IncidentID,{"originator": "wildfire_mesonh_physiographic", "Physiographic": True})
         print("Physiographic data received "+ simulationId)
         with pny.db_session:

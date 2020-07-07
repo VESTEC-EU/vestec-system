@@ -169,7 +169,7 @@ def handleRefreshOfSimulations(simulations):
                     queueid_to_sim[jkey].walltime=jvalue[1]
                 targetStateCall=checkMatchAgainstQueueStateCalls(queueid_to_sim[jkey].queue_state_calls, jvalue[0])
                 if (targetStateCall is not None):                      
-                    new_wf_stage_call={'targetName' : targetStateCall, 'incidentId' : queueid_to_sim[jkey].incident.uuid, 'simulationId' : queueid_to_sim[jkey].uuid}
+                    new_wf_stage_call={'targetName' : targetStateCall, 'incidentId' : queueid_to_sim[jkey].incident.uuid, 'simulationId' : queueid_to_sim[jkey].uuid, 'status' : jvalue[0]}
                     workflow_stages_to_run.append(new_wf_stage_call)
     pny.commit()
     if workflow_stages_to_run:
@@ -181,7 +181,20 @@ def issueWorkFlowStageCalls(workflow_stages_to_run):
         msg={}    
         msg["IncidentID"] = wf_call["incidentId"]        
         msg["simulationId"]=wf_call["simulationId"]
-        workflow.send(message=msg, queue=wf_call["targetName"])
+
+        origionatorPrettyStr=None
+        if wf_call["status"] == "COMPLETED":
+            origionatorPrettyStr="Simulation Completed"
+        elif wf_call["status"] == "QUEUED":
+            origionatorPrettyStr="Simulation Queued"
+        elif wf_call["status"] == "RUNNING":
+            origionatorPrettyStr="Simulation Running"
+        elif wf_call["status"] == "ENDING":
+            origionatorPrettyStr="Simulation Ending"
+        elif wf_call["status"] == "HELD":
+            origionatorPrettyStr="Simulation Held"
+
+        workflow.send(message=msg, queue=wf_call["targetName"], providedCaller=origionatorPrettyStr)
 
     workflow.FlushMessages()
     workflow.CloseConnection()

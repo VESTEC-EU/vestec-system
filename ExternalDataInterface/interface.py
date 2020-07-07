@@ -81,7 +81,7 @@ def sendMessageToWorkflowEngine(data_packet, queue, incidentId):
     else:
         msg["IncidentID"] = incidentId
     msg["data"]=data_packet
-    workflow.send(message=msg, queue=queue)
+    workflow.send(message=msg, queue=queue, providedCaller="External Data Interface")
     workflow.FlushMessages()
     workflow.CloseConnection()
 
