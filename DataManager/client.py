@@ -157,7 +157,7 @@ def _get_DM_URL():
     if "VESTEC_DM_URI" in os.environ:
         return os.environ["VESTEC_DM_URI"]
     else:
-        return 'http://localhost:5000/DM'
+        return 'http://localhost:5503/DM'
 
 @pny.db_session
 def _associateDataWithIncident(IncidentID, data_uuid, name, type, comment):

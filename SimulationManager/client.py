@@ -53,4 +53,4 @@ def _get_SM_URL():
     if "VESTEC_SM_URI" in os.environ:
         return os.environ["VESTEC_SM_URI"]
     else:
-        return 'http://localhost:5505/SM'
+        return 'http://localhost:5500/SM'
