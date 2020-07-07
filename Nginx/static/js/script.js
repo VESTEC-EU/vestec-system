@@ -486,8 +486,7 @@ function getIncidentDetails(incident_uuid) {
             $("#body-container").html(loadIncidentDetails(incident_details));           
             var viz = new Viz();
             viz.renderSVGElement(incident_details.digraph).then(function(element) {
-                $("svg").append(element);
-                $("#workflow_diagram").html($("#workflow_diagram").html());
+                $("#workflow_diagram").append(element);                
             });
         },
         error: function(xhr) {
@@ -656,7 +655,7 @@ function loadIncidentDetails(incident) {
         incident_html+="</table></div>";
     }
 
-    incident_html+="<div id=\"workflow_diagram\" class=\"jobDetails self-center\"><svg id=\"svg-canvas\" style='width: 100%; height: auto;'></svg></div>"    
+    incident_html+="<div id=\"workflow_diagram\" class=\"jobDetails self-center\"></div>"    
 
     return incident_html;
 }
