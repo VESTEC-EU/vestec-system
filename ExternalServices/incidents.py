@@ -88,7 +88,7 @@ def generateIncidentDiGraph(incident_uuid):
                 ),
                 datetime.timedelta(0),
             )
-            G.nodes[node]["label"] = node + "\n" + "(" + str(completion_time) + ")"
+            G.nodes[node]["label"] = node + " " + "(" + str(completion_time) + ")"
 
     return to_agraph(G)
 
