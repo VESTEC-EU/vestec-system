@@ -276,18 +276,18 @@ def wildfire_mesonh_results(msg):
 
     if simulation is not None:
         try:                
-            registerDataWithDM("fire_input.nc", machine_name, "MesoNH weather forecast", 0, "MesoNH simulation", 
+            data_uuid=registerDataWithDM("fire_input.nc", machine_name, "MesoNH weather forecast", 0, "MesoNH simulation", 
                 path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, type="Weather forecast", 
                 comment="Created by MesoNH on "+machine_name)
         except DataManagerException as err:
-            print("Error registering MesoNH result data with data manager "+err.message)                
+            print("Error registering MesoNH result data with data manager "+err.message)
+            return            
     else:
-        print("No such simulation with ID "+simulationId)            
-    
-    #print("Forwarding dummy 'weatherforecast.nc' to wildfire analyst step")
-    #msg = {"IncidentID": IncidentID, "file": "weatherforecast.nc"}
+        print("No such simulation with ID "+simulationId)
+        return    
 
-    #workflow.send(msg,"wildfire_fire_simulation")
+    fwdmsg={"IncidentID" : IncidentID, "weather_data_uuid" : data_uuid}
+    workflow.send(fwdmsg,"wildfire_fire_simulation")
 
 def RegisterHandlers():
     workflow.RegisterHandler(handler = wildfire_mesonh_getdata,queue="wildfire_mesonh_getdata")
