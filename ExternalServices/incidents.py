@@ -76,6 +76,9 @@ def generateIncidentDiGraph(incident_uuid):
             else:
                 tooltip_msg+=", stage completed on "+m.date_completed.strftime("%d/%m/%Y, %H:%M:%S")            
 
+            G.add_node(destination,style="filled",fillcolor=colour, tooltip=tooltip_msg)
+            G.add_edge(originator,destination)
+
         for node in G:
             completion_time = sum(
                 (
@@ -87,8 +90,6 @@ def generateIncidentDiGraph(incident_uuid):
             )
             G.nodes[node]["label"] = node + "\n" + "(" + str(completion_time) + ")"
 
-            G.add_node(destination,style="filled",fillcolor=colour, tooltip=tooltip_msg)
-            G.add_edge(originator,destination)
     return to_agraph(G)
 
 def packageSimulation(sim):
