@@ -333,8 +333,7 @@ async def submit_remove_file_on_machine(machine_name, file):
 
 #copies a file between two (possibly remote) locations. If move=true this acts like a move (deletes the source file)
 @pny.db_session
-def _copy(src, src_machine, src_storage_technology, dest, dest_machine, dest_storage_technology, move=False):
-    print("Copying %s from %s to %s with new name %s"%(src,src_machine,dest_machine,dest))
+def _copy(src, src_machine, src_storage_technology, dest, dest_machine, dest_storage_technology, move=False):    
     #copy within a machine
     if src_machine == dest_machine:        
         #local copy on the VESTEC server

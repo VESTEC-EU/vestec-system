@@ -117,15 +117,25 @@ def downloadDataToTargetViaDM(filename, machine, description, originator, url, p
     else:
         raise DataManagerException(returnUUID.status_code, returnUUID.text)
 
-def moveDataViaDM(data_uuid):
-    response=requests.post(_get_DM_URL()+'/move/'+data_uuid)
+def moveDataViaDM(data_uuid, dest_name, dest_machine, dest_storage_technology=None):
+    arguments = {   'dest': dest_name, 
+                    'machine':dest_machine }
+    if dest_storage_technology is not None:
+        arguments["storage_technology"]=dest_storage_technology
+
+    response=requests.post(_get_DM_URL()+'/move/'+data_uuid, data=arguments)
     if response.status_code == 201:
         return response.text
     else:
         raise DataManagerException(response.status_code, response.text)
 
-def copyDataViaDM(data_uuid):
-    response=requests.post(_get_DM_URL()+'/copy/'+data_uuid)
+def copyDataViaDM(data_uuid, dest_name, dest_machine, dest_storage_technology=None):
+    arguments = {   'dest': dest_name, 
+                    'machine':dest_machine }
+    if dest_storage_technology is not None:
+        arguments["storage_technology"]=dest_storage_technology
+
+    response=requests.post(_get_DM_URL()+'/copy/'+data_uuid, data=arguments)
     if response.status_code == 201:
         return response.text
     else:
