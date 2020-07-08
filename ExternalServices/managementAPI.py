@@ -18,6 +18,7 @@ from Database.machine import Machine
 from Database.activity import Activity
 from Database.workflow import RegisteredWorkflow, Simulation
 from Database.localdatastorage import LocalDataStorage
+from Database.log import DBLog
 from WorkflowManager import workflow
 from pony.orm.serialization import to_dict
 from flask import Flask, request, jsonify, send_file, Response
@@ -241,7 +242,7 @@ def performCancelSimulation(sim_uuid, username):
 @pny.db_session
 def getLogs():
     logs = []
-    log_records = pny.select(l for l in log.DBLog)[:]
+    log_records = pny.select(l for l in DBLog)[:]
 
     for l in log_records:
         lg = {}

@@ -9,3 +9,4 @@ from .edistorage import EDIHandler
 from .DataManager import Data, DataTransfer
 from .workflow import Incident, MessageLog, Simulation
 from .performance_data import PerformanceData, PerformanceDataType
+from .log import LogType, DBLog
