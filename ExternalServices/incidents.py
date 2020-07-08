@@ -320,7 +320,7 @@ def retrieveMyIncidentSummary(username, pending_filter, active_filter, completed
     user = User.get(username=username)
     for stored_incident in user.incidents:
         if doesStoredIncidentMatchFilter(stored_incident, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter):
-            incidents.append(packageIncident(stored_incident, True, False, False, False, False))
+            incidents.append(packageIncident(stored_incident, True, False, False, False, False, False))
     sorted_incidents=sorted(incidents, key = lambda i: (i['status'], i['srt_key']),reverse=True)
     for d in sorted_incidents:
         del d['srt_key']
@@ -330,6 +330,6 @@ def retrieveMyIncidentSummary(username, pending_filter, active_filter, completed
 def retrieveIncident(incident_uuid, username):    
     user = User.get(username=username)
     incident = Incident.get(uuid=incident_uuid)
-    if checkIfUserCanAccessIncident(incident, user):    
-        return packageIncident(incident, False, True, True, True, True)    
+    if checkIfUserCanAccessIncident(incident, user):
+        return packageIncident(incident, False, True, True, True, True, False)
     return None
