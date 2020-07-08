@@ -434,7 +434,7 @@ def _get_data_from_location(registered_data):
         target_src=registered_data.filename
     if registered_data.machine == "localhost":   
         if registered_data.storage_technology == "FILESYSTEM":
-            readFile = open(target_src, "wb")
+            readFile = open(target_src, "rb")
             data_payload=readFile.read()
             readFile.close()
             return data_payload, 200
