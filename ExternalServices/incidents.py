@@ -121,11 +121,15 @@ def packageDataTransfer(data_transfer):
     dt_dict = {}
 
     dt_dict["filename"] = data_transfer.src.name
+    dt_dict["size"] = "{:.2f} MiB".format(data_transfer.src.size/1048576.0)
     dt_dict["src_machine"] = data_transfer.src_machine
     dt_dict["dst_machine"] = data_transfer.dst_machine
-    dt_dict["date_started"] = data_transfer.date_started
-    dt_dict["date_completed"] = data_transfer.date_completed
-    dt_dict["completion_time"] = data_transfer.completion_time
+    dt_dict["date_started"] = data_transfer.date_started.strftime("%d/%m/%Y, %H:%M:%S")
+    dt_dict["date_completed"] = data_transfer.date_completed.strftime("%d/%m/%Y, %H:%M:%S")
+    dt_dict["completion_time"] = str(data_transfer.completion_time)
+    dt_dict["speed"] = "{:.2f} MiB/s".format(
+        (data_transfer.src.size/1048576.0)/data_transfer.completion_time.total_seconds()
+        )
     dt_dict["status"] = data_transfer.status
 
     return dt_dict
