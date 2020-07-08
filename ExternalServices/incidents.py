@@ -132,7 +132,7 @@ def packageDataTransfer(data_transfer):
 
 @pny.db_session
 def packageAllDataTransfersForDatasets(associated_datasets):
-    ds_ids = list(ds["uuid"] for ds in associated_datasets)
+    ds_ids = list(ds.uuid for ds in associated_datasets)
 
     data_transfers = pny.select(dt for dt in DataTransfer
                                 if dt.src.id in ds_ids
