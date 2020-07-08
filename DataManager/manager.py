@@ -156,14 +156,24 @@ def GetExternal():
 
     #instruct the machine to download the file (passes the size of the file back in the "options" dict)
     try:
-        status, message = _download(fname, path, storage_technology, machine, url, protocol, options)
+        status, message, date_started, date_completed = _download(fname, path, storage_technology, machine, url, protocol, options)
     except ConnectionManager.ConnectionError as e:
         return str(e), 500
-
+        
     if status == OK:
         size=message
         #register this new file with the data manager
         id=_register(fname,path, machine, description, type, size, originator, group, storage_technology)
+        with pny.db_session:
+            transfer_id = str(uuid.uuid4())
+            data_transfer = DataTransfer(id=transfer_id,
+                                     src=Data[id],
+                                     src_machine=protocol,
+                                     dst_machine=machine,
+                                     date_started=date_started,
+                                     status = "COMPLETED",
+                                     date_completed = date_completed,
+                                     completion_time = (date_completed - date_started))
         return id, 201
     elif status == NOT_IMPLEMENTED:
         return message, 501
@@ -486,7 +496,7 @@ def _download(filename,  path, storage_technology, machine, url, protocol, optio
         if options:
             print("Do not know how to deal with non-empty options")
             print(options)
-            return NOT_IMPLEMENTED
+            return NOT_IMPLEMENTED, "", 0, 0
         if machine == "localhost" and storage_technology == "VESTECDB":
             # If its localhost and VESTECDB then use a temporary file
             temp = tempfile.NamedTemporaryFile()
@@ -495,16 +505,18 @@ def _download(filename,  path, storage_technology, machine, url, protocol, optio
             cmd = "curl -f -sS -o %s %s"%(dest,url)
     else:
         print("Do not know how to handle protocols that are not http")
-        return NOT_IMPLEMENTED, "'%s' protocol not supported (yet?)"%protocol
+        return NOT_IMPLEMENTED, "'%s' protocol not supported (yet?)"%protocol, 0, 0
 
     if machine == "localhost":
-        #run the command locally        
+        #run the command locally
+        date_started=datetime.datetime.now()
         r=subprocess.run(cmd.split(" "),stdout=subprocess.PIPE,stderr = subprocess.PIPE,text=True)
+        date_completed=datetime.datetime.now()
         if r.returncode != 0:
             print("An error occurred in the local download")
             print(r.stderr)
             print(r.stdout)
-            return FILE_ERROR, r.stderr
+            return FILE_ERROR, r.stderr, 0, 0
         else:
             #get size of the new file and put this in the options dict
             size=os.path.getsize(dest)            
@@ -513,17 +525,19 @@ def _download(filename,  path, storage_technology, machine, url, protocol, optio
                 byte_contents=temp.read()
                 temp.close()
                 new_file = LocalDataStorage(contents=byte_contents, filename=dest, filetype="")
-            return OK, size            
+            return OK, size, date_started, date_completed
 
     else:        
         #run the command remotely
+        date_started=datetime.datetime.now()
         success, size_or_error=asyncio.run(submit_run_command_on_machine(machine, cmd, dest))        
+        date_completed=datetime.datetime.now()
         if not success:
             print("Remote download encountered an error:")              
-            return FILE_ERROR, size_or_error
+            return FILE_ERROR, size_or_error, 0, 0
         else:
             print("Remote download completed successfully")                                           
-            return OK, size_or_error
+            return OK, size_or_error, date_started, date_completed
 
 async def submit_run_command_on_machine(machine_name, command, listfile):
     client = await Client.create(machine_name)

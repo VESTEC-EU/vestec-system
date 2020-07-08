@@ -132,7 +132,7 @@ def packageDataset(stored_ds):
 def packageDataTransfer(data_transfer):
     dt_dict = {}
 
-    dt_dict["filename"] = data_transfer.src.name
+    dt_dict["filename"] = data_transfer.src.filename
     dt_dict["size"] = "{:.2f} MiB".format(data_transfer.src.size/1048576.0)
     dt_dict["src_machine"] = data_transfer.src_machine
     dt_dict["dst_machine"] = data_transfer.dst_machine
