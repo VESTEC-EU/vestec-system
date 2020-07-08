@@ -485,10 +485,11 @@ function getIncidentDetails(incident_uuid) {
             incident_details = JSON.parse(response.incident);            
             $("#body-container").html(loadIncidentDetails(incident_details));           
             var viz = new Viz();
-            viz.renderSVGElement(incident_details.digraph).then(function(element) {
-                $("svg").append(element);
-                $("#workflow_diagram").html($("#workflow_diagram").html());
-            });
+
+            viz.renderImageElement(incident_details.digraph).then(function(element) {                
+                element.setAttribute("style", "max-width:100%;");
+                $("#workflow_diagram").append(element);                
+              });
         },
         error: function(xhr) {
             $("#confirmation").removeClass().addClass("button red self-center");
@@ -578,7 +579,7 @@ function loadIncidentDetails(incident) {
     }
 
     incident_html += '</div>';
-    if (incident.status != "ARCHIVED") {
+    if (incident.status != "ARCHIVED" && incident.status != "ERROR") {
         incident_html+='<div class="jobDetails self-center">';
         if (incident.status == "PENDING") {
             incident_html += "<button class=\"button blue self-center\" onClick=\"activateIncident(\'"+incident.uuid+"\')\">Activate Incident</button>";
@@ -597,7 +598,7 @@ function loadIncidentDetails(incident) {
         if (incident.status == "ACTIVE" && incident.test_workflow) {
             incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button id=\"test_workflow\" class=\"button blue self-center\" onClick=\"testIncident('"+incident.uuid+"')\">Initiate test stage</button>";
         }
-        
+
         incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" style=\"float: right;\" onClick=\"getIncidentDetails(\'"+incident.uuid+"\')\">Refresh Status</button></div>";
     }
 
@@ -676,7 +677,7 @@ function loadIncidentDetails(incident) {
         incident_html+="</table></div>";
     }
 
-    incident_html+="<div id=\"workflow_diagram\" class=\"jobDetails self-center\"><svg id=\"svg-canvas\" style='width: 100%; height: auto;'></svg></div>"
+    incident_html+="<div id=\"workflow_diagram\" class=\"jobDetails self-center\"></div>"    
 
     return incident_html;
 }

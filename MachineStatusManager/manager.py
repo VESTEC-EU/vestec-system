@@ -34,45 +34,50 @@ def get_health():
 def delete_machine(machine_id):
     stored_machine=Machine.get(machine_id=machine_id)
     if (stored_machine is not None):        
-        stored_machine.delete()
-        pny.commit()
-    return jsonify({"status": 200})
+        stored_machine.delete()        
+        return jsonify({"status": 200})
+    else:
+        return jsonify({"msg":"No matching machine"}), 404
 
 @app.route("/MSM/enable/<machine_id>", methods=["POST"])
 @pny.db_session
 def enable_machine(machine_id):
     stored_machine=Machine.get(machine_id=machine_id)
     if (stored_machine is not None):        
-        stored_machine.enabled=True
-        pny.commit()
-    return jsonify({"status": 200})
+        stored_machine.enabled=True        
+        return jsonify({"status": 200})
+    else:
+        return jsonify({"msg":"No matching machine"}), 404
 
 @app.route("/MSM/disable/<machine_id>", methods=["POST"])
 @pny.db_session
 def disable_machine(machine_id):
     stored_machine=Machine.get(machine_id=machine_id)
     if (stored_machine is not None):        
-        stored_machine.enabled=False
-        pny.commit()
-    return jsonify({"status": 200})
+        stored_machine.enabled=False        
+        return jsonify({"status": 200})
+    else:
+        return jsonify({"msg":"No matching machine"}), 404
 
 @app.route("/MSM/enable_testmode/<machine_id>", methods=["POST"])
 @pny.db_session
 def enable_testmode_machine(machine_id):
     stored_machine=Machine.get(machine_id=machine_id)
     if (stored_machine is not None):        
-        stored_machine.test_mode=True
-        pny.commit()
-    return jsonify({"status": 200})
+        stored_machine.test_mode=True        
+        return jsonify({"status": 200})
+    else:
+        return jsonify({"msg":"No matching machine"}), 404
 
 @app.route("/MSM/disable_testmode/<machine_id>", methods=["POST"])
 @pny.db_session
 def disable_testmode_machine(machine_id):
     stored_machine=Machine.get(machine_id=machine_id)
     if (stored_machine is not None):        
-        stored_machine.test_mode=False
-        pny.commit()
-    return jsonify({"status": 200})
+        stored_machine.test_mode=False        
+        return jsonify({"status": 200})
+    else:
+        return jsonify({"msg":"No matching machine"}), 404
 
 @app.route("/MSM/add", methods=["POST"])
 @pny.db_session
@@ -88,7 +93,7 @@ def add_machine():
 
     newMachine = Machine(machine_id=str(uuid4()), machine_name=machine_name, host_name=host_name, scheduler=scheduler, connection_type=connection_type, num_nodes=num_nodes, cores_per_node=cores_per_node, base_work_dir=base_work_dir)
     pny.commit()
-    return jsonify({"status": 200})
+    return jsonify({"status": 201})
 
 @app.route("/MSM/matchmachine", methods=["GET"])
 @pny.db_session
@@ -99,7 +104,7 @@ def get_appropriate_machine():
     for machine in machines:
         if machine.enabled:            
             return jsonify({"machine_id":machine.machine_id}), 200    
-    return jsonify({"msg":"No matching machine"}), 401
+    return jsonify({"msg":"No matching machine"}), 404
 
 @app.route("/MSM/machinestatuses", methods=["GET"])
 @pny.db_session

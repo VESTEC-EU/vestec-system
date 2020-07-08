@@ -333,8 +333,7 @@ async def submit_remove_file_on_machine(machine_name, file):
 
 #copies a file between two (possibly remote) locations. If move=true this acts like a move (deletes the source file)
 @pny.db_session
-def _copy(src, src_machine, src_storage_technology, dest, dest_machine, dest_storage_technology, move=False):
-    print("Copying %s from %s to %s with new name %s"%(src,src_machine,dest_machine,dest))
+def _copy(src, src_machine, src_storage_technology, dest, dest_machine, dest_storage_technology, move=False):    
     #copy within a machine
     if src_machine == dest_machine:        
         #local copy on the VESTEC server
@@ -434,13 +433,13 @@ def _get_data_from_location(registered_data):
             readFile = open(target_src, "wb")
             data_payload=readFile.read()
             readFile.close()
-            return data_payload, 201
+            return data_payload, 200
         elif registered_data.storage_technology == "VESTECDB":
             localData=LocalDataStorage.get(filename=target_src)
-            return localData.contents, 201
+            return localData.contents, 200
     else:
         contents=asyncio.run(submit_remote_get_data(registered_data.machine, target_src))
-        return contents, 201
+        return contents, 200
 
 async def submit_remote_get_data(target_machine_name, src_file):
     client = await Client.create(target_machine_name)              
@@ -552,4 +551,4 @@ def _checkExists(machine,filename,path):
 
 if __name__ == "__main__":
     initialiseDatabase()
-    app.run(host='0.0.0.0', port=5000)
+    app.run(host='0.0.0.0', port=5503)

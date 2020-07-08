@@ -57,7 +57,7 @@ def getInfoForDataInDM(data_uuid=None):
 
 def getByteDataViaDM(data_uuid):
     retrieved_data=requests.get(_get_DM_URL()+'/get/'+data_uuid)
-    if retrieved_data.status_code == 201:
+    if retrieved_data.status_code == 200:
         return retrieved_data.text
     else:
         raise DataManagerException(retrieved_data.status_code, retrieved_data.text)
@@ -117,15 +117,25 @@ def downloadDataToTargetViaDM(filename, machine, description, originator, url, p
     else:
         raise DataManagerException(returnUUID.status_code, returnUUID.text)
 
-def moveDataViaDM(data_uuid):
-    response=requests.post(_get_DM_URL()+'/move/'+data_uuid)
+def moveDataViaDM(data_uuid, dest_name, dest_machine, dest_storage_technology=None):
+    arguments = {   'dest': dest_name, 
+                    'machine':dest_machine }
+    if dest_storage_technology is not None:
+        arguments["storage_technology"]=dest_storage_technology
+
+    response=requests.post(_get_DM_URL()+'/move/'+data_uuid, data=arguments)
     if response.status_code == 201:
         return response.text
     else:
         raise DataManagerException(response.status_code, response.text)
 
-def copyDataViaDM(data_uuid):
-    response=requests.post(_get_DM_URL()+'/copy/'+data_uuid)
+def copyDataViaDM(data_uuid, dest_name, dest_machine, dest_storage_technology=None):
+    arguments = {   'dest': dest_name, 
+                    'machine':dest_machine }
+    if dest_storage_technology is not None:
+        arguments["storage_technology"]=dest_storage_technology
+
+    response=requests.post(_get_DM_URL()+'/copy/'+data_uuid, data=arguments)
     if response.status_code == 201:
         return response.text
     else:
@@ -147,7 +157,7 @@ def _get_DM_URL():
     if "VESTEC_DM_URI" in os.environ:
         return os.environ["VESTEC_DM_URI"]
     else:
-        return 'http://localhost:5000/DM'
+        return 'http://localhost:5503/DM'
 
 @pny.db_session
 def _associateDataWithIncident(IncidentID, data_uuid, name, type, comment):
