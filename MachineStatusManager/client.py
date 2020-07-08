@@ -20,7 +20,7 @@ def addNewMachine(machine_name, host_name, scheduler, connection_type, num_nodes
                     'base_work_dir':base_work_dir  }
 
     status=requests.post(_get_MSM_URL() + '/add', json=arguments)
-    if status.status_code != 200:
+    if status.status_code != 201:
         raise MachineStatusManagerException(status.status_code, status.json()["msg"])
 
 def matchBestMachine(walltime, num_nodes):

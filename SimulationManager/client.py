@@ -29,17 +29,17 @@ def createSimulation(incident_id, num_nodes, requested_walltime, kind, executabl
 def submitSimulation(sim_id):
     submitobj = {'simulation_uuid' : sim_id}
     response = requests.post(_get_SM_URL()+'/submit', json=submitobj)
-    if response.status_code != 201:
+    if response.status_code != 200:
         raise SimulationManagerException(response.status_code, response.text)
 
 def refreshSimilation(sim_id):
     response = requests.post(_get_SM_URL()+'/refresh/'+sim_id)
-    if response.status_code != 201:
+    if response.status_code != 200:
         raise SimulationManagerException(response.status_code, response.text)
 
 def cancelSimulation(sim_id):
     response = requests.delete(_get_SM_URL()+'/simulation/'+sim_id)
-    if response.status_code != 201:
+    if response.status_code != 200:
         raise SimulationManagerException(response.status_code, response.text)
 
 def getSMHealth():
@@ -53,4 +53,4 @@ def _get_SM_URL():
     if "VESTEC_SM_URI" in os.environ:
         return os.environ["VESTEC_SM_URI"]
     else:
-        return 'http://localhost:5505/SM'
+        return 'http://localhost:5500/SM'

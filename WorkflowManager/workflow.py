@@ -331,7 +331,7 @@ def handler(f):
 
 # routine to call when we want to send a message to a queue. Takes the message (in dict form) and the queue to send the message to as arguments
 # This does not actually send the message, but enqueues it to be sent
-def send(message, queue, src_tag = "", dest_tag = ""):
+def send(message, queue, src_tag = "", dest_tag = "", providedCaller=None):
 
     # Get the incident ID from the message
     try:
@@ -351,7 +351,10 @@ def send(message, queue, src_tag = "", dest_tag = ""):
         return
 
     # get name of caller function - this will be logged as the sender of the message
-    caller = sys._getframe(1).f_code.co_name
+    if providedCaller is None:
+        caller = sys._getframe(1).f_code.co_name
+    else:
+        caller = providedCaller
 
     # create uuid for this message and add it to the message payload
     id = str(uuid.uuid4())
@@ -420,7 +423,7 @@ def FlushMessages():
                 message=(msg[:200] + '..') if len(msg) > 200 else msg,
                 src_tag=src_tag,
                 dest_tag=dest_tag
-            )
+            )            
             #ensure this is written to the DB ASAP
             # (In some cases Flushmessages can be called within a pny.db_session and so messages are sent before their db entry has been committed)
             pny.commit()

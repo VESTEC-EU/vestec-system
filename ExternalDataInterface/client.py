@@ -33,7 +33,7 @@ def registerEndpoint(incidentid, endpoint, queuename, pollperiod=None):
         arguments["pollperiod"]=pollperiod
 
     status=requests.post(_get_EDI_URL()+'/register', json=arguments)
-    if status.status_code != 200:
+    if status.status_code != 201:
         raise ExternalDataInterfaceException(status.status_code, status.json()["msg"])
 
 def getEDIHealth():
