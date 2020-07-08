@@ -19,6 +19,8 @@ class Data(db.Entity):
     originator = pny.Required(str) #where the data came from, e.g. a website, simulation output, some user
     group = pny.Required(str) #what the data belongs to, e.g. fire, space weather etc
     modifylock = pny.Required(int,default=0) #a lock for if something is being modified (e.g. if we are in the process of moving an object, we don't want to be able to copy it at the same time)
+    data_transfers_src = pny.Set("DataTransfer") # data transfers, where these data are the source
+    data_transfers_dst = pny.Set("DataTransfer") # data transfers, where these data are the destination
 
 # table for non-blocking tasks
 class Tasks(db.Entity):
@@ -34,8 +36,8 @@ class Tasks(db.Entity):
 class DataTransfer(db.Entity):
     """ Database entity for data transfers """
     id = pny.PrimaryKey(str)
-    src = pny.Required(Data) # allows to get durther information about data
-    dst = pny.Optional(Data) # might be different from src if file is copied
+    src = pny.Required(Data, reverse="data_transfers_src") # allows to get durther information about data
+    dst = pny.Optional(Data, reverse="data_transfers_dst") # might be different from src if file is copied
     src_machine = pny.Required(str)
     dst_machine = pny.Required(str)
     #date_submitted = pny.Required(datetime.datetime) # might be necessary for non-blocking data transfer
