@@ -261,7 +261,7 @@ def _handle_copy_or_move(id, move):
     with pny.db_session:
         transfer_id = str(uuid.uuid4())
         data_transfer = DataTransfer(id=transfer_id,
-                                     src_id=id,
+                                     src=Data[id],
                                      src_machine=src_machine,
                                      dst_machine=dest_machine,
                                      date_started=datetime.datetime.now(),
@@ -298,7 +298,7 @@ def _handle_copy_or_move(id, move):
                 new_id =_register(fname,path,dest_machine,description,size,originator,group,dest_storage_technology)
             data_transfer = DataTransfer[transfer_id]
             data_transfer.status = "COMPLETED"
-            data_transfer.dst_id = new_id
+            data_transfer.dst = Data[new_id]
             data_transfer.date_completed = date_completed
             data_transfer.completion_time = (data_transfer.date_completed -
                                              data_transfer.date_started)

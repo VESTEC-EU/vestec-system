@@ -34,8 +34,8 @@ class Tasks(db.Entity):
 class DataTransfer(db.Entity):
     """ Database entity for data transfers """
     id = pny.PrimaryKey(str)
-    src_id = pny.Required(str) # allows to get file size from database
-    dst_id = pny.Optional(str) # might be different from src_id on copy
+    src = pny.Required(Data) # allows to get durther information about data
+    dst = pny.Optional(Data) # might be different from src if file is copied
     src_machine = pny.Required(str)
     dst_machine = pny.Required(str)
     #date_submitted = pny.Required(datetime.datetime) # might be necessary for non-blocking data transfer
