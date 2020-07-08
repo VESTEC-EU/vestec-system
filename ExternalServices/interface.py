@@ -8,7 +8,7 @@ import pony.orm as pny
 import Database
 from ExternalServices import logins
 from flask import Flask, request, jsonify
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies, get_raw_jwt
 import managementAPI
 import EDIconnector
 
@@ -21,7 +21,16 @@ app = Flask(__name__)  # create an instance if the imported Flask class
 # Initialise JWT
 app.config["JWT_SECRET_KEY"] = os.environ["JWT_PASSWD"]
 app.config["JWT_TOKEN_LOCATION"] = ["headers"]
+app.config['JWT_BLACKLIST_ENABLED'] = True
+app.config['JWT_BLACKLIST_TOKEN_CHECKS'] = ['access', 'refresh']
 jwt = JWTManager(app)
+
+blacklist = set()
+
+@jwt.token_in_blacklist_loader
+def check_if_token_in_blacklist(decrypted_token):
+    jti = decrypted_token['jti']
+    return jti in blacklist
 
 @app.route('/flask/version', methods=["GET"])
 def getVersion():
@@ -256,9 +265,11 @@ def deleteEDIHandler():
    return managementAPI.deleteEDIHandler(request.json)
 
 @app.route("/flask/logout", methods=["DELETE"])
+@fresh_jwt_required
 def logout():
     response = jsonify({"status": 200, "msg": "User logged out."})
-    unset_jwt_cookies(response)
+    jti = get_raw_jwt()['jti']
+    blacklist.add(jti)
     return response
 
 @app.route("/EDI", methods=["POST"])
