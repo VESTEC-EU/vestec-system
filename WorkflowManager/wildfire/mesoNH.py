@@ -18,16 +18,16 @@ from DataManager.client import putByteDataViaDM, DataManagerException, registerD
 @workflow.handler
 def wildfire_mesonh_init_standalone(msg):
     IncidentID = msg["IncidentID"]
-    _handle_init(msg)
+    _handle_init(msg, "wildfire_mesonh_init_standalone")
     workflow.setIncidentActive(IncidentID)
 
 
 #initialises the mesoNH part of the workflow
 @workflow.handler
 def wildfire_mesonh_init(msg):
-    _handle_init(msg)
+    _handle_init(msg, "wildfire_mesonh_init")
 
-def _handle_init(msg):
+def _handle_init(msg, providedCaller):
     IncidentID = msg["IncidentID"]
     print("\nInitialising MesoNH sub-workflow")
 
@@ -38,7 +38,7 @@ def _handle_init(msg):
         print("Failed to register for GFS download "+err.message)
         return
         
-    workflow.send(msg,"wildfire_mesonh_physiographic")
+    workflow.send(msg,"wildfire_mesonh_physiographic", providedCaller=providedCaller)
 
 
 #Sees if there is new GFS data available. If so, downloads it [not implemented yet] and sends this on to the simulation stage
@@ -148,7 +148,7 @@ def wildfire_mesonh_simulation(msg):
 
     print("\nMesoNH simulation")
 
-    if originator == "issueWorkFlowStageCalls":
+    if originator == "Simulation Completed":
         workflow.Persist.Put(IncidentID,{"originator": "wildfire_mesonh_physiographic", "Physiographic": True})
         print("Physiographic data received "+ simulationId)
         with pny.db_session:
@@ -276,18 +276,18 @@ def wildfire_mesonh_results(msg):
 
     if simulation is not None:
         try:                
-            registerDataWithDM("fire_input.nc", machine_name, "MesoNH weather forecast", 0, "MesoNH simulation", 
+            data_uuid=registerDataWithDM("fire_input.nc", machine_name, "MesoNH weather forecast", 0, "MesoNH simulation", 
                 path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, type="Weather forecast", 
                 comment="Created by MesoNH on "+machine_name)
         except DataManagerException as err:
-            print("Error registering MesoNH result data with data manager "+err.message)                
+            print("Error registering MesoNH result data with data manager "+err.message)
+            return            
     else:
-        print("No such simulation with ID "+simulationId)            
-    
-    #print("Forwarding dummy 'weatherforecast.nc' to wildfire analyst step")
-    #msg = {"IncidentID": IncidentID, "file": "weatherforecast.nc"}
+        print("No such simulation with ID "+simulationId)
+        return    
 
-    #workflow.send(msg,"wildfire_fire_simulation")
+    fwdmsg={"IncidentID" : IncidentID, "weather_data_uuid" : data_uuid}
+    workflow.send(fwdmsg,"wildfire_fire_simulation")
 
 def RegisterHandlers():
     workflow.RegisterHandler(handler = wildfire_mesonh_getdata,queue="wildfire_mesonh_getdata")

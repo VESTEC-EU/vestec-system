@@ -38,14 +38,15 @@ def get_health():
 @pny.db_session
 def refresh_sim_state(simulation_id):
     sim=Simulation[simulation_id]
-    if (sim is not None):
-        if (sim.status=="PENDING" or sim.status=="CREATED" or sim.status=="QUEUED" or sim.status=="RUNNING" or sim.status=="ENDING"):
-            handleRefreshOfSimulations([sim])
-            return "Status refreshed", 201
+    if (sim is not None):        
+        if sim.status=="PENDING" or sim.status=="CREATED" or sim.status=="QUEUED" or sim.status=="RUNNING" or sim.status=="ENDING":
+            if sim.status!="CREATED":
+                handleRefreshOfSimulations([sim])
+            return "Status refreshed", 200
         else:
             return "Simulation state is invalid for refresh operation", 401
     else:
-        return "Simulation not found with that identifier", 401
+        return "Simulation not found with that identifier", 404
 
 @app.route("/SM/simulation/<simulation_id>", methods=["DELETE"])
 @pny.db_session
@@ -57,9 +58,9 @@ def cancel_simulation(simulation_id):
         sim.status="CANCELLED"
         sim.status_updated=datetime.datetime.now()
         pny.commit()
-        return "Simulation deleted", 201
+        return "Simulation deleted", 200
     else:
-        return "Simulation not found with that identifier", 401
+        return "Simulation not found with that identifier", 404
 
 async def delete_simulation_job(machine_name, queue_id):        
     client = await Client.create(machine_name)
@@ -78,14 +79,14 @@ def submit_job():
             simulation.jobID=submission_data[1]
             simulation.status="QUEUED"
             simulation.status_updated=datetime.datetime.now()
-            return "Job submitted", 201
+            return "Job submitted", 200
         else:
             simulation.status="ERROR"
             simulation.status_message=submission_data[1]
             simulation.status_updated=datetime.datetime.now()
-            return submission_data[1], 401
+            return submission_data[1], 400
     else:
-        return "Simulation can only be submitted when in created state", 401
+        return "Simulation can only be submitted when in created state", 400
 
 async def submit_job_to_machine(machine_name, num_nodes, requested_walltime, directory, executable):        
     client = await Client.create(machine_name)
@@ -169,7 +170,7 @@ def handleRefreshOfSimulations(simulations):
                     queueid_to_sim[jkey].walltime=jvalue[1]
                 targetStateCall=checkMatchAgainstQueueStateCalls(queueid_to_sim[jkey].queue_state_calls, jvalue[0])
                 if (targetStateCall is not None):                      
-                    new_wf_stage_call={'targetName' : targetStateCall, 'incidentId' : queueid_to_sim[jkey].incident.uuid, 'simulationId' : queueid_to_sim[jkey].uuid}
+                    new_wf_stage_call={'targetName' : targetStateCall, 'incidentId' : queueid_to_sim[jkey].incident.uuid, 'simulationId' : queueid_to_sim[jkey].uuid, 'status' : jvalue[0]}
                     workflow_stages_to_run.append(new_wf_stage_call)
     pny.commit()
     if workflow_stages_to_run:
@@ -181,7 +182,20 @@ def issueWorkFlowStageCalls(workflow_stages_to_run):
         msg={}    
         msg["IncidentID"] = wf_call["incidentId"]        
         msg["simulationId"]=wf_call["simulationId"]
-        workflow.send(message=msg, queue=wf_call["targetName"])
+
+        origionatorPrettyStr=None
+        if wf_call["status"] == "COMPLETED":
+            origionatorPrettyStr="Simulation Completed"
+        elif wf_call["status"] == "QUEUED":
+            origionatorPrettyStr="Simulation Queued"
+        elif wf_call["status"] == "RUNNING":
+            origionatorPrettyStr="Simulation Running"
+        elif wf_call["status"] == "ENDING":
+            origionatorPrettyStr="Simulation Ending"
+        elif wf_call["status"] == "HELD":
+            origionatorPrettyStr="Simulation Held"
+
+        workflow.send(message=msg, queue=wf_call["targetName"], providedCaller=origionatorPrettyStr)
 
     workflow.FlushMessages()
     workflow.CloseConnection()
@@ -202,5 +216,5 @@ if __name__ == "__main__":
     poll_scheduler.start()
     runon = datetime.datetime.now()+ datetime.timedelta(seconds=5)
     poll_scheduler.add_job(poll_outstanding_sim_statuses, 'interval', seconds=600, next_run_time = runon)
-    app.run(host="0.0.0.0", port=5505)
+    app.run(host="0.0.0.0", port=5500)
     poll_scheduler.shutdown()

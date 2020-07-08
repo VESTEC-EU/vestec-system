@@ -25,10 +25,10 @@ services:
     ports:
       - 8000:8000
     environment:
-      VESTEC_SM_URI: "http://simmanager:5505/SM"
-      VESTEC_MSM_URI: "http://msm:5502/MSM"
+      VESTEC_SM_URI: "http://simmanager:5500/SM"
       VESTEC_EDI_URI: "http://edi:5501/EDImanager"
-      VESTEC_DM_URI : "http://datamanager:5000/DM"
+      VESTEC_MSM_URI: "http://msm:5502/MSM"
+      VESTEC_DM_URI : "http://datamanager:5503/DM"
       JWT_PASSWD: "SECRET"  # to be replaced by docker secrets
     env_file:
       - environment_variables.env
@@ -124,10 +124,10 @@ services:
       context: ../
       dockerfile: WorkflowManager/Dockerfile
     environment:
-      VESTEC_SM_URI: "http://simmanager:5505/SM"
-      VESTEC_MSM_URI: "http://msm:5502/MSM"
+      VESTEC_SM_URI: "http://simmanager:5500/SM"
       VESTEC_EDI_URI: "http://edi:5501/EDImanager"
-      VESTEC_DM_URI : "http://datamanager:5000/DM"
+      VESTEC_MSM_URI: "http://msm:5502/MSM"
+      VESTEC_DM_URI : "http://datamanager:5503/DM"
     env_file:
       - environment_variables.env
     networks:

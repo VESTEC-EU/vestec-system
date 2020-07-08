@@ -49,14 +49,23 @@ MODISurl = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/c6/shapes/zips
 
 VIIRSurl = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/viirs/shapes/zips/VNP14IMGTDL_NRT_Europe_48h.zip"
 
+hotspotEndpoint="WFAHotspot"
 
 #set up the hotspots workdir
 wkdir = os.path.abspath("hotspots")
 
+@workflow.handler
+def wildfire_hotspot_init_standalone(msg):
+    IncidentID = msg["IncidentID"]
+    _handle_init(msg)
+    workflow.setIncidentActive(IncidentID)
 
 #initialise the workflow
 @workflow.handler
 def wildfire_hotspot_init(msg):
+    _handle_init(msg)
+
+def _handle_init(msg):
     print("\nInitialising hotspot sub-workflow")
     incident = msg["IncidentID"]
     
@@ -76,21 +85,24 @@ def wildfire_hotspot_init(msg):
         registerEndpoint(incident, MODISurl, "wildfire_modis_newdata", 300)
     except ExternalDataInterfaceException as err:
         print("Failed to register for modis download "+err.message)
-        return
-
-    print("Registered EDI to poll for MODIS data")
-    time.sleep(1)
+        return   
 
     #register EDI to poll for VIIRS data
     try:
         registerEndpoint(incident, VIIRSurl, "wildfire_viirs_newdata", 300)
     except ExternalDataInterfaceException as err:
         print("Failed to register for VIIRS download "+err.message)
+        return    
+    
+    # register WFA hotspot endpoint
+    try:
+        registerEndpoint(incident, hotspotEndpoint, "wildfire_tecnosylva_hotspots")
+    except ExternalDataInterfaceException as err:
+        print("Failed to register WFA hotspot endpoint "+err.message)
         return
 
-    print("Registered EDI to poll for VIIRS data")
-    
-    time.sleep(1)
+    print("Registered EDI to poll for MODIS, VIIRS, and WFA hotspot data")
+
 
 
 #called when there is new MODIS data
@@ -272,9 +284,9 @@ def wildfire_process_hotspots(msg):
         os.remove(os.path.join(removedir,file))
     
     #Technically tecnosylva would review this data then push to an EDI endpoint with their accepted hotspots, but we're just pushing the data through as if tecnosylva pushed it
-    message = {"IncidentID": incident, "file": outfile}
+    #message = {"IncidentID": incident, "file": outfile}
 
-    workflow.send(message,"wildfire_tecnosylva_hotspots")
+   # workflow.send(message,"wildfire_tecnosylva_hotspots")
 
 
 
@@ -310,21 +322,11 @@ def dm_register(file,machine,description,originator,group, incident, storage_tec
         size = os.path.getsize(file)
 
     try:
-        registerDataWithDM(filename, machine, description, size, originator, group = group, storage_technology=storage_technology, path=path)
+        return registerDataWithDM(filename, machine, description, size, originator, group = group, storage_technology=storage_technology, path=path, 
+            associate_with_incident=True, incidentId=incident, type=group)
     except DataManagerException as err:
         print("Error registering data with DM, "+err.message)
-        return
-
-    with pny.db_session:
-        I = Incident[incident]
-        I.associated_datasets.create(
-            uuid=r.text,
-            name=file, 
-            type=group, 
-            comment=description,         
-            date_created=datetime.datetime.now()
-        )
-    return r.text
+        return None
 
 #download a file with the DM
 def dm_download(file,machine,description,originator,group,url,incident):
@@ -332,21 +334,10 @@ def dm_download(file,machine,description,originator,group,url,incident):
     path, filename = os.path.split(file)
 
     try:
-        downloadDataToTargetViaDM(filename, machine, description, originator, url, "http", group = group, path=path)
+        downloadDataToTargetViaDM(filename, machine, description, originator, url, "http", group = group, path=path, 
+            associate_with_incident=True, incidentId=incident, type=group)
     except DataManagerException as err:
-        print("Error downloading data to target machine, "+err.message)
-        return
-
-    with pny.db_session:
-        I = Incident[incident]
-        I.associated_datasets.create(
-            uuid=r.text,
-            name=file, 
-            type=group, 
-            comment=description,         
-            date_created=datetime.datetime.now()
-        )
-    return    
+        print("Error downloading data to target machine, "+err.message)        
 
 #from a MODIS/VIIRS "modified" timestamp, produce a more 'friendly' datestring
 def parse_timestamp(datestr):
@@ -439,16 +430,34 @@ def extract_hotspots(points, inputshp, sensor, outputdir):
 
 @workflow.handler
 def wildfire_tecnosylva_hotspots(msg):
-    print("\nHola. Me llamo Tecnosylva!")
-    file = msg["file"]
-    print("I have file %s"%file)
+    print("\nHola. Me llamo Tecnosylva!")    
 
-    workflow.send(msg,"wildfire_fire_simulation")
+    provided_hotspot_data=json.loads(msg["data"]["payload"])
+    
+    incidentId=provided_hotspot_data["incidentID"]
+    payload=provided_hotspot_data["payload"]    
+
+    with pny.db_session:
+        new_file = LocalDataStorage(contents=payload.encode("ascii"), filename=incidentId+"/CONFIG_PROB_DYN.json", filetype="WFA provided hotspot data")    
+
+    try:
+        data_uuid=registerDataWithDM("CONFIG_PROB_DYN.json", "localhost", "WFA", str(len(payload)), "WFA hotspot data", 
+                storage_technology="VESTECDB", path=incidentId, associate_with_incident=True, incidentId=incidentId, type="WFA provided hotspot data", 
+                comment="WFA provided hotspot data")
+    except DataManagerException as err:
+        print("Error registering hotspot data with DM, "+err.message)
+        return
+
+    print("Hotspot data stored")
+
+    fwdmsg={"IncidentID" : incidentId, "hotspot_data_uuid" : data_uuid}
+    workflow.send(fwdmsg,"wildfire_fire_simulation")
 
 
 #register the handlers with the workflow system
 def RegisterHandlers():
     workflow.RegisterHandler(wildfire_hotspot_init, "wildfire_hotspot_init")
+    workflow.RegisterHandler(wildfire_hotspot_init_standalone, "wildfire_hotspot_init_standalone")
     workflow.RegisterHandler(wildfire_modis_newdata, "wildfire_modis_newdata")
     workflow.RegisterHandler(wildfire_viirs_newdata, "wildfire_viirs_newdata")
     workflow.RegisterHandler(wildfire_process_hotspots, "wildfire_process_hotspots")
