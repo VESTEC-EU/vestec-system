@@ -24,7 +24,7 @@ from flask import Flask, request, jsonify, send_file, Response
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
 from ExternalDataInterface.client import getEDIHealth, getAllEDIEndpoints, removeEndpoint
 from MachineStatusManager.client import retrieveMachineStatuses, addNewMachine, MachineStatusManagerException, deleteMachine, enableMachine, disableMachine, enableTestModeOnMachine, disableTestModeOnMachine, getMSMHealth
-from DataManager.client import getInfoForDataInDM, DataManagerException, getDMHealth, deleteDataViaDM
+from DataManager.client import getInfoForDataInDM, DataManagerException, getDMHealth, deleteDataViaDM, getByteDataViaDM
 from SimulationManager.client import refreshSimilation, SimulationManagerException, cancelSimulation, getSMHealth
 
 logger = log.VestecLogger("Website")
@@ -185,6 +185,10 @@ def getDataMetadata(data_uuid, incident_uuid, username):
 def downloadData(data_uuid):    
     try:
         file_info=getInfoForDataInDM(data_uuid)
+        byte_data=getByteDataViaDM(data_uuid)
+        return send_file(io.BytesIO(byte_data.encode()),
+                     attachment_filename=file_info["filename"],
+                     mimetype=file_info["type"])
     except DataManagerException as err:
         return jsonify({"msg" : err.message}), err.status_code
 
