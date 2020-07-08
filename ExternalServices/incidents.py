@@ -331,5 +331,5 @@ def retrieveIncident(incident_uuid, username):
     user = User.get(username=username)
     incident = Incident.get(uuid=incident_uuid)
     if checkIfUserCanAccessIncident(incident, user):
-        return packageIncident(incident, False, True, True, True, True, False)
+        return packageIncident(incident, False, True, True, True, True, True)
     return None
