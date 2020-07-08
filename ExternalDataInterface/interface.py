@@ -53,8 +53,7 @@ def pollDataSource(id):
     x = requests.head(handler.endpoint, allow_redirects=True)
     if x.ok:
         data_packet=generateDataPacket(x.headers, "pull",handler.endpoint,handler.incidentid)
-        data_packet["status_code"]=x.status_code
-        print("Got datapacket from '%s'"%handler.endpoint)
+        data_packet["status_code"]=x.status_code        
         sendMessageToWorkflowEngine(data_packet,handler.queuename,handler.incidentid)
         logger.Log(log.LogType.Activity, "Forwarded pulled data from '"+handler.endpoint+"' to queue '"+handler.queuename+"'")            
 
@@ -114,18 +113,11 @@ def handlePostOfData(endpoint, data, headers):
 #like notification of new weather data which could be of use to many different incidents
 @app.route("/EDImanager", methods=["POST"])
 def post_data_anon():
-    print("anonymous data posted")
-    print("posted by ",request.remote_addr)
-    print("Data =", request.get_data())
-    print("Header=", request.headers)
     return handlePostOfData(request.remote_addr, request.get_data(), dict(request.headers))    
 
 #way to push data to the EDI, giving the endpoint
 @app.route("/EDImanager/<sourceid>", methods=["POST"])
 def post_data(sourceid):
-    print("Data posted to %s"%sourceid)
-    print("Data =", request.get_data())
-    print("Header=", request.headers)
     return handlePostOfData(sourceid, request.get_data(), dict(request.headers))
 
 
@@ -212,7 +204,6 @@ def remove():
                             and d.incidentid==incidentid 
                             and d.endpoint==endpoint)
     
-    print("endpoint = ", endpoint)
     
     #if there are no such handlers, return an error
     if len(handlers) == 0:
@@ -222,11 +213,8 @@ def remove():
     
     #loop through handlers (should just be one...) and delete them
     for handler in handlers:
-        if handler.type == "PULL":
-            print("REMOVED PULL HANDLER")
+        if handler.type == "PULL":            
             cancelScheduledHandler(handler.id)
-        else:
-            print("REMOVED PUSH HANDLER")
 
         handler.delete()
 
