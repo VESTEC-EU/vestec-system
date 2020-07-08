@@ -66,7 +66,7 @@ def wildfire_fire_simulation(msg):
             try:
                 data_info=getInfoForDataInDM(weatherDataUUID)
                 weather_loc="Weather data is located at "+data_info["absolute_path"]
-                putByteDataViaDM("weather_data.txt", machine_name, "WFA weather location", "Wildfire workflow", weather_loc, path=simulation.directory)                 
+                putByteDataViaDM("weather_data.txt", machine_name, "WFA weather location", "text/plain", "Wildfire workflow", weather_loc, path=simulation.directory)                 
             except DataManagerException as err:
                 print("Can not retrieve DM information for weather data or write this to simulation location"+err.message)
                 return

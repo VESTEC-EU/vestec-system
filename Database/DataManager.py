@@ -8,6 +8,7 @@ class Data(db.Entity):
     id = pny.PrimaryKey(str)
     machine = pny.Required(str)
     filename = pny.Required(str)
+    type = pny.Required(str)
     path = pny.Optional(str)
     storage_technology = pny.Required(str,default="FILESYSTEM") #could be FILESYSTEM, VESTECDB, OBJECTSTORE
     description = pny.Required(str)

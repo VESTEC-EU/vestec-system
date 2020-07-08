@@ -105,6 +105,7 @@ def _perform_registration(form_data):
         path = ""
     machine = form_data["machine"]
     description = form_data["description"]
+    type = form_data["type"]
     if "size" in form_data:
         size = form_data["size"]
     elif "payload" in form_data:
@@ -122,7 +123,7 @@ def _perform_registration(form_data):
         return "File already exists", 406
 
     #register this with the database and return its UUID
-    id=_register(fname,path,machine,description,size,originator,group,storage_technology)
+    id=_register(fname,path,machine,description,type,size,originator,group,storage_technology)
     return id, 201
 
 #instructs the data manager to download data from the internet onto a specified machine. Returns a uuid for that data entity
@@ -136,6 +137,7 @@ def GetExternal():
         path = ""
     machine = flask.request.form["machine"]
     description = flask.request.form["description"]
+    type = flask.request.form["type"]
     originator = flask.request.form["originator"]
     group = flask.request.form["group"]
     if "storage_technology" in flask.request.form:
@@ -161,7 +163,7 @@ def GetExternal():
     if status == OK:
         size=message
         #register this new file with the data manager
-        id=_register(fname,path, machine, description,size, originator, group, storage_technology)
+        id=_register(fname,path, machine, description, type, size, originator, group, storage_technology)
         return id, 201
     elif status == NOT_IMPLEMENTED:
         return message, 501
@@ -246,6 +248,7 @@ def _handle_copy_or_move(id, move):
         src = os.path.join(data.path,data.filename)
         src_machine = data.machine
         description = data.description
+        type=data.type
         size = data.size
         originator = data.originator
         group = data.group    
@@ -295,7 +298,7 @@ def _handle_copy_or_move(id, move):
                 new_id=id
             else:
                 path,fname = os.path.split(dest)
-                new_id =_register(fname,path,dest_machine,description,size,originator,group,dest_storage_technology)
+                new_id =_register(fname,path,dest_machine,description,type,size,originator,group,dest_storage_technology)
             data_transfer = DataTransfer[transfer_id]
             data_transfer.status = "COMPLETED"
             data_transfer.dst_id = new_id
@@ -306,9 +309,10 @@ def _handle_copy_or_move(id, move):
 
 #Creates a new entry in the database
 @pny.db_session
-def _register(fname,path,machine,description,size,originator,group,storage_technology="FILESYSTEM"):
+def _register(fname,path,machine,description,type,size,originator,group,storage_technology="FILESYSTEM"):
     id = str(uuid.uuid4())
-    d=Data(id=id,machine=machine,filename=fname,path=path,description=description,size=size,date_registered=datetime.datetime.now(),originator=originator,group=group,storage_technology=storage_technology)
+    d=Data(id=id,machine=machine,filename=fname,path=path,description=description,type=type,size=size,date_registered=datetime.datetime.now(),
+        originator=originator,group=group,storage_technology=storage_technology)
     return id
 
 #deletes a file, and marks its entry in the database as deleted

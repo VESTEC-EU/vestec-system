@@ -126,7 +126,7 @@ def wildfire_mesonh_physiographic(msg):
             simulation=Simulation[sim_id]   
             machine_name=simulation.machine.machine_name   
         try:
-            data_uuid=putByteDataViaDM("prep_pgd.yml", machine_name, "PGD pre-processing YAML configuration", "MesoNH workflow", yaml.dump(yaml_template), path=simulation.directory)        
+            data_uuid=putByteDataViaDM("prep_pgd.yml", machine_name, "PGD pre-processing YAML configuration", "text/plain", "MesoNH workflow", yaml.dump(yaml_template), path=simulation.directory)        
         except DataManagerException as err:
             print("Error creating configuration file on machine"+err.message)
             return
@@ -158,8 +158,8 @@ def wildfire_mesonh_simulation(msg):
         if simulation is not None:
             try:
                 print("Physiographic path is "+simulation.directory)
-                registerDataWithDM("CFIRE02KM.nc", machine_name, "Physiographic data", 0, "MesoNH PGD pre-processing", 
-                    path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, type="Physiographic data", 
+                registerDataWithDM("CFIRE02KM.nc", machine_name, "Physiographic data", "application/octet-stream", 0, "MesoNH PGD pre-processing", 
+                    path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="Physiographic data", 
                     comment="Created by MesoNH PGD pre-processing which was run on "+machine_name)
             except DataManagerException as err:
                 print("Error registering data with data manager "+err.message)
@@ -210,8 +210,8 @@ def wildfire_mesonh_simulation(msg):
             filename=os.path.split(url)[1]
             gfs_data_filenames.append(filename)            
             try:
-                gfs_data_uuids.append(downloadDataToTargetViaDM(filename, machine_name, "GFS global weather data", "NASA website", url, "https", 
-                    path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, type="GFS global weather data", comment="Downloaded from NASA website onto "+machine_name))
+                gfs_data_uuids.append(downloadDataToTargetViaDM(filename, machine_name, "GFS global weather data", "application/octet-stream", "NASA website", url, "https", 
+                    path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="GFS global weather data", comment="Downloaded from NASA website onto "+machine_name))
             except DataManagerException as err:
                 print("Error downloading GFS weather data to target machine "+err.message)
                 return
@@ -219,7 +219,7 @@ def wildfire_mesonh_simulation(msg):
         mesoNHYaml=_buildMesoNHYaml(IncidentID, machine_basedir, simulation.directory, gfs_data_filenames[0],gfs_data_filenames[1], _retrievePGDDataLocation(IncidentID))
 
         try:
-            data_uuid=putByteDataViaDM("params.yml", machine_name, "MesoNH YAML configuration", "MesoNH workflow", mesoNHYaml, path=simulation.directory)        
+            data_uuid=putByteDataViaDM("params.yml", machine_name, "MesoNH YAML configuration", "text/plain", "MesoNH workflow", mesoNHYaml, path=simulation.directory)        
         except DataManagerException as err:
             print("Error creating configuration file on machine"+err.message)
             return
@@ -276,8 +276,8 @@ def wildfire_mesonh_results(msg):
 
     if simulation is not None:
         try:                
-            data_uuid=registerDataWithDM("fire_input.nc", machine_name, "MesoNH weather forecast", 0, "MesoNH simulation", 
-                path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, type="Weather forecast", 
+            data_uuid=registerDataWithDM("fire_input.nc", machine_name, "MesoNH weather forecast", "application/octet-stream", 0, "MesoNH simulation", 
+                path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="Weather forecast", 
                 comment="Created by MesoNH on "+machine_name)
         except DataManagerException as err:
             print("Error registering MesoNH result data with data manager "+err.message)

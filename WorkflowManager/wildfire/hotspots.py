@@ -135,6 +135,7 @@ def wildfire_modis_newdata(msg):
         dm_download(file = filename,
                     machine = "localhost",
                     description = "MODIS input datafile for %s"%modified,
+                    type="application/zip",
                     originator = "hotspot MODIS hadler",
                     group = "hotspot",
                     url = MODISurl,
@@ -195,6 +196,7 @@ def wildfire_viirs_newdata(msg):
         dm_download(file = filename,
                     machine = "localhost",
                     description = "VIIRS input datafile for %s"%modified,
+                    type="application/zip",
                     originator = "hotspot VIIRS hadler",
                     group = "hotspot",
                     url = VIIRSurl,
@@ -268,6 +270,7 @@ def wildfire_process_hotspots(msg):
                 machine="localhost",
                 description = "%s hotspots for region on %s"%(sensor,date),
                 originator = "process hotspots handler",
+                type="application/json",
                 group = "hotspot",
                 storage_technology= "VESTECDB",
                 incident = incident)
@@ -310,7 +313,7 @@ def zip(files,target):
     file.close()
 
 #register a file with the DM
-def dm_register(file,machine,description,originator,group, incident, storage_technology):
+def dm_register(file,machine,description,type,originator,group, incident, storage_technology):
     print("Registering %s with DataManager"%file)
     path, filename = os.path.split(file)
 
@@ -322,20 +325,20 @@ def dm_register(file,machine,description,originator,group, incident, storage_tec
         size = os.path.getsize(file)
 
     try:
-        return registerDataWithDM(filename, machine, description, size, originator, group = group, storage_technology=storage_technology, path=path, 
-            associate_with_incident=True, incidentId=incident, type=group)
+        return registerDataWithDM(filename, machine, description, type, size, originator, group = group, storage_technology=storage_technology, path=path, 
+            associate_with_incident=True, incidentId=incident, kind=group)
     except DataManagerException as err:
         print("Error registering data with DM, "+err.message)
         return None
 
 #download a file with the DM
-def dm_download(file,machine,description,originator,group,url,incident):
+def dm_download(file,machine,description,type,originator,group,url,incident):
     print("Asking dm to download %s"%url)
     path, filename = os.path.split(file)
 
     try:
-        downloadDataToTargetViaDM(filename, machine, description, originator, url, "http", group = group, path=path, 
-            associate_with_incident=True, incidentId=incident, type=group)
+        downloadDataToTargetViaDM(filename, machine, description, type, originator, url, "http", group = group, path=path, 
+            associate_with_incident=True, incidentId=incident, kind=group)
     except DataManagerException as err:
         print("Error downloading data to target machine, "+err.message)        
 
@@ -441,8 +444,8 @@ def wildfire_tecnosylva_hotspots(msg):
         new_file = LocalDataStorage(contents=payload.encode("ascii"), filename=incidentId+"/CONFIG_PROB_DYN.json", filetype="WFA provided hotspot data")    
 
     try:
-        data_uuid=registerDataWithDM("CONFIG_PROB_DYN.json", "localhost", "WFA", str(len(payload)), "WFA hotspot data", 
-                storage_technology="VESTECDB", path=incidentId, associate_with_incident=True, incidentId=incidentId, type="WFA provided hotspot data", 
+        data_uuid=registerDataWithDM("CONFIG_PROB_DYN.json", "localhost", "WFA", "application/json", str(len(payload)), "WFA hotspot data", 
+                storage_technology="VESTECDB", path=incidentId, associate_with_incident=True, incidentId=incidentId, kind="WFA provided hotspot data", 
                 comment="WFA provided hotspot data")
     except DataManagerException as err:
         print("Error registering hotspot data with DM, "+err.message)

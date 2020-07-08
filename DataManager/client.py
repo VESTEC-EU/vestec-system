@@ -9,8 +9,8 @@ class DataManagerException(Exception):
         self.status_code = status_code
         self.message = message
 
-def registerDataWithDM(filename, machine, description, size, originator, group = "none", storage_technology=None, path=None, 
-        associate_with_incident=False, incidentId=None, type="", comment=None):
+def registerDataWithDM(filename, machine, description, type, size, originator, group = "none", storage_technology=None, path=None, 
+        associate_with_incident=False, incidentId=None, kind="", comment=None):
     if associate_with_incident and incidentId is None:
         raise DataManagerException(400, "Must supply an incident ID when associating dataset with an incident")
 
@@ -18,6 +18,7 @@ def registerDataWithDM(filename, machine, description, size, originator, group =
                     'machine':machine,
                     'storage_technology' : storage_technology, 
                     'description':description, 
+                    'type':type,
                     'size':size, 
                     'originator':originator,
                     'group' : group }
@@ -30,7 +31,7 @@ def registerDataWithDM(filename, machine, description, size, originator, group =
     if returnUUID.status_code == 201:
         if associate_with_incident:
             if comment is None: comment=description
-            _associateDataWithIncident(incidentId, returnUUID.text, filename, type, comment)
+            _associateDataWithIncident(incidentId, returnUUID.text, filename, kind, comment)
         return returnUUID.text
     else:
         raise DataManagerException(returnUUID.status_code, returnUUID.text)
@@ -62,8 +63,8 @@ def getByteDataViaDM(data_uuid):
     else:
         raise DataManagerException(retrieved_data.status_code, retrieved_data.text)
 
-def putByteDataViaDM(filename, machine, description, originator, payload, group = "none", storage_technology=None, path=None, 
-        associate_with_incident=False, incidentId=None, type="", comment=None):
+def putByteDataViaDM(filename, machine, description, type, originator, payload, group = "none", storage_technology=None, path=None, 
+        associate_with_incident=False, incidentId=None, kind="", comment=None):
     if associate_with_incident and incidentId is None:
         raise DataManagerException(400, "Must supply an incident ID when associating dataset with an incident")
 
@@ -71,6 +72,7 @@ def putByteDataViaDM(filename, machine, description, originator, payload, group 
                     'machine':machine,
                     'storage_technology' : storage_technology, 
                     'description':description, 
+                    'type':type,
                     'payload':payload, 
                     'originator':originator,
                     'group' : group }
@@ -83,13 +85,13 @@ def putByteDataViaDM(filename, machine, description, originator, payload, group 
     if response.status_code == 201:
         if associate_with_incident:
             if comment is None: comment=description
-            _associateDataWithIncident(incidentId, returnUUID.text, filename, type, comment)
+            _associateDataWithIncident(incidentId, returnUUID.text, filename, kind, comment)
         return response.text
     else:
         raise DataManagerException(response.status_code, response.text)
 
-def downloadDataToTargetViaDM(filename, machine, description, originator, url, protocol, group = "none", storage_technology=None, path=None, options=None,
-        associate_with_incident=False, incidentId=None, type="", comment=None):
+def downloadDataToTargetViaDM(filename, machine, description, type, originator, url, protocol, group = "none", storage_technology=None, path=None, options=None,
+        associate_with_incident=False, incidentId=None, kind="", comment=None):
     if associate_with_incident and incidentId is None:
         raise DataManagerException(400, "Must supply an incident ID when associating dataset with an incident")
 
@@ -97,6 +99,7 @@ def downloadDataToTargetViaDM(filename, machine, description, originator, url, p
                     'machine':machine,
                     'storage_technology' : storage_technology, 
                     'description':description, 
+                    'type':type,
                     'url':url, 
                     'protocol':protocol, 
                     'originator':originator,
@@ -112,7 +115,7 @@ def downloadDataToTargetViaDM(filename, machine, description, originator, url, p
     if returnUUID.status_code == 201:
         if associate_with_incident:
             if comment is None: comment=description
-            _associateDataWithIncident(incidentId, returnUUID.text, filename, type, comment)
+            _associateDataWithIncident(incidentId, returnUUID.text, filename, kind, comment)
         return returnUUID.text
     else:
         raise DataManagerException(returnUUID.status_code, returnUUID.text)
