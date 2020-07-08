@@ -81,15 +81,15 @@ def generateIncidentDiGraph(incident_uuid):
             G.add_edge(originator,destination)
 
         for node in G:
-            completion_time = sum(
-                (
-                    m.completion_time
-                    for m in messages
-                    if node in [m.destination, m.dest_tag]
-                ),
-                datetime.timedelta(0),
-            )
-            G.nodes[node]["label"] = node + " " + "(" + str(completion_time) + ")"
+            #completion_time = sum(
+            #    (
+            #        m.completion_time
+            #        for m in messages
+            #        if node in [m.destination, m.dest_tag]
+            #    ),
+            #    datetime.timedelta(0),
+            #)
+            G.nodes[node]["label"] = node #+ " " + "(" + str(completion_time) + ")"
 
     return to_agraph(G)
 
