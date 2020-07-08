@@ -1,6 +1,7 @@
 from WorkflowManager import workflow
 from Database.users import User
 from Database.workflow import Incident, RegisteredWorkflow, MessageLog, StoredDataset
+from Database.DataManager import DataTransfer
 import pony.orm as pny
 from flask import jsonify
 from flask_jwt_extended import get_jwt_identity
@@ -116,7 +117,30 @@ def packageDataset(stored_ds):
         stored_ds_dict["machine"]=""
     return stored_ds_dict
 
-def packageIncident(stored_incident, include_sort_key, include_digraph, include_manual_data_queuename, include_associated_data, include_associated_simulations):
+def packageDataTransfer(data_transfer):
+    dt_dict = {}
+
+    dt_dict["filename"] = data_transfer.src.name
+    dt_dict["src_machine"] = data_transfer.src_machine
+    dt_dict["dst_machine"] = data_transfer.dst_machine
+    dt_dict["date_started"] = data_transfer.date_started
+    dt_dict["date_completed"] = data_transfer.date_completed
+    dt_dict["completion_time"] = data_transfer.completion_time
+    dt_dict["status"] = data_transfer.status
+
+    return dt_dict
+
+@pny.db_session
+def packageAllDataTransfersForDatasets(associated_datasets):
+    ds_ids = list(ds["uuid"] for ds in associated_datasets)
+
+    data_transfers = pny.select(dt for dt in DataTransfer
+                                if dt.src.id in ds_ids
+                                or dt.dst.id in ds_ids)[:]
+
+    return list(packageDataTransfer(dt) for dt in data_transfers)
+
+def packageIncident(stored_incident, include_sort_key, include_digraph, include_manual_data_queuename, include_associated_data, include_associated_simulations, include_associated_data_transfers):
     incident={}
     incident["uuid"]=stored_incident.uuid
     incident["kind"]=stored_incident.kind
@@ -157,6 +181,10 @@ def packageIncident(stored_incident, include_sort_key, include_digraph, include_
             incident["data_sets"].append(packageDataset(stored_ds))
 
         incident["data_sets"]=sorted(incident["data_sets"], key=itemgetter('date_created'), reverse=True)
+
+    if (include_associated_data_transfers):
+        incident["data_transfers"] = packageAllDataTransfersForDatasets(stored_incident.associated_datasets)
+
     return incident
 
 @pny.db_session
