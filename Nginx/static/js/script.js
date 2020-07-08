@@ -572,6 +572,7 @@ function loadIncidentDetails(incident) {
         incident_html += '<div class="jobLine"><b>Lower right Lat/Long: </b><div>' + incident.lower_right_latlong + '</div></div>';
     }
     incident_html += '<div class="jobLine"><b>Associated datasets: </b><div>' + incident.data_sets.length + '</div></div>';
+    incident_html += '<div class="jobLine"><b>Associated data transfers: </b><div>' + incident.data_transfers.length + '</div></div>';
     if (incident.status == "COMPLETE") {
         incident_html += '<div class="jobLine"><b>Completed On: </b><div>' + incident.date_completed + '</div></div>';
     }
