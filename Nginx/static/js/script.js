@@ -210,9 +210,9 @@ $("#userInput").keyup(function(e) {
     }
 });
 
-$("#signup").click(function() {
+function displaySignup() {
     window.location.replace("/signup");
-});
+}
 
 function userLogin() {
     var user = {};

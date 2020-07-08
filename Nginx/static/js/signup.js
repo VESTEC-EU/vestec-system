@@ -8,7 +8,7 @@ function signUp() {
 
     if (user["username"] && user["name"] && user["email"] && user["password"]) {
         if (user["password"] != user["confirm_pass"]) {
-            $("#login-message").html("Sorry, the passwords do not match.");
+            $("#login-message").html("The passwords do not match, please fix and retry");
             $("#login-message").removeClass().addClass("button white-btn amber-high-btn self-left");
             $("#login-message").show();
         } else {
@@ -30,14 +30,14 @@ function signUp() {
                     }
                 },
                 error: function(response) {
-                    $("#login-message").html("Sorry, there seems to be a problem with our system.");
+                    $("#login-message").html("Internal system error, signup failed");
                     $("#login-message").removeClass().addClass("button white-btn red-high-btn self-left");
                     $("#login-message").show();
                 }
             });
         }
     } else {
-        $("#login-message").html("Please enter all details.");
+        $("#login-message").html("Some details are missing, all are required");
         $("#login-message").removeClass().addClass("button amber-high-btn white-btn self-left");
         $("#login-message").show();
     }
