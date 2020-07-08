@@ -657,7 +657,26 @@ function loadIncidentDetails(incident) {
         incident_html+="</table></div>";
     }
 
-    incident_html+="<div id=\"workflow_diagram\" class=\"jobDetails self-center\"><svg id=\"svg-canvas\" style='width: 100%; height: auto;'></svg></div>"    
+    if (incident.data_transfers.length > 0) {
+        incident_html+="<div id=\"incident_data_transfers\" class=\"jobDetails self-center\"><table id='incidentDataTransferTable' class='self-center displayTable'>";
+        incident_html+="<thead><tr><th>File Transfer Started</th><th>Filename</th><th>Size</th><th>From</th><th>To</th><th>Status</th><th>Completed</th><th>Duration</th><th>Speed</th></tr></thead>";
+        for (data_transfer of incident.data_transfers) {
+            incident_html+="<tr>";
+            incident_html+="<td>"+data_transfer.date_started+"</td>";
+            incident_html+="<td>"+data_transfer.filename+"</td>";
+            incident_html+="<td>"+data_transfer.size+"</td>";
+            incident_html+="<td>"+data_transfer.src_machine+"</td>";
+            incident_html+="<td>"+data_transfer.dst_machine+"</td>";
+            incident_html+="<td>"+data_transfer.status+"</td>";
+            incident_html+="<td>"+data_transfer.date_completed+"</td>";
+            incident_html+="<td>"+data_transfer.completion_time+"</td>";
+            incident_html+="<td>"+data_transfer.speed+"</td>";
+            incident_html+="</tr>"
+        }
+        incident_html+="</table></div>";
+    }
+
+    incident_html+="<div id=\"workflow_diagram\" class=\"jobDetails self-center\"><svg id=\"svg-canvas\" style='width: 100%; height: auto;'></svg></div>"
 
     return incident_html;
 }
