@@ -156,6 +156,14 @@ def getDMHealth():
     except:
         return False
 
+def getLocalFilePathPrepend():
+    if "VESTEC_SHARED_FILE_LOCATION" in os.environ:
+        shared_location= os.environ["VESTEC_SHARED_FILE_LOCATION"]
+        if shared_location[-1] != "/": shared_location+="/"
+        return shared_location
+    else:
+        return ""
+
 def _get_DM_URL():
     if "VESTEC_DM_URI" in os.environ:
         return os.environ["VESTEC_DM_URI"]

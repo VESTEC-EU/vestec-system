@@ -12,7 +12,7 @@ from Database import LocalDataStorage
 import geopandas as gpd
 import time
 from ExternalDataInterface.client import registerEndpoint, ExternalDataInterfaceException
-from DataManager.client import downloadDataToTargetViaDM, registerDataWithDM, DataManagerException
+from DataManager.client import downloadDataToTargetViaDM, registerDataWithDM, DataManagerException, getLocalFilePathPrepend
 
 from Database import Incident
 
@@ -52,7 +52,7 @@ VIIRSurl = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/viirs/shapes/z
 hotspotEndpoint="WFAHotspot"
 
 #set up the hotspots workdir
-wkdir = os.path.abspath(_getLocalPathPrepend()+"hotspots")
+wkdir = os.path.abspath(getLocalFilePathPrepend()+"hotspots")
 
 @workflow.handler
 def wildfire_hotspot_init_standalone(msg):
@@ -455,14 +455,6 @@ def wildfire_tecnosylva_hotspots(msg):
 
     fwdmsg={"IncidentID" : incidentId, "hotspot_data_uuid" : data_uuid}
     workflow.send(fwdmsg,"wildfire_fire_simulation")
-
-def _getLocalPathPrepend():
-    if "VESTEC_SHARED_FILE_LOCATION" in os.environ:
-        shared_location= os.environ["VESTEC_SHARED_FILE_LOCATION"]
-        if shared_location[-1] != "/": shared_location+="/"
-        return shared_location
-    else:
-        return ""
 
 #register the handlers with the workflow system
 def RegisterHandlers():
