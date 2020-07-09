@@ -439,10 +439,7 @@ def wildfire_tecnosylva_hotspots(msg):
     provided_hotspot_data=json.loads(msg["data"]["payload"])
     
     incidentId=provided_hotspot_data["incidentID"]
-    payload=provided_hotspot_data["payload"]    
-
-    with pny.db_session:
-        new_file = LocalDataStorage(contents=payload.encode("ascii"), filename=incidentId+"/CONFIG_PROB_DYN.json", filetype="WFA provided hotspot data")    
+    payload=provided_hotspot_data["payload"]       
 
     try:
         data_uuid=registerDataWithDM("CONFIG_PROB_DYN.json", "localhost", "WFA", "application/json", str(len(payload)), "WFA hotspot data", 
@@ -451,6 +448,9 @@ def wildfire_tecnosylva_hotspots(msg):
     except DataManagerException as err:
         print("Error registering hotspot data with DM, "+err.message)
         return
+
+    with pny.db_session:
+        new_file = LocalDataStorage(contents=payload.encode("ascii"), filename=incidentId+"/CONFIG_PROB_DYN.json", filetype="WFA provided hotspot data") 
 
     print("Hotspot data stored")
 
