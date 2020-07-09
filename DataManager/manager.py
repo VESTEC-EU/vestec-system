@@ -24,7 +24,7 @@ NOT_IMPLEMENTED = 2
 
 @app.route("/DM/health", methods=["GET"])
 def get_health():
-    return flask.jsonify({"status": 200})
+    return flask.jsonify({"status": 200}), 200
 
 @app.route("/DM/search",methods=["GET"])
 @pny.db_session

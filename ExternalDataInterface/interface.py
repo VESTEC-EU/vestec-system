@@ -103,7 +103,7 @@ def handlePostOfData(endpoint, data, headers):
         for handler in handlers:
             forwardToQueue(data,headers,endpoint,handler.queuename, handler.incidentid)
 
-        return jsonify({"status": 200, "msg": "Data received"}) 
+        return jsonify({"msg": "Data received"}), 200
     else:
         logger.Log(log.LogType.Error, "Data posted from '"+endpoint+"' and ignoring as there are no handlers that match")      
         return jsonify({"msg": "No matching handler registered"}), 404
@@ -123,7 +123,7 @@ def post_data(sourceid):
 
 @app.route("/EDImanager/health", methods=["GET"])
 def get_health():
-    return jsonify({"status": 200})
+    return jsonify({"status": 200}), 200
 
 #register a handler
 @app.route("/EDImanager/register",methods=["POST"])

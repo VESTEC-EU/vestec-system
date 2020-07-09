@@ -32,7 +32,7 @@ logger = log.VestecLogger("Simulation Manager")
 
 @app.route("/SM/health", methods=["GET"])
 def get_health():
-    return jsonify({"status": 200})
+    return jsonify({"status": 200}), 200
 
 @app.route("/SM/refresh/<simulation_id>", methods=["POST"])
 @pny.db_session
