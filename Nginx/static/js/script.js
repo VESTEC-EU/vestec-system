@@ -915,8 +915,8 @@ function getWorkflows() {
                     item = workflows[item];
                     wf_entry += "<td>" + item.kind + "</td>";
                     wf_entry += "<td>" + item.initqueuename + "</td>";
-                    wf_entry += "<td>" + item.dataqueuename + "</td>";
                     wf_entry += "<td>" + item.shutdownqueuename + "</td>";
+                    wf_entry += "<td>" + item.dataqueuename + "</td>";                    
                     wf_entry += "<td><img src='../img/cross.png' class='click_button' width=32 height=32 onClick=\"deleteWorkflow('"+item.kind+"')\"></td>";
                     
                     wf_entry += "</tr>";
