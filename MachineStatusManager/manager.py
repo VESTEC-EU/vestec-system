@@ -149,7 +149,7 @@ async def retrieve_machine_status(machine_name):
 if __name__ == "__main__":
     initialiseDatabase()    
     poll_scheduler.start()
-    runon = datetime.datetime.now()+ datetime.timedelta(seconds=5)
+    runon = datetime.datetime.now()+ datetime.timedelta(seconds=30)
     poll_scheduler.add_job(poll_machine_statuses, 'interval', seconds=1200, next_run_time = runon) # Machine queue update every 20 minutes
     app.run(host="0.0.0.0", port=5502)    
     poll_scheduler.shutdown()

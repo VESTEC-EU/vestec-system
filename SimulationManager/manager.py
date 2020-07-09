@@ -214,7 +214,7 @@ async def get_job_status_update(machine_name, queue_ids):
 if __name__ == "__main__":
     initialiseDatabase()
     poll_scheduler.start()
-    runon = datetime.datetime.now()+ datetime.timedelta(seconds=5)
+    runon = datetime.datetime.now()+ datetime.timedelta(seconds=30)
     poll_scheduler.add_job(poll_outstanding_sim_statuses, 'interval', seconds=600, next_run_time = runon)
     app.run(host="0.0.0.0", port=5500)
     poll_scheduler.shutdown()
