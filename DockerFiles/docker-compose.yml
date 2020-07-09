@@ -8,7 +8,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - 80:80
+      - 443:443
     volumes:
+      - /var/vestec/certs:/var/vestec/certs
       - ../Nginx/static/:/var/www/
     links:
       - externalservices:externalservices
@@ -102,7 +104,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "changeme"
     volumes:
-      - "/home/max/mariadb:/var/lib/mysql"
+      - "/var/vestec/db:/var/lib/mysql"
     networks:
       - vestec
     
