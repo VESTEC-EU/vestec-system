@@ -131,21 +131,22 @@ def packageDataset(stored_ds):
     return stored_ds_dict
 
 def packageDataTransfer(data_transfer):
-    dt_dict = {}
-
-    dt_dict["filename"] = data_transfer.src.filename
-    dt_dict["size"] = "{:.2f} MiB".format(data_transfer.src.size/1048576.0)
-    dt_dict["src_machine"] = data_transfer.src_machine
-    dt_dict["dst_machine"] = data_transfer.dst_machine
-    dt_dict["date_started"] = data_transfer.date_started.strftime("%d/%m/%Y, %H:%M:%S")
-    dt_dict["date_completed"] = data_transfer.date_completed.strftime("%d/%m/%Y, %H:%M:%S")
-    dt_dict["completion_time"] = str(data_transfer.completion_time)
-    dt_dict["speed"] = "{:.2f} MiB/s".format(
-        (data_transfer.src.size/1048576.0)/data_transfer.completion_time.total_seconds()
-        )
-    dt_dict["status"] = data_transfer.status
-
-    return dt_dict
+    if data_transfer.date_completed is not None and data_transfer.completion_time is not None:
+        dt_dict = {}
+        dt_dict["filename"] = data_transfer.src.filename
+        dt_dict["size"] = "{:.2f} MiB".format(data_transfer.src.size/1048576.0)
+        dt_dict["src_machine"] = data_transfer.src_machine
+        dt_dict["dst_machine"] = data_transfer.dst_machine
+        dt_dict["date_started"] = data_transfer.date_started.strftime("%d/%m/%Y, %H:%M:%S")
+        dt_dict["date_completed"] = data_transfer.date_completed.strftime("%d/%m/%Y, %H:%M:%S")
+        dt_dict["completion_time"] = str(data_transfer.completion_time)
+        dt_dict["speed"] = "{:.2f} MiB/s".format(
+            (data_transfer.src.size/1048576.0)/data_transfer.completion_time.total_seconds()
+            )
+        dt_dict["status"] = data_transfer.status
+        return dt_dict
+    else:
+        return None
 
 @pny.db_session
 def packageAllDataTransfersForDatasets(associated_datasets):
@@ -155,7 +156,7 @@ def packageAllDataTransfersForDatasets(associated_datasets):
                                 if dt.src.id in ds_ids
                                 or dt.dst.id in ds_ids)[:]
 
-    return list(packageDataTransfer(dt) for dt in data_transfers)
+    return list(filter(None, (packageDataTransfer(dt) for dt in data_transfers)))
 
 def packageIncident(stored_incident, include_sort_key, include_digraph, include_manual_data_queuename, include_associated_data, include_associated_simulations, include_associated_data_transfers):
     incident={}
