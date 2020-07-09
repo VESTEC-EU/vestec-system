@@ -27,7 +27,7 @@ logger = log.VestecLogger("Machine Status Manager")
 
 @app.route("/MSM/health", methods=["GET"])
 def get_health():
-    return jsonify({"status": 200})
+    return jsonify({"status": 200}), 200
 
 @app.route("/MSM/machine/<machine_id>", methods=["DELETE"])
 @pny.db_session
@@ -35,7 +35,7 @@ def delete_machine(machine_id):
     stored_machine=Machine.get(machine_id=machine_id)
     if (stored_machine is not None):        
         stored_machine.delete()        
-        return jsonify({"status": 200})
+        return jsonify({"msg": "Machine deleted"}), 200
     else:
         return jsonify({"msg":"No matching machine"}), 404
 
@@ -45,7 +45,7 @@ def enable_machine(machine_id):
     stored_machine=Machine.get(machine_id=machine_id)
     if (stored_machine is not None):        
         stored_machine.enabled=True        
-        return jsonify({"status": 200})
+        return jsonify({"msg": "Machine enabled"}), 200
     else:
         return jsonify({"msg":"No matching machine"}), 404
 
@@ -55,7 +55,7 @@ def disable_machine(machine_id):
     stored_machine=Machine.get(machine_id=machine_id)
     if (stored_machine is not None):        
         stored_machine.enabled=False        
-        return jsonify({"status": 200})
+        return jsonify({"msg": "Machine disabled"}), 200
     else:
         return jsonify({"msg":"No matching machine"}), 404
 
@@ -65,7 +65,7 @@ def enable_testmode_machine(machine_id):
     stored_machine=Machine.get(machine_id=machine_id)
     if (stored_machine is not None):        
         stored_machine.test_mode=True        
-        return jsonify({"status": 200})
+        return jsonify({"msg": "Enabled test mode on machine"}), 200
     else:
         return jsonify({"msg":"No matching machine"}), 404
 
@@ -75,7 +75,7 @@ def disable_testmode_machine(machine_id):
     stored_machine=Machine.get(machine_id=machine_id)
     if (stored_machine is not None):        
         stored_machine.test_mode=False        
-        return jsonify({"status": 200})
+        return jsonify({"msg": "Disabled test mode on machine"}), 200
     else:
         return jsonify({"msg":"No matching machine"}), 404
 
@@ -93,7 +93,7 @@ def add_machine():
 
     newMachine = Machine(machine_id=str(uuid4()), machine_name=machine_name, host_name=host_name, scheduler=scheduler, connection_type=connection_type, num_nodes=num_nodes, cores_per_node=cores_per_node, base_work_dir=base_work_dir)
     pny.commit()
-    return jsonify({"status": 201})
+    return jsonify({"msg": "Machine added"}), 201
 
 @app.route("/MSM/matchmachine", methods=["GET"])
 @pny.db_session
@@ -129,7 +129,7 @@ def get_machine_status():
                 machine_info["status_last_checked"]=machine.status_last_checked.strftime("%d/%m/%Y, %H:%M:%S")
             machine_descriptions.append(machine_info)         
     
-    return json.dumps(machine_descriptions)
+    return json.dumps(machine_descriptions), 200
 
 @pny.db_session
 def poll_machine_statuses():
