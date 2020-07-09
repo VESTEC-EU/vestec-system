@@ -349,6 +349,7 @@ def getWorkflowInfo():
         specific_workflow_info["kind"]=workflow.kind
         specific_workflow_info["initqueuename"]=workflow.init_queue_name
         specific_workflow_info["dataqueuename"]=workflow.data_queue_name
+        specific_workflow_info["shutdownqueuename"]=workflow.shutdown_queue_name
         workflow_info.append(specific_workflow_info)
     return jsonify({"status": 200, "workflows": json.dumps(workflow_info)})
 
@@ -357,8 +358,9 @@ def addWorkflow(retrieved_data):
     workflow_kind = retrieved_data.get("kind", None)
     init_queue_name = retrieved_data.get("initqueuename", None)
     data_queue_name = retrieved_data.get("dataqueuename", None)
+    shutdown_queue_name = retrieved_data.get("shutdownqueuename", None)
     istestWorkflow = retrieved_data.get("testworkflow", None)    
-    newwf = RegisteredWorkflow(kind=workflow_kind, init_queue_name=init_queue_name, data_queue_name=data_queue_name, test_workflow=istestWorkflow)
+    newwf = RegisteredWorkflow(kind=workflow_kind, init_queue_name=init_queue_name, data_queue_name=data_queue_name, shutdown_queue_name=shutdown_queue_name, test_workflow=istestWorkflow)
 
     pny.commit()    
     return jsonify({"status": 200, "msg": "Workflow added"})

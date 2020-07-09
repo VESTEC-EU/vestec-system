@@ -271,7 +271,18 @@ def cancelIncident(incident_uuid, username):
     user = User.get(username=username)
     if checkIfUserCanAccessIncident(incident, user):
         workflow.OpenConnection()
-        workflow.Cancel(incident_uuid)
+
+        incident_workflow=RegisteredWorkflow.get(kind=incident.kind)
+        if incident_workflow is not None:
+            if incident_workflow.shutdown_queue_name is not None and len(incident_workflow.shutdown_queue_name) > 0:
+                msg = {}
+                msg["IncidentID"]=incident_uuid                
+                workflow.send(message=msg, queue=incident_workflow.shutdown_queue_name)
+            else:
+                workflow.Cancel(incident_uuid)
+        else:
+            workflow.Cancel(incident_uuid)        
+        
         workflow.FlushMessages()
         workflow.CloseConnection()
 

@@ -96,5 +96,6 @@ class RegisteredWorkflow(db.Entity):
     kind=pny.Required(str)
     init_queue_name=pny.Required(str)
     data_queue_name=pny.Optional(str)
+    shutdown_queue_name=pny.Optional(str)
     test_workflow = pny.Required(bool, default=False, sql_default='0')
     users = pny.Set("User")
