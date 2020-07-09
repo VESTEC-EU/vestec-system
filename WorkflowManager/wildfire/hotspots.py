@@ -96,7 +96,7 @@ def _handle_init(msg):
     
     # register WFA hotspot endpoint
     try:
-        registerEndpoint(incident, hotspotEndpoint, "wildfire_tecnosylva_hotspots")
+        registerEndpoint(incident, hotspotEndpoint+"-"+incident, "wildfire_tecnosylva_hotspots")
     except ExternalDataInterfaceException as err:
         print("Failed to register WFA hotspot endpoint "+err.message)
         return

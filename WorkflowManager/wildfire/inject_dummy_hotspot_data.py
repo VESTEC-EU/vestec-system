@@ -4,7 +4,8 @@ sys.path.append("../")
 import requests
 import json
 
-url = 'http://localhost:5501/EDImanager/WFAHotspot'
+#url = 'https://vestec.epcc.ed.ac.uk/EDI/WFAHotspot'
+url = 'http://localhost:8000/EDI/WFAHotspot'
 
 if len(sys.argv) < 3:
     print("Error, you must provide the incidentID and hotspot file as a command line argument")
@@ -16,5 +17,5 @@ hotspot_file.close()
 
 msg = {"incidentID": sys.argv[1], "payload" : read_bytes}
 
-x = requests.post(url, data = json.dumps(msg))
+x = requests.post(url+"-"+sys.argv[1], data = json.dumps(msg))
 print(x.text)
