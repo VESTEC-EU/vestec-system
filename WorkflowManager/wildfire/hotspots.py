@@ -52,7 +52,7 @@ VIIRSurl = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/viirs/shapes/z
 hotspotEndpoint="WFAHotspot"
 
 #set up the hotspots workdir
-wkdir = os.path.abspath(getLocalFilePathPrepend()+"hotspots")
+wkdir = os.path.abspath("hotspots")
 
 @workflow.handler
 def wildfire_hotspot_init_standalone(msg):
@@ -126,7 +126,7 @@ def wildfire_modis_newdata(msg):
         basedir = os.path.join(wkdir,incident,"MODIS",datestr)
         filedir = os.path.join(basedir,"input")
 
-        os.makedirs(filedir,exist_ok=True)
+        os.makedirs(getLocalFilePathPrepend()+filedir,exist_ok=True)
         
         #select the filename (with full path) for the file to be downloaded
         filename = os.path.join(filedir,os.path.basename(MODISurl))
@@ -142,7 +142,7 @@ def wildfire_modis_newdata(msg):
                     incident = incident)
         
         #unzip it
-        unzip(filename,filedir)
+        unzip(filename, filedir)
                      
         
         #persist this new timestamp (and the file)
@@ -187,7 +187,7 @@ def wildfire_viirs_newdata(msg):
         basedir = os.path.join(wkdir,incident,"VIIRS",datestr)
         filedir = os.path.join(basedir,"input")
 
-        os.makedirs(filedir,exist_ok=True)
+        os.makedirs(getLocalFilePathPrepend()+filedir,exist_ok=True)
         
         #select the filename (with full path) for the file to be downloaded
         filename = os.path.join(filedir,os.path.basename(VIIRSurl))
@@ -203,7 +203,7 @@ def wildfire_viirs_newdata(msg):
                     incident = incident)
         
         #unzip it
-        unzip(filename,filedir)
+        unzip(filename, filedir)
                      
         
         #persist this new timestamp (and the file)
@@ -262,7 +262,7 @@ def wildfire_process_hotspots(msg):
     #points = [1.8347167968750002, 53.38332836757156, 11.744384765625, 48.75618876280552]
     
     #make the directry to place the hotspots files
-    os.mkdir(outputdir)
+    os.mkdir(getLocalFilePathPrepend()+outputdir)
 
     outfile = extract_hotspots(points=points,inputshp = inputfile,sensor = sensor, outputdir=outputdir)
 
@@ -277,14 +277,14 @@ def wildfire_process_hotspots(msg):
 
     #clean up files we no longer need
     removedir = os.path.dirname(inputfile)
-    files = os.listdir(removedir)
+    files = os.listdir(getLocalFilePathPrepend()+removedir)
     toremove = []
     for file in files:
         if ".zip" not in file:
             toremove.append(file)
     for file in toremove:
         print("Deleting %s"%file)
-        os.remove(os.path.join(removedir,file))
+        os.remove(os.path.join(getLocalFilePathPrepend()+removedir,file))
     
     #Technically tecnosylva would review this data then push to an EDI endpoint with their accepted hotspots, but we're just pushing the data through as if tecnosylva pushed it
     #message = {"IncidentID": incident, "file": outfile}
@@ -301,15 +301,15 @@ def check_exists(persisted,modified,type):
 
 def unzip(target,dir):
     print("Unzipping %s"%target)
-    file = zipfile.ZipFile(target, 'r')
-    file.extractall(dir)
+    file = zipfile.ZipFile(getLocalFilePathPrepend()+target, 'r')
+    file.extractall(getLocalFilePathPrepend()+dir)
     file.close()
 
 def zip(files,target):
     print("Zipping %s"%target)
-    file = zipfile.ZipFile(target, "w")
+    file = zipfile.ZipFile(getLocalFilePathPrepend()+target, "w")
     for f in files:
-        file.write(f)
+        file.write(getLocalFilePathPrepend()+f)
     file.close()
 
 #register a file with the DM
@@ -359,8 +359,8 @@ def convert_to_geojson(input_shapefile_path, output_geojson_path):
         output_geojson_path (str): The path of the ouput GeoJSON.
     """
     print("Creating geojson from %s"%os.path.basename(input_shapefile_path))
-    current_shape = gpd.read_file(input_shapefile_path)
-    current_shape.to_file(output_geojson_path, driver="GeoJSON")
+    current_shape = gpd.read_file(getLocalFilePathPrepend()+input_shapefile_path)
+    current_shape.to_file(getLocalFilePathPrepend()+output_geojson_path, driver="GeoJSON")
 
 #extracts hotspots found in the satellite data shapefile form sensor within points. 
 def extract_hotspots(points, inputshp, sensor, outputdir):
@@ -369,8 +369,9 @@ def extract_hotspots(points, inputshp, sensor, outputdir):
     name, ext = os.path.splitext(basename)
     inputjson = name + ".json"
     inputjson = os.path.join(dir,inputjson)
-    convert_to_geojson(inputshp,inputjson)
-    f = open(inputjson,"r")
+    convert_to_geojson(getLocalFilePathPrepend()+inputshp, getLocalFilePathPrepend()+inputjson)
+
+    f = open(getLocalFilePathPrepend()+inputjson,"r")
     data = json.load(f)
     f.close()
 
@@ -426,7 +427,7 @@ def extract_hotspots(points, inputshp, sensor, outputdir):
         new_file = LocalDataStorage(contents=contents.encode("ascii"), filename=outfile, filetype="application/json")    
     
     #delete the input json file (no longer needed)
-    os.remove(inputjson)
+    os.remove(getLocalFilePathPrepend()+inputjson)
 
     return outfile
 
