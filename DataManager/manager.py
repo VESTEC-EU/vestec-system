@@ -505,7 +505,7 @@ def _download(filename,  path, storage_technology, machine, url, protocol, optio
             # If its localhost and VESTECDB then use a temporary file
             temp = tempfile.NamedTemporaryFile()
             cmd = "curl -f -sS -o %s %s"%(temp.name, url)
-        else if machine == "localhost:
+        elif machine == "localhost:
             cmd = "curl -f -sS -o %s %s"%(_getLocalPathPrepend()+dest, url)
         else:
             cmd = "curl -f -sS -o %s %s"%(dest, url)
