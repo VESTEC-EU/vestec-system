@@ -321,6 +321,10 @@ def _handle_copy_or_move(id, move):
 @pny.db_session
 def _register(fname,path,machine,description,type,size,originator,group,storage_technology="FILESYSTEM"):
     id = str(uuid.uuid4())
+    try:
+        size = int(size)
+    except ValueError:    
+        size=0 
     d=Data(id=id,machine=machine,filename=fname,path=path,description=description,type=type,size=size,date_registered=datetime.datetime.now(),
         originator=originator,group=group,storage_technology=storage_technology)
     return id
@@ -501,8 +505,10 @@ def _download(filename,  path, storage_technology, machine, url, protocol, optio
             # If its localhost and VESTECDB then use a temporary file
             temp = tempfile.NamedTemporaryFile()
             cmd = "curl -f -sS -o %s %s"%(temp.name, url)
-        else:
+        else if machine == "localhost:
             cmd = "curl -f -sS -o %s %s"%(_getLocalPathPrepend()+dest, url)
+        else:
+            cmd = "curl -f -sS -o %s %s"%(dest, url)
     else:
         print("Do not know how to handle protocols that are not http")
         return NOT_IMPLEMENTED, "'%s' protocol not supported (yet?)"%protocol, 0, 0
@@ -547,7 +553,7 @@ async def submit_run_command_on_machine(machine_name, command, listfile):
         if len(list_info) == 1:
             tokens=list_info[0].split()
             if len(tokens) >= 4:
-                size=tokens[4]
+                size=tokens[4]                
             else:
                 print("Downloaded file OK, but can not retrieve size as file listing is malformed")
                 size=0
