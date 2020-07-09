@@ -5,6 +5,7 @@ from Database.workflow import Simulation
 from SimulationManager.client import createSimulation, submitSimulation, SimulationManagerException, cancelSimulation
 from DataManager.client import moveDataViaDM, DataManagerException, getInfoForDataInDM, putByteDataViaDM
 import workflow
+import yaml
 
 @workflow.handler
 def wildfire_fire_static(msg):
@@ -53,8 +54,18 @@ def wildfire_fire_simulation(msg):
         print("Dependencies met for WFA")
 
         try:
-            callbacks = {'COMPLETED': 'wildfire_fire_results'}   
-            sim_id=createSimulation(IncidentID, 1, "0:05:00", "Wildfire simulation", "run.sh", queuestate_callbacks=callbacks, template_dir="wildfire_template")
+            data_info=getInfoForDataInDM(weatherDataUUID)            
+        except DataManagerException as err:
+            print("Can not retrieve DM information for weather data "+err.message)
+            return
+
+        sample_configuration_file = open("wildfire/templates/wfa.yml")
+        yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)
+        yaml_template["weather_data"]["path"]=data_info["absolute_path"]
+
+        try:
+            callbacks = {'COMPLETED': 'wildfire_fire_results'}
+            sim_id=createSimulation(IncidentID, 1, "0:05:00", "Wildfire simulation", "wfa.sh", queuestate_callbacks=callbacks, template_dir="wildfire_template")
             with pny.db_session:
                 simulation=Simulation[sim_id]    
                 machine_name=simulation.machine.machine_name
@@ -63,24 +74,20 @@ def wildfire_fire_simulation(msg):
 
             moveDataViaDM(hotspotDataUUID, machine_basedir+simulation.directory+"/CONFIG_PROB_DYN.json", machine_name)
 
-            try:
-                data_info=getInfoForDataInDM(weatherDataUUID)
-                weather_loc="Weather data is located at "+data_info["absolute_path"]
-                putByteDataViaDM("weather_data.txt", machine_name, "WFA weather location", "text/plain", "Wildfire workflow", weather_loc, path=simulation.directory)                 
+            try:                
+                putByteDataViaDM("wfa.yml", machine_name, "Wildfire configuration", "text/plain", "Wildfire workflow", yaml.dump(yaml_template), path=simulation.directory)                 
             except DataManagerException as err:
-                print("Can not retrieve DM information for weather data or write this to simulation location"+err.message)
+                print("Can not write wildfire configuration to simulation location"+err.message)
                 return
-            
-            cancelSimulation(sim_id)
 
+            cancelSimulation(sim_id)
         except SimulationManagerException as err:
             print("Error creating or submitting WFA simulation "+err.message)
             return
         
 @workflow.handler
 def wildfire_fire_results(msg):
-    print("\nResults available for wildfire analyst simulation!")
-    print("Simulation 'id' is %s"%msg["file"])
+    print("\nResults available for wildfire analyst simulation!")    
 
 def RegisterHandlers():
     workflow.RegisterHandler(wildfire_fire_simulation,"wildfire_fire_simulation")
