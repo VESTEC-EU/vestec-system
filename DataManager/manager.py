@@ -519,7 +519,7 @@ def _download(filename,  path, storage_technology, machine, url, protocol, optio
             return FILE_ERROR, r.stderr, 0, 0
         else:
             #get size of the new file and put this in the options dict
-            size=os.path.getsize(dest)            
+            size=os.path.getsize(_getLocalPathPrepend()+dest)            
             if storage_technology == "VESTECDB":
                 # Transfer temporary file into the VESTECDB
                 byte_contents=temp.read()

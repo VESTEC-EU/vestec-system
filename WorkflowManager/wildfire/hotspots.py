@@ -369,7 +369,7 @@ def extract_hotspots(points, inputshp, sensor, outputdir):
     name, ext = os.path.splitext(basename)
     inputjson = name + ".json"
     inputjson = os.path.join(dir,inputjson)
-    convert_to_geojson(getLocalFilePathPrepend()+inputshp, getLocalFilePathPrepend()+inputjson)
+    convert_to_geojson(inputshp, inputjson)
 
     f = open(getLocalFilePathPrepend()+inputjson,"r")
     data = json.load(f)
