@@ -11,7 +11,7 @@ from Database import LocalDataStorage
 from Database.workflow import Simulation
 from DataManager.client import registerDataWithDM, putByteDataViaDM, DataManagerException
 from SimulationManager.client import createSimulation, submitSimulation, SimulationManagerException
-from ExternalDataInterface.client import registerEndpoint, ExternalDataInterfaceException
+from ExternalDataInterface.client import registerEndpoint, ExternalDataInterfaceException, removeEndpoint
 
 # we now want to define some handlers
 @workflow.handler
@@ -69,6 +69,27 @@ def simple_workflow_execution_completed(message):
     print("Stage completed with simulation ID "+message["simulationId"])
 
 @workflow.handler
+def shutdown_simple(message):
+    print("Shutdown simple workflow for "+message["IncidentID"])
+
+    try:
+        removeEndpoint(message["IncidentID"], "editest", "external_data_arrival")
+    except ExternalDataInterfaceException as err:
+        print("Error from EDI on endpoint removal "+err.message)
+
+    try:
+        removeEndpoint(message["IncidentID"], "add_data_simple"+message["IncidentID"], "add_data_simple")
+    except ExternalDataInterfaceException as err:
+        print("Error from EDI on registration "+err.message)
+
+    try:
+        removeEndpoint(message["IncidentID"], "test_stage_"+message["IncidentID"], "test_workflow_simple")
+    except ExternalDataInterfaceException as err:
+        print("Error from EDI on registration "+err.message)
+
+    workflow.Cancel(message["IncidentID"])
+
+@workflow.handler
 def initialise_simple(message):
     print("Initialise simple workflow for "+message["IncidentID"])
     
@@ -95,4 +116,5 @@ def RegisterHandlers():
     workflow.RegisterHandler(manually_add_data, "add_data_simple")
     workflow.RegisterHandler(test_workflow, "test_workflow_simple")
     workflow.RegisterHandler(initialise_simple, "initialise_simple")
+    workflow.RegisterHandler(shutdown_simple, "shutdown_simple")
     workflow.RegisterHandler(simple_workflow_execution_completed, "simple_workflow_execution_completed")
