@@ -29,9 +29,12 @@ services:
       VESTEC_EDI_URI: "http://edi:5501/EDImanager"
       VESTEC_MSM_URI: "http://msm:5502/MSM"
       VESTEC_DM_URI : "http://datamanager:5503/DM"
+      VESTEC_SHARED_FILE_LOCATION : "/shared_data"
       JWT_PASSWD: "SECRET"  # to be replaced by docker secrets
     env_file:
       - environment_variables.env
+    volumes:
+      - "/shared_data:/shared_data"
     networks:
       - vestec
 
@@ -47,8 +50,11 @@ services:
     #   - "../Database:/database"
     environment:
       VESTEC_MSM_URI: "http://msm:5502/MSM"
+      VESTEC_SHARED_FILE_LOCATION : "/shared_data"
     env_file:
       - environment_variables.env
+    volumes:
+      - "/shared_data:/shared_data"
     networks:
       - vestec
 
@@ -62,8 +68,12 @@ services:
     #WE ONLY NEED THIS IF WE ARE USING SQLITE
     # volumes:
     #   - "../Database:/database"
+    environment:
+      VESTEC_SHARED_FILE_LOCATION : "/shared_data"
     env_file:
       - environment_variables.env
+    volumes:
+      - "/shared_data:/shared_data"
     networks:
       - vestec
 
@@ -78,8 +88,12 @@ services:
     #WE ONLY NEED THIS IF WE ARE USING SQLITE
     # volumes:
     #   - "../Database:/database"
+    environment:
+      VESTEC_SHARED_FILE_LOCATION : "/shared_data"    
     env_file:
       - environment_variables.env
+    volumes:
+      - "/shared_data:/shared_data"
     networks:
       - vestec
 
@@ -93,8 +107,12 @@ services:
     #WE ONLY NEED THIS IF WE ARE USING SQLITE
     # volumes:
     #   - "../Database:/database"
+    environment:
+      VESTEC_SHARED_FILE_LOCATION : "/shared_data"    
     env_file:
       - environment_variables.env
+    volumes:
+      - "/shared_data:/shared_data"
     networks:
       - vestec
 
@@ -128,8 +146,11 @@ services:
       VESTEC_EDI_URI: "http://edi:5501/EDImanager"
       VESTEC_MSM_URI: "http://msm:5502/MSM"
       VESTEC_DM_URI : "http://datamanager:5503/DM"
+      VESTEC_SHARED_FILE_LOCATION : "/shared_data"
     env_file:
       - environment_variables.env
+    volumes:
+      - "/shared_data:/shared_data"
     networks:
       - vestec
 
@@ -140,8 +161,12 @@ services:
     build:
       context: ../
       dockerfile: DataManager/Dockerfile
+    environment:
+      VESTEC_SHARED_FILE_LOCATION : "/shared_data"
     env_file:
       - environment_variables.env
+    volumes:
+      - "/shared_data:/shared_data"
     networks:
       - vestec
     

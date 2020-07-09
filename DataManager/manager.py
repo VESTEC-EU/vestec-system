@@ -331,7 +331,7 @@ def _delete(file, machine, storage_technology):
     if machine == "localhost":  
         if storage_technology == "FILESYSTEM":
             try:
-                os.remove(file)
+                os.remove(_getLocalPathPrepend()+file)
             except OSError as e:
                 return FILE_ERROR, str(e)            
         elif storage_technology == "VESTECDB":            
@@ -354,9 +354,9 @@ def _copy(src, src_machine, src_storage_technology, dest, dest_machine, dest_sto
         if src_machine == "localhost":   
             if src_storage_technology == "FILESYSTEM":
                 if move:
-                    command = "mv %s %s"%(src,dest)
+                    command = "mv %s %s"%(_getLocalPathPrepend()+src, _getLocalPathPrepend()+dest)
                 else:
-                    command = "cp %s %s"%(src,dest)
+                    command = "cp %s %s"%(_getLocalPathPrepend()+src, _getLocalPathPrepend()+dest)
                 result = subprocess.run(command.split(" "),stdout=subprocess.PIPE, stderr=subprocess.PIPE,text=True)
                 if result.returncode == 0:
                     return OK, "copied"
@@ -382,7 +382,7 @@ def _copy(src, src_machine, src_storage_technology, dest, dest_machine, dest_sto
         #copy from VESTEC server to remote machine
         if src_machine == "localhost":
             if src_storage_technology == "FILESYSTEM":
-                asyncio.run(transfer_file_to_or_from_machine(dest_machine, src, dest, download=False))
+                asyncio.run(transfer_file_to_or_from_machine(dest_machine, _getLocalPathPrepend()+src, dest, download=False))
             elif src_storage_technology == "VESTECDB":
                 data_item=LocalDataStorage.get(filename=src)
                 asyncio.run(submit_copy_bytes_to_machine(dest_machine, data_item.contents, dest))
@@ -393,7 +393,7 @@ def _copy(src, src_machine, src_storage_technology, dest, dest_machine, dest_sto
         #copy from remote machine to VESTEC server
         elif dest_machine == "localhost":
             if dest_storage_technology == "FILESYSTEM":
-                asyncio.run(transfer_file_to_or_from_machine(src_machine, src, dest, download=True))
+                asyncio.run(transfer_file_to_or_from_machine(src_machine, src, _getLocalPathPrepend()+dest, download=True))
             elif dest_storage_technology == "VESTECDB":
                 byte_contents=asyncio.run(submit_copy_bytes_from_machine(src_machine, src, move))
                 new_file = LocalDataStorage(contents=byte_contents, filename=dest, filetype="")
@@ -444,7 +444,7 @@ def _get_data_from_location(registered_data):
         target_src=registered_data.filename
     if registered_data.machine == "localhost":   
         if registered_data.storage_technology == "FILESYSTEM":
-            readFile = open(target_src, "rb")
+            readFile = open(_getLocalPathPrepend()+target_src, "rb")
             data_payload=readFile.read()
             readFile.close()
             return data_payload, 200
@@ -471,7 +471,7 @@ def _put_data_to_location(data_payload, data_uuid):
             target_dest=registered_data.filename
         if registered_data.machine == "localhost":   
             if registered_data.storage_technology == "FILESYSTEM":
-                newFile = open(target_dest, "wb")
+                newFile = open(_getLocalPathPrepend()+target_dest, "wb")
                 newFile.write(data_payload)
                 newFile.close()
             elif registered_data.storage_technology == "VESTECDB":                
@@ -500,9 +500,9 @@ def _download(filename,  path, storage_technology, machine, url, protocol, optio
         if machine == "localhost" and storage_technology == "VESTECDB":
             # If its localhost and VESTECDB then use a temporary file
             temp = tempfile.NamedTemporaryFile()
-            cmd = "curl -f -sS -o %s %s"%(temp.name,url)
+            cmd = "curl -f -sS -o %s %s"%(temp.name, url)
         else:
-            cmd = "curl -f -sS -o %s %s"%(dest,url)
+            cmd = "curl -f -sS -o %s %s"%(_getLocalPathPrepend()+dest, url)
     else:
         print("Do not know how to handle protocols that are not http")
         return NOT_IMPLEMENTED, "'%s' protocol not supported (yet?)"%protocol, 0, 0
@@ -566,6 +566,14 @@ def _checkExists(machine,filename,path):
         return True
     else:
         return False
+
+def _getLocalPathPrepend():
+    if "VESTEC_SHARED_FILE_LOCATION" in os.environ:
+        shared_location= os.environ["VESTEC_SHARED_FILE_LOCATION"]
+        if shared_location[-1] != "/": shared_location+="/"
+        return shared_location
+    else:
+        return ""
 
 if __name__ == "__main__":
     initialiseDatabase()

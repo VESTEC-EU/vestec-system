@@ -52,7 +52,7 @@ VIIRSurl = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/viirs/shapes/z
 hotspotEndpoint="WFAHotspot"
 
 #set up the hotspots workdir
-wkdir = os.path.abspath("hotspots")
+wkdir = os.path.abspath(_getLocalPathPrepend()+"hotspots")
 
 @workflow.handler
 def wildfire_hotspot_init_standalone(msg):
@@ -456,6 +456,13 @@ def wildfire_tecnosylva_hotspots(msg):
     fwdmsg={"IncidentID" : incidentId, "hotspot_data_uuid" : data_uuid}
     workflow.send(fwdmsg,"wildfire_fire_simulation")
 
+def _getLocalPathPrepend():
+    if "VESTEC_SHARED_FILE_LOCATION" in os.environ:
+        shared_location= os.environ["VESTEC_SHARED_FILE_LOCATION"]
+        if shared_location[-1] != "/": shared_location+="/"
+        return shared_location
+    else:
+        return ""
 
 #register the handlers with the workflow system
 def RegisterHandlers():
@@ -465,8 +472,6 @@ def RegisterHandlers():
     workflow.RegisterHandler(wildfire_viirs_newdata, "wildfire_viirs_newdata")
     workflow.RegisterHandler(wildfire_process_hotspots, "wildfire_process_hotspots")
     workflow.RegisterHandler(wildfire_tecnosylva_hotspots,"wildfire_tecnosylva_hotspots")
-
-
 
 #kick off an incident for the hotspot workflow
 if __name__ == "__main__":
@@ -478,10 +483,3 @@ if __name__ == "__main__":
     workflow.send({"IncidentID": incident},"hotspot_init")
     workflow.FlushMessages()
     workflow.CloseConnection()
-
-
-
-    
-
-
-
