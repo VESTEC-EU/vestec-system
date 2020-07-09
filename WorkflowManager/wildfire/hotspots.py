@@ -11,7 +11,7 @@ import pony.orm as pny
 from Database import LocalDataStorage
 import geopandas as gpd
 import time
-from ExternalDataInterface.client import registerEndpoint, ExternalDataInterfaceException
+from ExternalDataInterface.client import registerEndpoint, ExternalDataInterfaceException, removeEndpoint
 from DataManager.client import downloadDataToTargetViaDM, registerDataWithDM, DataManagerException, getLocalFilePathPrepend
 
 from Database import Incident
@@ -103,7 +103,35 @@ def _handle_init(msg):
 
     print("Registered EDI to poll for MODIS, VIIRS, and WFA hotspot data")
 
+@workflow.handler
+def wildfire_hotspot_shutdown_standalone(msg):
+    IncidentID = msg["IncidentID"]
+    _handle_shutdown(IncidentID)
+    workflow.Cancel(IncidentID)
 
+@workflow.handler
+def wildfire_hotspot_shutdown(msg):
+    IncidentID = msg["IncidentID"]
+    _handle_shutdown(IncidentID)
+    workflow.send(msg, "wildfire_shutdown_response")
+
+def _handle_shutdown(incident):
+    try:
+        removeEndpoint(incident, MODISurl, "wildfire_modis_newdata", 300)
+    except ExternalDataInterfaceException as err:
+        print("Failed to remove modis download endpoint "+err.message)   
+
+    #register EDI to poll for VIIRS data
+    try:
+        removeEndpoint(incident, VIIRSurl, "wildfire_viirs_newdata", 300)
+    except ExternalDataInterfaceException as err:
+        print("Failed to remove VIIRS download endpoint "+err.message)    
+    
+    # register WFA hotspot endpoint
+    try:
+        removeEndpoint(incident, hotspotEndpoint+"-"+incident, "wildfire_tecnosylva_hotspots")
+    except ExternalDataInterfaceException as err:
+        print("Failed to remove WFA hotspot endpoint "+err.message)
 
 #called when there is new MODIS data
 @workflow.handler
@@ -461,6 +489,8 @@ def wildfire_tecnosylva_hotspots(msg):
 def RegisterHandlers():
     workflow.RegisterHandler(wildfire_hotspot_init, "wildfire_hotspot_init")
     workflow.RegisterHandler(wildfire_hotspot_init_standalone, "wildfire_hotspot_init_standalone")
+    workflow.RegisterHandler(wildfire_hotspot_shutdown, "wildfire_hotspot_shutdown")
+    workflow.RegisterHandler(wildfire_hotspot_shutdown_standalone, "wildfire_hotspot_shutdown_standalone")
     workflow.RegisterHandler(wildfire_modis_newdata, "wildfire_modis_newdata")
     workflow.RegisterHandler(wildfire_viirs_newdata, "wildfire_viirs_newdata")
     workflow.RegisterHandler(wildfire_process_hotspots, "wildfire_process_hotspots")

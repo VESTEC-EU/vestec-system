@@ -11,7 +11,7 @@ from .weatherdata import getLatestURLs
 
 from Database import Incident
 from Database.workflow import Simulation
-from ExternalDataInterface.client import registerEndpoint, ExternalDataInterfaceException
+from ExternalDataInterface.client import registerEndpoint, ExternalDataInterfaceException, removeEndpoint
 from SimulationManager.client import createSimulation, submitSimulation, SimulationManagerException, cancelSimulation
 from DataManager.client import putByteDataViaDM, DataManagerException, registerDataWithDM, downloadDataToTargetViaDM, getInfoForDataInDM
 
@@ -20,7 +20,6 @@ def wildfire_mesonh_init_standalone(msg):
     IncidentID = msg["IncidentID"]
     _handle_init(msg, "wildfire_mesonh_init_standalone")
     workflow.setIncidentActive(IncidentID)
-
 
 #initialises the mesoNH part of the workflow
 @workflow.handler
@@ -40,6 +39,24 @@ def _handle_init(msg, providedCaller):
         
     workflow.send(msg,"wildfire_mesonh_physiographic", providedCaller=providedCaller)
 
+
+@workflow.handler
+def wildfire_mesonh_shutdown_standalone(msg):
+    IncidentID = msg["IncidentID"]
+    _handle_shutdown(IncidentID)
+    workflow.Cancel(IncidentID)
+
+@workflow.handler
+def wildfire_mesonh_shutdown(msg):
+    IncidentID = msg["IncidentID"]
+    _handle_shutdown(IncidentID)
+    workflow.send(msg, "wildfire_shutdown_response")
+
+def _handle_shutdown(IncidentID):
+    try:
+        removeEndpoint(IncidentID, "https://www.ncei.noaa.gov/data/global-forecast-system/access/grid-003-1.0-degree/analysis", "wildfire_mesonh_getdata", 3600)        
+    except ExternalDataInterfaceException as err:
+        print("Failed to remove MesoNH for GFS download "+err.message)
 
 #Sees if there is new GFS data available. If so, downloads it [not implemented yet] and sends this on to the simulation stage
 @workflow.handler
@@ -292,6 +309,8 @@ def wildfire_mesonh_results(msg):
 def RegisterHandlers():
     workflow.RegisterHandler(handler = wildfire_mesonh_getdata,queue="wildfire_mesonh_getdata")
     workflow.RegisterHandler(handler = wildfire_mesonh_init,queue="wildfire_mesonh_init")
+    workflow.RegisterHandler(handler = wildfire_mesonh_shutdown,queue="wildfire_mesonh_shutdown")
+    workflow.RegisterHandler(handler = wildfire_mesonh_shutdown_standalone,queue="wildfire_mesonh_shutdown_standalone")
     workflow.RegisterHandler(handler = wildfire_mesonh_init_standalone,queue="wildfire_mesonh_init_standalone")
     workflow.RegisterHandler(handler = wildfire_mesonh_physiographic,queue="wildfire_mesonh_physiographic")
     workflow.RegisterHandler(handler = wildfire_mesonh_simulation,queue="wildfire_mesonh_simulation")
