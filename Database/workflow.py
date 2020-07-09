@@ -90,7 +90,7 @@ class Lock(db.Entity):
 class HandlerLog(db.Entity):
     incident = pny.Required(str)
     originator = pny.Required(str)
-    data = pny.Required(str)
+    data = pny.Required(pny.LongStr)
 
 class RegisteredWorkflow(db.Entity):
     kind=pny.Required(str)
