@@ -645,11 +645,9 @@ function loadIncidentDetails(incident) {
         for (data_set of incident.data_sets) {
             locally_held=data_set.machine == "localhost";
             machine_name=locally_held ? "VESTEC system" : data_set.machine;
-            incident_html+="<tr><td>"+data_set.name+"</td><td>"+data_set.type+"</td><td>"+machine_name+"</td><td>"+data_set.date_created+"</td><td>";
-            if (locally_held) {
-                incident_html+="<img src='../img/download.png' class='click_button' title='Download dataset' width=26 height=26 onClick=\"downloadData('"+data_set.uuid+"','"+data_set.name+"')\">";
-                incident_html+="&nbsp;&nbsp;&nbsp;";
-            }
+            incident_html+="<tr><td>"+data_set.name+"</td><td>"+data_set.type+"</td><td>"+machine_name+"</td><td>"+data_set.date_created+"</td><td>";            
+            incident_html+="<img src='../img/download.png' class='click_button' title='Download dataset' width=26 height=26 onClick=\"downloadData('"+data_set.uuid+"','"+data_set.name+"')\">";
+            incident_html+="&nbsp;&nbsp;&nbsp;";            
             incident_html+="<img src='../img/edit.png' class='click_button' width=26 height=26 onClick=\"editDataItem('"+data_set.uuid+"','"+incident.uuid+"')\">";
             incident_html+="&nbsp;&nbsp;&nbsp;";
             incident_html+="<img src='../img/cross.png' class='click_button' width=26 height=26 onClick=\"deleteDataItem('"+data_set.uuid+"','"+incident.uuid+"')\">";
@@ -785,7 +783,7 @@ function downloadData(data_uuid, filename) {
     $.ajax({
         url: "/flask/data/"+data_uuid,
         type: "GET",
-        dataType: 'binary',
+        //dataType: 'binary',
         headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
         success: function (data) {            
             var url = URL.createObjectURL(data);
