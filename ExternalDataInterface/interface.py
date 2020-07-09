@@ -136,7 +136,10 @@ def register():
         incidentid = d["incidentid"]
         endpoint = d["endpoint"]
         if "pollperiod" in d:
-            pollperiod = d["pollperiod"]
+            try:
+                pollperiod=float(d["pollperiod"])
+            except ValueError:
+                pollperiod=None
         else:
             pollperiod=None
     except KeyError:
@@ -186,19 +189,22 @@ def remove():
         queuename = d["queuename"]
         incidentid = d["incidentid"]
         endpoint = d["endpoint"]
-        if "pollperiod" in d:
-            pollperiod = d["pollperiod"]
+        if "pollperiod" in d:            
+            try:
+                pollperiod=float(d["pollperiod"])
+            except ValueError:
+                pollperiod=None
         else:
             pollperiod=None
     except KeyError:
-        return jsonify({"msg": "The request header does not contain the required fields"}), 500
+        return jsonify({"msg": "The request header does not contain the required fields"}), 500    
     
     #get any handlers that match this
     if (pollperiod != "null" and pollperiod is not None):        
         handlers = EDIHandler.select(lambda d: d.queuename==queuename
                             and d.incidentid==incidentid 
                             and d.endpoint==endpoint 
-                            and str(d.pollperiod)==pollperiod)
+                            and str(d.pollperiod)==str(pollperiod))
     else:
         handlers = EDIHandler.select(lambda d: d.queuename==queuename
                             and d.incidentid==incidentid 
