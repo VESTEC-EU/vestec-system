@@ -303,8 +303,8 @@ function submitJob() {
                 $("#confirmation").show();
             }
         },
-        error: function(response) {
-            $("#confirmation").html("<span>&#10007</span> Error creating new incident");
+        error: function(response) {            
+            $("#confirmation").html("<span>&#10007</span>"+ response.responseJSON.msg);
             $("#confirmation").removeClass().addClass("button white-btn red-high-btn self-center");
             $("#confirmation").show();
         }

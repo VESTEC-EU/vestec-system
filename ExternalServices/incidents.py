@@ -23,13 +23,8 @@ def checkIfUserCanAccessIncident(incident, user):
 
 @pny.db_session
 def createIncident(incident_name, incident_kind, username, incident_upper_left_latlong="", incident_lower_right_latlong="", duration=None):
-    user_id = User.get(username=username)
-    if duration is not None:
-        job_id = workflow.CreateIncident(incident_name, incident_kind, user_id=user_id, upper_left_latlong=incident_upper_left_latlong, lower_right_latlong=incident_lower_right_latlong, duration=duration)
-    else:
-        job_id = workflow.CreateIncident(incident_name, incident_kind, user_id=user_id, upper_left_latlong=incident_upper_left_latlong, lower_right_latlong=incident_lower_right_latlong)
-
-    return job_id
+    user_id = User.get(username=username)    
+    return workflow.CreateIncident(incident_name, incident_kind, user_id=user_id, upper_left_latlong=incident_upper_left_latlong, lower_right_latlong=incident_lower_right_latlong, duration=duration)        
 
 def generateIncidentDiGraph(incident_uuid):
     #directional graph structure to store the graph

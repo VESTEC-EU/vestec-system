@@ -107,18 +107,24 @@ def createIncident(username):
     incident_lower_right_latlong=incident_request.get("lowerRightLatlong", "")
     incident_duration=incident_request.get("duration", None)
 
+    try:
+        if incident_duration is not None:
+            incident_duration=int(incident_duration)
+    except ValueError:
+        return jsonify({"msg": "If incident duration is provided then it must be an integer"}), 400
+
     if RegisteredWorkflow.get(kind=incident_kind) is None:
-        return jsonify({"status": 400, "msg": "Incident kind is unknown, this must match a registered workflow that you have permission to access"})
+        return jsonify({"msg": "Incident kind is unknown, this must match a registered workflow that you have permission to access"}), 400
     else:        
         if logins.can_user_access_workflow(username, incident_kind):
             if incident_name and incident_kind:
-                job_id = incidents.createIncident(incident_name, incident_kind, username, incident_upper_left_latlong, incident_lower_right_latlong)
+                job_id = incidents.createIncident(incident_name, incident_kind, username, incident_upper_left_latlong, incident_lower_right_latlong, incident_duration)
                 logger.Log(log.LogType.Website, ("Creation of incident kind %s of name %s by %s" % (incident_name, incident_kind, username)), user=username)
-                return jsonify({"status": 201, "msg": "Incident successfully created.", "incidentid" : job_id})    
+                return jsonify({"msg": "Incident successfully created.", "incidentid" : job_id}), 201
             else:
-                return jsonify({"status": 400, "msg": "Incident name or type is missing"})
+                return jsonify({"msg": "Incident name or type is missing"}), 400
         else:
-            return jsonify({"status": 400, "msg": "Permission denied to access the workflow kind that this incident is created with, you will need this added for your user"})
+            return jsonify({"msg": "Permission denied to access the workflow kind that this incident is created with, you will need this added for your user"})
 
 def getAllMyIncidents(username, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter):
     incident_summaries=incidents.retrieveMyIncidentSummary(username, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter)
