@@ -191,7 +191,8 @@ def remove():
         endpoint = d["endpoint"]
         if "pollperiod" in d:            
             try:
-                pollperiod=float(d["pollperiod"])
+                pollperiod_flt=float(d["pollperiod"])
+                pollperiod=int(d["pollperiod"])
             except ValueError:
                 pollperiod=None
         else:
@@ -202,6 +203,12 @@ def remove():
     #get any handlers that match this
     if (pollperiod != "null" and pollperiod is not None):        
         handlers = EDIHandler.select(lambda d: d.queuename==queuename
+                            and d.incidentid==incidentid 
+                            and d.endpoint==endpoint 
+                            and str(d.pollperiod)==str(pollperiod_flt))
+
+        if len(handlers) == 0:
+            handlers = EDIHandler.select(lambda d: d.queuename==queuename
                             and d.incidentid==incidentid 
                             and d.endpoint==endpoint 
                             and str(d.pollperiod)==str(pollperiod))
