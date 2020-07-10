@@ -23,7 +23,7 @@ from WorkflowManager import workflow
 from pony.orm.serialization import to_dict
 from flask import Flask, request, jsonify, send_file, Response
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
-from ExternalDataInterface.client import getEDIHealth, getAllEDIEndpoints, removeEndpoint
+from ExternalDataInterface.client import getEDIHealth, getAllEDIEndpoints, removeEndpoint, ExternalDataInterfaceException
 from MachineStatusManager.client import retrieveMachineStatuses, addNewMachine, MachineStatusManagerException, deleteMachine, enableMachine, disableMachine, enableTestModeOnMachine, disableTestModeOnMachine, getMSMHealth
 from DataManager.client import getInfoForDataInDM, DataManagerException, getDMHealth, deleteDataViaDM, getByteDataViaDM
 from SimulationManager.client import refreshSimilation, SimulationManagerException, cancelSimulation, getSMHealth
