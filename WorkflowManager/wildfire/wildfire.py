@@ -80,7 +80,7 @@ def wildfire_fire_simulation(msg):
                 print("Can not write wildfire configuration to simulation location"+err.message)
                 return
 
-            cancelSimulation(sim_id)
+            submitSimulation(sim_id)
         except SimulationManagerException as err:
             print("Error creating or submitting WFA simulation "+err.message)
             return
