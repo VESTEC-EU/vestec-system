@@ -17,7 +17,7 @@ class MessageLog(db.Entity):
     destination = pny.Required(str)
     incident_id = pny.Required(str)
     message = pny.Required(str)
-    comment = pny.Optional(str)
+    comment = pny.Optional(pny.LongStr)
     consumer = pny.Optional(str)
     src_tag = pny.Optional(str) #optional name for the sender (for workflow graph visualisation)
     dest_tag = pny.Optional(str) #optional name for the reciever (for workflow graph visualisation)
