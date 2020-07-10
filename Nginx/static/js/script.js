@@ -1478,7 +1478,7 @@ function logOut() {
         success: function(response) {
             if (response.status == 200) {
                 sessionStorage.removeItem("access_token");
-                window.location.href = "/login";
+                window.location.href = "/";
             }
         }
     });
