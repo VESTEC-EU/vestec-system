@@ -42,8 +42,8 @@ class DataTransfer(db.Entity):
     src_machine = pny.Required(str)
     dst_machine = pny.Required(str)
     #date_submitted = pny.Required(datetime.datetime) # might be necessary for non-blocking data transfer
-    date_started = pny.Required(datetime.datetime)
-    date_completed = pny.Optional(datetime.datetime)
-    completion_time = pny.Optional(datetime.timedelta)
+    date_started = pny.Required(datetime.datetime, precision=6)
+    date_completed = pny.Optional(datetime.datetime, precision=6)
+    completion_time = pny.Optional(datetime.timedelta, precision=6)
     status = pny.Required(str)
 
