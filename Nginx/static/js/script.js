@@ -292,16 +292,10 @@ function submitJob() {
         data: JSON.stringify(job),
         dataType: "json",
         success: function(response) {
-            if (response.status == "201") {
-                $("#userInput").val('');
-                $("#confirmation").html("<span>&#10003</span>" + response.msg);
-                $("#confirmation").removeClass().addClass("button white-btn green-high-btn self-center");
-                $("#confirmation").show();
-            } else {
-                $("#confirmation").html("<span>&#10007</span>" + response.msg);
-                $("#confirmation").removeClass().addClass("button white-btn amber-high-btn self-center");
-                $("#confirmation").show();
-            }
+            $("#userInput").val('');
+            $("#confirmation").html("<span>&#10003</span>" + response.msg);
+            $("#confirmation").removeClass().addClass("button white-btn green-high-btn self-center");
+            $("#confirmation").show();
         },
         error: function(response) {            
             $("#confirmation").html("<span>&#10007</span>"+ response.responseJSON.msg);
