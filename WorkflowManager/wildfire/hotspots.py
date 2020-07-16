@@ -510,10 +510,10 @@ def extract_hotspots(points, inputshp, sensor, outputdir):
                     d["properties"] = {
                                         "FRP": FRP,
                                         "DATE": DATE,
-                                        "TIME": TIME
+                                        "TIME": TIME,
+                                        "SENSOR": sensor
                                        }
                     d["geometry"] = feature["geometry"]
-                    d["sensor"] = sensor
 
                     hotspots.append(d)
 
