@@ -115,11 +115,12 @@ def packageSimulation(sim):
         try:
             perf_dict = {}
             perf_dict["data_type"] = str(perf_data.data_type)
-            perf_dict["raw_json"] = json.loads(perf_data.raw_json)
+            perf_dict["raw_json"] = json.dumps(json.loads(perf_data.raw_json))
 
             perf_data_dicts.append(perf_dict)
-        except:
+        except Exception as e:
             # if there's anything wrong with the stored data, continue
+            print("error in adding perf_data: {}".format(e), flush=True)
             pass
 
     simulation_dict["performance_data"] = perf_data_dicts
