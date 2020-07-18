@@ -138,7 +138,7 @@ def wildfire_mesonh_physiographic(msg):
 
     try:
         callbacks = {'COMPLETED': 'wildfire_mesonh_simulation'}   
-        sim_id=createSimulation(IncidentID, 1, "0:05:00", "PGD pre-processing", "prep_pgd.sh", queuestate_callbacks=callbacks, template_dir="prep_pdg_template")
+        sim_id=createSimulation(IncidentID, 1, "0:05:00", "PGD pre-processing", "prep_pgd.sh", queuestate_callbacks=callbacks, template_dir="templates/prep_pdg_template")
         with pny.db_session:
             simulation=Simulation[sim_id]   
             machine_name=simulation.machine.machine_name   
@@ -214,7 +214,7 @@ def wildfire_mesonh_simulation(msg):
     
     try:
         callbacks = {'COMPLETED': 'wildfire_mesonh_results'}   
-        sim_id=createSimulation(IncidentID, 1, "0:10:00", "MesoNH weather simulation", "run.sh", queuestate_callbacks=callbacks, template_dir="mesonh_template")
+        sim_id=createSimulation(IncidentID, 1, "0:10:00", "MesoNH weather simulation", "mesonh_composed.sh", queuestate_callbacks=callbacks, template_dir="templates/mesonh_template")
         with pny.db_session:
             simulation=Simulation[sim_id]    
             machine_name=simulation.machine.machine_name
@@ -236,7 +236,7 @@ def wildfire_mesonh_simulation(msg):
         mesoNHYaml=_buildMesoNHYaml(IncidentID, machine_basedir, simulation.directory, gfs_data_filenames[0],gfs_data_filenames[1], _retrievePGDDataLocation(IncidentID))
 
         try:
-            data_uuid=putByteDataViaDM("params.yml", machine_name, "MesoNH YAML configuration", "text/plain", "MesoNH workflow", mesoNHYaml, path=simulation.directory)        
+            data_uuid=putByteDataViaDM("mesonh_composed.yml", machine_name, "MesoNH YAML configuration", "text/plain", "MesoNH workflow", mesoNHYaml, path=simulation.directory)        
         except DataManagerException as err:
             print("Error creating configuration file on machine"+err.message)
             return
