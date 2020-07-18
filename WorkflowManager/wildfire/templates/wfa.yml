@@ -1,14 +1,15 @@
-mpi_processes: 12
-omp_threads: 2
-sim_duration: 36
+sim_name: test
+mpi_processes: 24
+omp_threads: 1
+sim_duration: 1
 start_time: 0
-total_sims: 36
+sims_per_rank: 2
 fuel_geotiff:
   class: File
-  path: IN/_2_fuel_10m.tif
+  path: wfadata/_2_fuel_10m.tif
 mdt_geotiff:
   class: File
-  path: IN/_2_dem_extract_10m_extract.tif
+  path: wfadata/_2_dem_extract_10m_extract.tif
 weather_data:
   class: File
   path: fire_input.nc
@@ -20,4 +21,4 @@ lowerright:
   lon: 3.07
 dynamic_config:
   class: File
-  path: CONFIG_PROB_DYN.json
+  path: wfadata/dynamic.json
