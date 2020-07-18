@@ -3,7 +3,7 @@ sys.path.append("../")
 import pony.orm as pny
 from Database.workflow import Simulation, Incident
 from SimulationManager.client import createSimulation, submitSimulation, SimulationManagerException, cancelSimulation
-from DataManager.client import moveDataViaDM, DataManagerException, getInfoForDataInDM, putByteDataViaDM, registerDataWithDM
+from DataManager.client import moveDataViaDM, DataManagerException, getInfoForDataInDM, putByteDataViaDM, registerDataWithDM, copyDataViaDM
 import workflow
 import yaml
 
@@ -61,7 +61,7 @@ def wildfire_fire_simulation(msg):
 
         try:
             callbacks = {'COMPLETED': 'wildfire_fire_results'}
-            sim_id=createSimulation(IncidentID, 1, "0:05:00", "Wildfire simulation", "wfa.sh", queuestate_callbacks=callbacks, template_dir="wildfire_template")
+            sim_id=createSimulation(IncidentID, 1, "0:05:00", "Wildfire simulation", "wfa.sh", queuestate_callbacks=callbacks, template_dir="templates/wildfire_template")
             with pny.db_session:
                 simulation=Simulation[sim_id]    
                 machine_name=simulation.machine.machine_name
@@ -111,8 +111,11 @@ def wildfire_fire_results(msg):
     print("\nResults available for wildfire analyst simulation!") 
 
     with pny.db_session:
+        myincident = Incident[IncidentID]
         simulation=Simulation[simulationId]
         machine_name=simulation.machine.machine_name
+        machine_basedir=simulation.machine.base_work_dir
+        if machine_basedir[-1] != "/": machine_basedir+="/"
 
     if simulation is not None:
         try:                
@@ -129,10 +132,88 @@ def wildfire_fire_results(msg):
                 path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA output file", 
                 comment="Created by WFA on "+machine_name)
         except DataManagerException as err:
-            print("Error registering WFA result data with data manager "+err.message)
-            return   
+            print("Error registering WFA result data with data manager, aborting "+err.message)
+            return
+
+        try:
+            callbacks = {'COMPLETED': 'wildfire_post_results'}
+            pp_sim_id=createSimulation(IncidentID, 1, "0:05:00", "Wildfire postprocessing", "wfapost.sh", queuestate_callbacks=callbacks, template_dir="templates/wildfire_post_template")
+            with pny.db_session:
+                post_proc_simulation=Simulation[pp_sim_id]
+                post_proc_machine_name=post_proc_simulation.machine.machine_name                
+
+            try:                 
+                putByteDataViaDM("config.json", machine_name, "Wildfire post-processing configuration", "text/plain", "Wildfire workflow", 
+                    "{\n  \"simDuration\": "+str(myincident.duration)+"\n}\n", path=post_proc_simulation.directory)
+
+                copyDataViaDM(data_uuid_test_fire_best, machine_basedir+post_proc_simulation.directory+"/input/normal/test_Fire_Best.tif", machine_name)
+                copyDataViaDM(data_uuid_test_fireshed_best, machine_basedir+post_proc_simulation.directory+"/input/fireshed/test_FireShed_Best.tif", machine_name)
+                copyDataViaDM(data_uuid_test_variance, machine_basedir+post_proc_simulation.directory+"/input/probabilistic/test_Fire_Variance.tif", machine_name)
+                copyDataViaDM(data_uuid_test_mean, machine_basedir+post_proc_simulation.directory+"/input/probabilistic/test_Fire_Mean.tif", machine_name)
+                
+                #putByteDataViaDM("wfapost.yml", machine_name, "Wildfire post-processing configuration", "text/plain", "Wildfire workflow", 
+                #    _buildWFAPostYaml(IncidentID, simulation.directory, machine_basedir), path=post_proc_simulation.directory)                    
+            except DataManagerException as err:
+                print("Can not write wildfire post processing configuration to simulation location"+err.message)
+                return
+
+            submitSimulation(pp_sim_id)
+        except SimulationManagerException as err:
+            print("Error creating or submitting WFA post-processing simulation "+err.message)
+            return
+
+@pny.db_session
+def _buildWFAPostYaml(incidentId, simulation_directory, machine_basedir):
+    myincident = Incident[incidentId]
+    duration = myincident.duration
+
+    if simulation_directory[-1] != "/": simulation_directory+="/"
+
+    sample_configuration_file = open("wildfire/templates/wfapost.yml")
+    yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)    
+    yaml_template["normal_gtif"]["path"]=machine_basedir+simulation_directory+"test_Fire_Best.tif"
+    yaml_template["fireshed_gtif"]["path"]=machine_basedir+simulation_directory+"test_FireShed_Best.tif"
+    yaml_template["variance"]["path"]=machine_basedir+simulation_directory+"test_Fire_Variance.tif"
+    yaml_template["mean"]["path"]=machine_basedir+simulation_directory+"test_Fire_Mean.tif"
+    
+    yaml_template["sim_duration"]=duration
+        
+    return yaml.dump(yaml_template)
+
+@workflow.handler
+def wildfire_post_results(msg):
+    print("Post processing of WFA results completed")
+
+    IncidentID = msg["IncidentID"]
+    simulationId = msg["simulationId"]    
+
+    with pny.db_session:        
+        simulation=Simulation[simulationId]
+        machine_name=simulation.machine.machine_name        
+
+    try:                
+        registerDataWithDM("normal.png", machine_name, "WFA post-processing", "image/png", 0, "Normal PNG", 
+                path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA image file", 
+                comment="Created by WFA post-processor on "+machine_name)
+
+        registerDataWithDM("fireshed.png", machine_name, "WFA post-processing", "image/png", 0, "FireShed PNG", 
+                path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA image file", 
+                comment="Created by WFA post-processor on "+machine_name)
+
+        registerDataWithDM("fire_prob_1.png", machine_name, "WFA post-processing", "image/png", 0, "Normal probability PNG", 
+                path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA image file", 
+                comment="Created by WFA post-processor on "+machine_name)
+
+        registerDataWithDM("fire_front_prob_1.png", machine_name, "WFA post-processing", "image/png", 0, "Front probability PNG", 
+                path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA image file", 
+                comment="Created by WFA post-processor on "+machine_name)
+
+    except DataManagerException as err:
+        print("Error registering WFA post-processed PNG with data manager, aborting "+err.message)
+        return
 
 def RegisterHandlers():
     workflow.RegisterHandler(wildfire_fire_simulation,"wildfire_fire_simulation")
     workflow.RegisterHandler(wildfire_fire_static,"wildfire_fire_static")
     workflow.RegisterHandler(wildfire_fire_results,"wildfire_fire_results")
+    workflow.RegisterHandler(wildfire_post_results,"wildfire_post_results")
