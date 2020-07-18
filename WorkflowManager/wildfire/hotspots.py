@@ -315,11 +315,87 @@ def wildfire_process_hotspots(msg):
     for file in toremove:
         print("Deleting %s"%file)
         os.remove(os.path.join(getLocalFilePathPrepend()+removedir,file))
-    
-    #Technically tecnosylva would review this data then push to an EDI endpoint with their accepted hotspots, but we're just pushing the data through as if tecnosylva pushed it
-    #message = {"IncidentID": incident, "file": outfile}
 
-   # workflow.send(message,"wildfire_tecnosylva_hotspots")
+    message = {
+        "IncidentID": incident,
+        "file": outfile,
+        "date": date
+    }
+
+    workflow.send(message,"wildfire_consolidate_hotspots")
+
+@workflow.atomic
+@workflow.handler
+def wildfire_consolidate_hotspots(msg):
+    incident = msg["IncidentID"]
+    hotspotsfile = msg["file"]
+    date = msg["date"]
+    
+    #open the new hotspots file and read them in
+    with open(hotspotsfile,"r") as f:
+            newhotspots=json.load(f)
+    
+
+    consolidated = workflow.Persist.Get(incident)
+    
+    #get the latest consolidated hotspot data
+    if len(consolidated) != 0:
+        latestfile = consolidated[-1]["file"]
+        with open(latestfile,"r") as f:
+            hotspots=json.load(f)
+
+    #no existing hotspot data
+    if len(consolidated) == 0:
+        #hotspotsfile is the consolidated list
+        hotspots = {"type":newhotspots["type"],"crs": newhotspots["crs"], "features": []}
+    
+    #add new hotspots if they aren't already in the hotspots list
+    added = 0
+    for hotspot in newhotspots["features"]:
+        if hotspot not in hotspots["features"]:
+            hotspots["features"].append(hotspot)
+            added +=1
+    
+    if added > 0:
+
+        #we have new data. Write a new json
+
+        timestamp = parse_timestamp(date)
+
+        basedir = os.path.join(wkdir,incident,"consolidated",timestamp)
+
+        os.makedirs(getLocalFilePathPrepend()+basedir,exist_ok=True)
+
+        file = os.path.join(basedir,"hotspots.json")
+
+        contents = json.dumps(hotspots,indent=1)
+
+        with open(file,"w") as f:
+            f.write(contents)
+
+        with pny.db_session:
+            new_file = LocalDataStorage(contents=contents.encode("ascii"), filename=file, filetype="application/json") 
+        
+        fileID = dm_register(file=file,
+                machine="localhost",
+                description = "Consolidated hotspots for region on %s"%(date),
+                originator = "consolidate hotspots handler",
+                type="application/json",
+                group = "hotspot",
+                storage_technology= "VESTECDB",
+                incident = incident)
+
+        print("\nConsolidate hotspots: Created new consolidated hotspots file for %s with %d new hotspots"%(date,added))
+
+        workflow.Persist.Put(incident,{"file": file, "date": date})
+
+    else:
+        print("\nConsolidate hotspots: No new hotspots")
+        
+
+
+
+
 
 
 
@@ -436,7 +512,8 @@ def extract_hotspots(points, inputshp, sensor, outputdir):
                     d["properties"] = {
                                         "FRP": FRP,
                                         "DATE": DATE,
-                                        "TIME": TIME
+                                        "TIME": TIME,
+                                        "SENSOR": sensor
                                        }
                     d["geometry"] = feature["geometry"]
 
@@ -453,6 +530,13 @@ def extract_hotspots(points, inputshp, sensor, outputdir):
     outfile = os.path.join(outputdir,"%s_hotspots.json"%sensor)
     
     contents=json.dumps(d,indent=1)
+
+    #write file to disk so it can be used in future workflow stages
+    # WE NEED A WAY OF GETTING DATA BACK FROM THE DM
+    f=open(outfile,"w")
+    f.write(contents)
+    f.close()
+
     with pny.db_session:
         new_file = LocalDataStorage(contents=contents.encode("ascii"), filename=outfile, filetype="application/json")    
     
@@ -464,7 +548,7 @@ def extract_hotspots(points, inputshp, sensor, outputdir):
 
 @workflow.handler
 def wildfire_tecnosylva_hotspots(msg):
-    print("\nHola. Me llamo Tecnosylva!")    
+    print("\nHotspot data incoming from Tecnosylva")    
 
     provided_hotspot_data=json.loads(msg["data"]["payload"])
     
@@ -497,6 +581,7 @@ def RegisterHandlers():
     workflow.RegisterHandler(wildfire_viirs_newdata, "wildfire_viirs_newdata")
     workflow.RegisterHandler(wildfire_process_hotspots, "wildfire_process_hotspots")
     workflow.RegisterHandler(wildfire_tecnosylva_hotspots,"wildfire_tecnosylva_hotspots")
+    workflow.RegisterHandler(wildfire_consolidate_hotspots,"wildfire_consolidate_hotspots")
 
 #kick off an incident for the hotspot workflow
 if __name__ == "__main__":
