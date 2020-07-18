@@ -332,7 +332,7 @@ def wildfire_consolidate_hotspots(msg):
     date = msg["date"]
     
     #open the new hotspots file and read them in
-    with open(hotspotsfile,"r") as f:
+    with open(getLocalFilePathPrepend()+hotspotsfile,"r") as f:
             newhotspots=json.load(f)
     
 
@@ -341,7 +341,7 @@ def wildfire_consolidate_hotspots(msg):
     #get the latest consolidated hotspot data
     if len(consolidated) != 0:
         latestfile = consolidated[-1]["file"]
-        with open(latestfile,"r") as f:
+        with open(getLocalFilePathPrepend()+latestfile,"r") as f:
             hotspots=json.load(f)
 
     #no existing hotspot data
@@ -370,7 +370,7 @@ def wildfire_consolidate_hotspots(msg):
 
         contents = json.dumps(hotspots,indent=1)
 
-        with open(file,"w") as f:
+        with open(getLocalFilePathPrepend()+file,"w") as f:
             f.write(contents)
 
         with pny.db_session:
@@ -533,7 +533,7 @@ def extract_hotspots(points, inputshp, sensor, outputdir):
 
     #write file to disk so it can be used in future workflow stages
     # WE NEED A WAY OF GETTING DATA BACK FROM THE DM
-    f=open(outfile,"w")
+    f=open(getLocalFilePathPrepend()+outfile,"w")
     f.write(contents)
     f.close()
 
