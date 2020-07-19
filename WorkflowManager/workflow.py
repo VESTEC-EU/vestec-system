@@ -479,18 +479,16 @@ def _Cleanup(ch, method, properties, body):
     msgid = msg["MessageID"]
     log = MessageLog[msgid]
     log.date_received = datetime.datetime.now()
-    log.status = "PROCESSING"
+    log.status = "COMPLETE"
     log.consumer = ConsumerID
+    log.date_completed = datetime.datetime.now()
+    pny.commit()
 
     logger.info("Cleaning up Incident %s" % IncidentID)
     print(" [*] Cleaning up incident %s"%IncidentID)
 
     if msg["CleanLocks"]:
         _CleanLock(IncidentID)
-
-    # Need to update this here, as in the persist cleanup will modify the data and can become inconsistent
-    log.date_completed = datetime.datetime.now()
-    log.status = "COMPLETE"
 
     if msg["CleanPersist"]:
         Persist._Cleanup(IncidentID)
