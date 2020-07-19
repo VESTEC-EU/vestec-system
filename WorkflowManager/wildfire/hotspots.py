@@ -45,11 +45,11 @@ from Database import Incident
 # Presently you run a workflow by executing this file. It will create a new incident, register pull handlers on the EDI and will generate hotspots for the specified region.
 
 #URLS to download the data from
-MODISurl = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/c6/shapes/zips/MODIS_C6_Europe_48h.zip"
-#MODISurl = "https://vestec.wildfireanalyst.com/static/hotspots/modis_aquaterra_61_firms_nasa_201207_lajonquera.zip"
+#MODISurl = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/c6/shapes/zips/MODIS_C6_Europe_48h.zip"
+MODISurl = "https://vestec.wildfireanalyst.com/static/hotspots/modis_aquaterra_61_firms_nasa_201207_lajonquera.zip"
 
-VIIRSurl = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/viirs/shapes/zips/VNP14IMGTDL_NRT_Europe_48h.zip"
-#VIIRSurl = "https://vestec.wildfireanalyst.com/static/hotspots/viirs_suominpp_10nrt_firms_nasa_201207_lajonquera.zip"
+#VIIRSurl = "https://firms.modaps.eosdis.nasa.gov/data/active_fire/viirs/shapes/zips/VNP14IMGTDL_NRT_Europe_48h.zip"
+VIIRSurl = "https://vestec.wildfireanalyst.com/static/hotspots/viirs_suominpp_10nrt_firms_nasa_201207_lajonquera.zip"
 
 hotspotEndpoint="WFAHotspot"
 
@@ -374,9 +374,17 @@ def wildfire_consolidate_hotspots(msg):
             f.write(contents)
 
         with pny.db_session:
-            new_file = LocalDataStorage(contents=contents.encode("ascii"), filename=file, filetype="application/json") 
+            print("File name is "+file)
+            fileobj = LocalDataStorage.get(filename = file)
+            if fileobj is None:
+                new_file = LocalDataStorage(contents=contents.encode("ascii"), filename=file, filetype="application/json")
+                needRegister=True
+            else:
+                needRegister=False
+                fileobj.contents=contents.encode("ascii")
         
-        fileID = dm_register(file=file,
+        if needRegister:
+            fileID = dm_register(file=file,
                 machine="localhost",
                 description = "Consolidated hotspots for region on %s"%(date),
                 originator = "consolidate hotspots handler",
