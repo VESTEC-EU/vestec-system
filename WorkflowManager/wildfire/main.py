@@ -47,6 +47,7 @@ def wildfire_shutdown(msg):
     workflow.send(queue="wildfire_mesonh_shutdown", message=msg)
     workflow.send(queue="wildfire_hotspot_shutdown", message=msg)    
 
+@workflow.atomic
 @workflow.handler
 def wildfire_shutdown_response(msg):
     IncidentID = msg["IncidentID"]
