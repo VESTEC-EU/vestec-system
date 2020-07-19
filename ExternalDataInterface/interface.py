@@ -52,7 +52,7 @@ def pollDataSource(id):
         return
     
     #get the header from the endpoint, and send it off to the workflow
-    x = requests.head(handler.endpoint, allow_redirects=True)
+    x = requests.head(handler.endpoint, allow_redirects=True, verify=False)
     if x.ok:
         data_packet=generateDataPacket(x.headers, "pull",handler.endpoint,handler.incidentid)
         data_packet["status_code"]=x.status_code        
