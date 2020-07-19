@@ -119,16 +119,16 @@ def wildfire_fire_results(msg):
 
     if simulation is not None:
         try:                
-            data_uuid_test_fire_best=registerDataWithDM("test_Fire_Best.tif", machine_name, "WFA simulation", "application/octet-stream", 0, "Normal GTIF", 
+            data_uuid_test_fire_best=registerDataWithDM("test_Fire_Best.tif", machine_name, "WFA simulation", "application/octet-stream", 473901, "Normal GTIF", 
                 path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA output file", 
                 comment="Created by WFA on "+machine_name)
-            data_uuid_test_fireshed_best=registerDataWithDM("test_FireShed_Best.tif", machine_name, "WFA simulation", "application/octet-stream", 0, "FireShed GTIF", 
+            data_uuid_test_fireshed_best=registerDataWithDM("test_FireShed_Best.tif", machine_name, "WFA simulation", "application/octet-stream", 2125431, "FireShed GTIF", 
                 path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA output file", 
                 comment="Created by WFA on "+machine_name)
-            data_uuid_test_variance=registerDataWithDM("test_Fire_Variance.tif", machine_name, "WFA simulation", "application/octet-stream", 0, "Variance GTIF", 
+            data_uuid_test_variance=registerDataWithDM("test_Fire_Variance.tif", machine_name, "WFA simulation", "application/octet-stream", 3709094, "Variance GTIF", 
                 path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA output file", 
                 comment="Created by WFA on "+machine_name)
-            data_uuid_test_mean=registerDataWithDM("test_Fire_Mean.tif", machine_name, "WFA simulation", "application/octet-stream", 0, "Mean GTIF", 
+            data_uuid_test_mean=registerDataWithDM("test_Fire_Mean.tif", machine_name, "WFA simulation", "application/octet-stream", 4245835, "Mean GTIF", 
                 path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA output file", 
                 comment="Created by WFA on "+machine_name)
         except DataManagerException as err:
@@ -192,19 +192,19 @@ def wildfire_post_results(msg):
         machine_name=simulation.machine.machine_name        
 
     try:                
-        registerDataWithDM("normal.png", machine_name, "WFA post-processing", "image/png", 0, "Normal PNG", 
+        registerDataWithDM("normal.png", machine_name, "WFA post-processing", "image/png", 67432, "Normal PNG", 
                 path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA image file", 
                 comment="Created by WFA post-processor on "+machine_name)
 
-        registerDataWithDM("fireshed.png", machine_name, "WFA post-processing", "image/png", 0, "FireShed PNG", 
+        registerDataWithDM("fireshed.png", machine_name, "WFA post-processing", "image/png", 83138, "FireShed PNG", 
                 path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA image file", 
                 comment="Created by WFA post-processor on "+machine_name)
 
-        registerDataWithDM("fire_prob_1.png", machine_name, "WFA post-processing", "image/png", 0, "Normal probability PNG", 
+        registerDataWithDM("fire_prob_1.png", machine_name, "WFA post-processing", "image/png", 138850, "Normal probability PNG", 
                 path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA image file", 
                 comment="Created by WFA post-processor on "+machine_name)
 
-        registerDataWithDM("fire_front_prob_1.png", machine_name, "WFA post-processing", "image/png", 0, "Front probability PNG", 
+        registerDataWithDM("fire_front_prob_1.png", machine_name, "WFA post-processing", "image/png", 69339, "Front probability PNG", 
                 path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA image file", 
                 comment="Created by WFA post-processor on "+machine_name)
 
