@@ -259,8 +259,7 @@ function getJobWizard() {
         type: "GET",
         headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
         success: function(response) {            
-            var workflows = JSON.parse(response.workflows);
-            console.log(workflows);
+            var workflows = JSON.parse(response.workflows);            
             $("#incidentType").empty();
             for (item in workflows) {
                 item = workflows[item];                                                   
