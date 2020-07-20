@@ -129,7 +129,8 @@ def create_job():
         stored_machine=None
         return "Error allocating job to machine", 400
 
-    simulation = Simulation(uuid=uuid, incident=incident_id, kind=kind, date_created=datetime.datetime.now(), num_nodes=num_nodes, requested_walltime=requested_walltime, executable=executable, status=job_status, status_updated=datetime.datetime.now(), directory=directory)
+    simulation = Simulation(uuid=uuid, incident=incident_id, kind=kind, date_created=datetime.datetime.now(), num_nodes=num_nodes, 
+                    requested_walltime=requested_walltime, executable=executable, status=job_status, status_updated=datetime.datetime.now(), directory=directory)
     if (job_status=="ERROR"):
         simulation.status_message=status_message
     if (stored_machine is not None):
@@ -151,6 +152,7 @@ def poll_outstanding_sim_statuses():
     simulations=pny.select(g for g in Simulation if g.status == "QUEUED" or g.status == "RUNNING" or g.status == "ENDING")
     handleRefreshOfSimulations(simulations)    
 
+@pny.db_session
 def handleRefreshOfSimulations(simulations):
     machine_to_queueid={}    
     queueid_to_sim={}
@@ -168,6 +170,7 @@ def handleRefreshOfSimulations(simulations):
                 queueid_to_sim[jkey].status=jvalue[0]
                 if (len(jvalue[1]) > 0):
                     queueid_to_sim[jkey].walltime=jvalue[1]
+                pny.commit()
                 targetStateCall=checkMatchAgainstQueueStateCalls(queueid_to_sim[jkey].queue_state_calls, jvalue[0])
                 if (targetStateCall is not None):                      
                     new_wf_stage_call={'targetName' : targetStateCall, 'incidentId' : queueid_to_sim[jkey].incident.uuid, 'simulationId' : queueid_to_sim[jkey].uuid, 'status' : jvalue[0]}
@@ -181,11 +184,14 @@ def issueWorkFlowStageCalls(workflow_stages_to_run):
     for wf_call in workflow_stages_to_run:            
         msg={}    
         msg["IncidentID"] = wf_call["incidentId"]        
-        msg["simulationId"]=wf_call["simulationId"]
+        msg["simulationId"]=wf_call["simulationId"]        
 
         origionatorPrettyStr=None
         if wf_call["status"] == "COMPLETED":
             origionatorPrettyStr="Simulation Completed"
+            simulation = Simulation[wf_call["simulationId"]]
+            directory_listing = asyncio.run(get_job_directory_listing(simulation.machine.machine_name, simulation.directory))
+            msg["directoryListing"]=directory_listing
         elif wf_call["status"] == "QUEUED":
             origionatorPrettyStr="Simulation Queued"
         elif wf_call["status"] == "RUNNING":
@@ -199,6 +205,10 @@ def issueWorkFlowStageCalls(workflow_stages_to_run):
 
     workflow.FlushMessages()
     workflow.CloseConnection()
+
+async def get_job_directory_listing(machine_name, directory_name):        
+    client = await Client.create(machine_name)
+    return await client.ls(directory_name)    
 
 def checkMatchAgainstQueueStateCalls(state_calls, queue_state):
     for state_call in state_calls:
