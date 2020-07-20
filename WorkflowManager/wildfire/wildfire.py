@@ -6,6 +6,11 @@ from SimulationManager.client import createSimulation, submitSimulation, Simulat
 from DataManager.client import moveDataViaDM, DataManagerException, getInfoForDataInDM, putByteDataViaDM, registerDataWithDM, copyDataViaDM
 import workflow
 import yaml
+import datetime
+
+class WildfireDataAccessException(Exception):
+    def __init__(self, msg):
+        self.msg=msg
 
 @workflow.handler
 def wildfire_fire_static(msg):
@@ -109,6 +114,7 @@ def wildfire_fire_results(msg):
     IncidentID = msg["IncidentID"]
     simulationId = msg["simulationId"]
     simulationIdPostfix=simulationId.split("-")[-1]
+    directoryListing=msg["directoryListing"]
     print("\nResults available for wildfire analyst simulation!") 
 
     with pny.db_session:
@@ -119,21 +125,24 @@ def wildfire_fire_results(msg):
         if machine_basedir[-1] != "/": machine_basedir+="/"
 
     if simulation is not None:
-        try:                
-            data_uuid_test_fire_best=registerDataWithDM("test_Fire_Best.tif", machine_name, "WFA simulation", "application/octet-stream", 473901, "Normal GTIF", 
-                path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA output file", 
-                comment="Created by WFA on "+machine_name)
-            data_uuid_test_fireshed_best=registerDataWithDM("test_FireShed_Best.tif", machine_name, "WFA simulation", "application/octet-stream", 2125431, "FireShed GTIF", 
-                path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA output file", 
-                comment="Created by WFA on "+machine_name)
-            data_uuid_test_variance=registerDataWithDM("test_Fire_Variance.tif", machine_name, "WFA simulation", "application/octet-stream", 3709094, "Variance GTIF", 
-                path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA output file", 
-                comment="Created by WFA on "+machine_name)
-            data_uuid_test_mean=registerDataWithDM("test_Fire_Mean.tif", machine_name, "WFA simulation", "application/octet-stream", 4245835, "Mean GTIF", 
-                path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA output file", 
-                comment="Created by WFA on "+machine_name)
-        except DataManagerException as err:
-            print("Error registering WFA result data with data manager, aborting "+err.message)
+        result_files={}
+        for entry in directoryListing:
+            tokens=entry.split()
+            if len(tokens) == 9 and ".tif" in tokens[8]:
+                result_files[tokens[8]]=int(tokens[4])
+
+        try:
+            data_uuid_test_fire_best=_registerWFAResultFile("test_Fire_Best.tif", result_files, machine_name, simulation.directory, IncidentID)
+            data_uuid_test_fireshed_best=_registerWFAResultFile("test_FireShed_Best.tif", result_files, machine_name, simulation.directory, IncidentID)
+            data_uuid_test_variance=_registerWFAResultFile("test_Fire_Variance.tif", result_files, machine_name, simulation.directory, IncidentID)
+            data_uuid_test_mean=_registerWFAResultFile("test_Fire_Mean.tif", result_files, machine_name, simulation.directory, IncidentID)
+        except WildfireDataAccessException as err:
+            with pny.db_session:
+                simulation=Simulation[simulationId]
+                simulation.status="ERROR"
+                simulation.status_message=err.msg
+                simulation.status_updated=datetime.datetime.now()
+                pny.commit()
             return
 
         try:
@@ -166,6 +175,18 @@ def wildfire_fire_results(msg):
             print("Error creating or submitting WFA post-processing simulation "+err.message)
             return
 
+def _registerWFAResultFile(filename, result_files, machine_name, directory, incidentId):
+    if filename not in result_files:
+        raise WildfireDataAccessException("Expected result file is not available from the simulation, this indicates the execution failed")
+    try:                
+        data_uuid=registerDataWithDM(filename, machine_name, "WFA simulation", "application/octet-stream", result_files[filename], 
+            "GTIF", path=directory, associate_with_incident=True, incidentId=incidentId, kind="WFA output file", 
+            comment="Created by WFA on "+machine_name)
+        return data_uuid
+    except DataManagerException as err:
+        print("Error registering WFA result data with data manager, aborting "+err.message)
+        raise WildfireDataAccessException("Error registering WFA result data with data manager on the VESTEC system")
+
 @pny.db_session
 def _buildWFAPostYaml(incidentId, simulation_directory, machine_basedir):
     myincident = Incident[incidentId]
@@ -190,7 +211,7 @@ def wildfire_post_results(msg):
 
     IncidentID = msg["IncidentID"]
     simulationId = msg["simulationId"]
-    directoryListing=msg["directoryListing"]                    
+    directoryListing=msg["directoryListing"]
 
     with pny.db_session:        
         simulation=Simulation[simulationId]

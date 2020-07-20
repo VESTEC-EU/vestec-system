@@ -152,6 +152,14 @@ def wildfire_mesonh_physiographic(msg):
         print("Error creating or submitting simulation "+err.message)
         return
 
+def _doesSimulationDirectoryContainFile(directoryListing, filename):
+    for entry in directoryListing:
+        tokens=entry.split()
+        if len(tokens) == 9:
+            if tokens[8] == filename:
+                return True, int(tokens[4])
+    return False, None
+
 #logs any new messages appropriately, then sees if the criteria are met to run a simulation. If so, it runs [not implemented] the simulation
 @workflow.atomic
 @workflow.handler
@@ -161,13 +169,21 @@ def wildfire_mesonh_simulation(msg):
     if "simulationId" in msg:
         simulationId = msg["simulationId"]
     else:
-        simulationId = None
+        simulationId = None    
 
-    print("\nMesoNH simulation")
+    if originator == "Simulation Completed":        
+        pgdFileCreated, pgdFileSize=_doesSimulationDirectoryContainFile(msg["directoryListing"], "CFIRE02KM.nc")
+        if not pgdFileCreated:
+            with pny.db_session:
+                simulation=Simulation[simulationId]
+                simulation.status="ERROR"
+                simulation.status_message="PGD output file not generated, this indicated there was an error running the simulation code"
+                simulation.status_updated=datetime.datetime.now()
+                pny.commit()
+            return
 
-    if originator == "Simulation Completed":
         workflow.Persist.Put(IncidentID,{"originator": "wildfire_mesonh_physiographic", "Physiographic": True})
-        print("Physiographic data received "+ simulationId)
+        print("Physiographic data received "+ simulationId)        
         with pny.db_session:
             simulation=Simulation[simulationId]
             machine_name=simulation.machine.machine_name
@@ -175,7 +191,7 @@ def wildfire_mesonh_simulation(msg):
         if simulation is not None:
             try:
                 print("Physiographic path is "+simulation.directory)
-                registerDataWithDM("CFIRE02KM.nc", machine_name, "Physiographic data", "application/octet-stream", 0, "MesoNH PGD pre-processing", 
+                registerDataWithDM("CFIRE02KM.nc", machine_name, "Physiographic data", "application/octet-stream", pgdFileSize, "MesoNH PGD pre-processing", 
                     path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="Physiographic data", 
                     comment="Created by MesoNH PGD pre-processing which was run on "+machine_name)
             except DataManagerException as err:
@@ -285,7 +301,17 @@ def _buildMesoNHYaml(incidentId, machine_basedir, simulation_location, gfs_file1
 @workflow.handler
 def wildfire_mesonh_results(msg):
     IncidentID = msg["IncidentID"]
-    simulationId = msg["simulationId"]    
+    simulationId = msg["simulationId"]
+
+    weatherFileCreated, weatherFileSize=_doesSimulationDirectoryContainFile(msg["directoryListing"], "fire_input.nc")
+    if not weatherFileCreated:
+        with pny.db_session:
+            simulation=Simulation[simulationId]
+            simulation.status="ERROR"
+            simulation.status_message="MesoNH output file not generated, this indicated there was an error running the simulation code"
+            simulation.status_updated=datetime.datetime.now()
+            pny.commit()
+        return
 
     with pny.db_session:
         simulation=Simulation[simulationId]
@@ -293,8 +319,8 @@ def wildfire_mesonh_results(msg):
 
     if simulation is not None:
         try:                
-            data_uuid=registerDataWithDM("fire_input.nc", machine_name, "MesoNH weather forecast", "application/octet-stream", 0, "MesoNH simulation", 
-                path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="Weather forecast", 
+            data_uuid=registerDataWithDM("fire_input.nc", machine_name, "MesoNH weather forecast", "application/octet-stream", weatherFileSize, 
+                "MesoNH simulation", path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="Weather forecast", 
                 comment="Created by MesoNH on "+machine_name)
         except DataManagerException as err:
             print("Error registering MesoNH result data with data manager "+err.message)
