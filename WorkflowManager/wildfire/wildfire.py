@@ -108,6 +108,7 @@ def _buildWFAYaml(incidentId, weather_datainfo):
 def wildfire_fire_results(msg):
     IncidentID = msg["IncidentID"]
     simulationId = msg["simulationId"]
+    simulationIdPostfix=simulationId.split("-")[-1]
     print("\nResults available for wildfire analyst simulation!") 
 
     with pny.db_session:
@@ -145,6 +146,9 @@ def wildfire_fire_results(msg):
             try:                 
                 putByteDataViaDM("config.json", machine_name, "Wildfire post-processing configuration", "text/plain", "Wildfire workflow", 
                     "{\n  \"simDuration\": "+str(myincident.duration)+"\n}\n", path=post_proc_simulation.directory)
+
+                putByteDataViaDM("sim_id", machine_name, "Wildfire post-processing simulation ID token", "text/plain", "Wildfire workflow", 
+                    simulationIdPostfix, path=post_proc_simulation.directory)
 
                 copyDataViaDM(data_uuid_test_fire_best, machine_basedir+post_proc_simulation.directory+"/input/normal/test_Fire_Best.tif", machine_name, gather_metrics=False)
                 copyDataViaDM(data_uuid_test_fireshed_best, machine_basedir+post_proc_simulation.directory+"/input/fireshed/test_FireShed_Best.tif", machine_name, gather_metrics=False)
@@ -185,32 +189,22 @@ def wildfire_post_results(msg):
     print("Post processing of WFA results completed")
 
     IncidentID = msg["IncidentID"]
-    simulationId = msg["simulationId"]    
+    simulationId = msg["simulationId"]
+    directoryListing=msg["directoryListing"]                    
 
     with pny.db_session:        
         simulation=Simulation[simulationId]
         machine_name=simulation.machine.machine_name        
-
-    try:                
-        registerDataWithDM("normal.png", machine_name, "WFA post-processing", "image/png", 67432, "Normal PNG", 
-                path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA image file", 
-                comment="Created by WFA post-processor on "+machine_name)
-
-        registerDataWithDM("fireshed.png", machine_name, "WFA post-processing", "image/png", 83138, "FireShed PNG", 
-                path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA image file", 
-                comment="Created by WFA post-processor on "+machine_name)
-
-        registerDataWithDM("fire_prob_1.png", machine_name, "WFA post-processing", "image/png", 138850, "Normal probability PNG", 
-                path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA image file", 
-                comment="Created by WFA post-processor on "+machine_name)
-
-        registerDataWithDM("fire_front_prob_1.png", machine_name, "WFA post-processing", "image/png", 69339, "Front probability PNG", 
-                path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA image file", 
-                comment="Created by WFA post-processor on "+machine_name)
-
-    except DataManagerException as err:
-        print("Error registering WFA post-processed PNG with data manager, aborting "+err.message)
-        return
+    
+    for entry in directoryListing:
+        tokens=entry.split()
+        if len(tokens) == 9 and ".png" in tokens[8]:            
+            try:                
+                registerDataWithDM(tokens[8], machine_name, "WFA post-processing", "image/png", int(tokens[4]), "WFA output PNG", 
+                    path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA image file", 
+                    comment="Created by WFA post-processor on "+machine_name)
+            except DataManagerException as err:
+                print("Error registering WFA post-processed PNG '"+tokens[8]+"' with data manager, aborting "+err.message)            
 
 def RegisterHandlers():
     workflow.RegisterHandler(wildfire_fire_simulation,"wildfire_fire_simulation")
