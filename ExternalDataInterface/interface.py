@@ -25,9 +25,15 @@ poll_scheduler=BackgroundScheduler(executors={"default": ThreadPoolExecutor(1)})
 def scheduleHandler(id, seconds):
     id = str(id)
     # start this 5 seconds from now
-    runon = datetime.datetime.now()+ datetime.timedelta(seconds=5)
-    misfire_grace_time=1
-    if seconds > 600: misfire_grace_time=60
+    runon = datetime.datetime.now()+ datetime.timedelta(seconds=5)    
+    if seconds >= 600: 
+        misfire_grace_time=60
+    elif seconds >= 300: 
+        misfire_grace_time=30
+    elif seconds >= 60: 
+        misfire_grace_time=10
+    else:
+        misfire_grace_time=1
     poll_scheduler.add_job(pollDataSource, 'interval',args=[id], seconds=seconds, id = id, next_run_time = runon, misfire_grace_time=misfire_grace_time)
     
     print("Scheduled pull handler with ID %s"%id)
