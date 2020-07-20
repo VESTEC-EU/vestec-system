@@ -146,10 +146,10 @@ def wildfire_fire_results(msg):
                 putByteDataViaDM("config.json", machine_name, "Wildfire post-processing configuration", "text/plain", "Wildfire workflow", 
                     "{\n  \"simDuration\": "+str(myincident.duration)+"\n}\n", path=post_proc_simulation.directory)
 
-                copyDataViaDM(data_uuid_test_fire_best, machine_basedir+post_proc_simulation.directory+"/input/normal/test_Fire_Best.tif", machine_name)
-                copyDataViaDM(data_uuid_test_fireshed_best, machine_basedir+post_proc_simulation.directory+"/input/fireshed/test_FireShed_Best.tif", machine_name)
-                copyDataViaDM(data_uuid_test_variance, machine_basedir+post_proc_simulation.directory+"/input/probabilistic/test_Fire_Variance.tif", machine_name)
-                copyDataViaDM(data_uuid_test_mean, machine_basedir+post_proc_simulation.directory+"/input/probabilistic/test_Fire_Mean.tif", machine_name)
+                copyDataViaDM(data_uuid_test_fire_best, machine_basedir+post_proc_simulation.directory+"/input/normal/test_Fire_Best.tif", machine_name, gather_metrics=False)
+                copyDataViaDM(data_uuid_test_fireshed_best, machine_basedir+post_proc_simulation.directory+"/input/fireshed/test_FireShed_Best.tif", machine_name, gather_metrics=False)
+                copyDataViaDM(data_uuid_test_variance, machine_basedir+post_proc_simulation.directory+"/input/probabilistic/test_Fire_Variance.tif", machine_name, gather_metrics=False)
+                copyDataViaDM(data_uuid_test_mean, machine_basedir+post_proc_simulation.directory+"/input/probabilistic/test_Fire_Mean.tif", machine_name, gather_metrics=False)
                 
                 #putByteDataViaDM("wfapost.yml", machine_name, "Wildfire post-processing configuration", "text/plain", "Wildfire workflow", 
                 #    _buildWFAPostYaml(IncidentID, simulation.directory, machine_basedir), path=post_proc_simulation.directory)                    

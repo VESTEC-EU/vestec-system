@@ -74,7 +74,11 @@ def info(id=None):
 def get_data(id):
     registeredData=Data[id]
     if registeredData is not None:
-        return _get_data_from_location(registeredData)
+        if "gather_metrics" in flask.request.form:
+            gather_metrics=flask.request.form["gather_metrics"].lower() == "true"            
+        else:
+            gather_metrics=False        
+        return _get_data_from_location(registeredData, gather_metrics)
     else:
         return "Data not found", 400
 
@@ -83,7 +87,11 @@ def get_data(id):
 def put_data():    
     registered_status=_perform_registration(flask.request.form)
     if registered_status[1] == 201:
-        put_status= _put_data_to_location(flask.request.form["payload"], registered_status[0])
+        if "gather_metrics" in flask.request.form:
+            gather_metrics=flask.request.form["gather_metrics"].lower() == "true"            
+        else:
+            gather_metrics=False
+        put_status= _put_data_to_location(flask.request.form["payload"], registered_status[0], gather_metrics)
         if put_status[1] == 201:
             return registered_status[0], 201
         else:
@@ -266,24 +274,32 @@ def _handle_copy_or_move(id, move):
     #get the options from the header
     dest_machine = flask.request.form["machine"]
     dest = flask.request.form["dest"]
+
+    if "gather_metrics" in flask.request.form:
+        gather_metrics=flask.request.form["gather_metrics"].lower() == "true"
+    else:
+        gather_metrics=True
+
     if "storage_technology" in flask.request.form:
         dest_storage_technology = flask.request.form["storage_technology"]
     else:
         dest_storage_technology = "FILESYSTEM"
 
-    with pny.db_session:
-        transfer_id = str(uuid.uuid4())
-        data_transfer = DataTransfer(id=transfer_id,
-                                     src=Data[id],
-                                     src_machine=src_machine,
-                                     dst_machine=dest_machine,
-                                     date_started=datetime.datetime.now(),
-                                     status="STARTED")
+    if gather_metrics:
+        with pny.db_session:
+            transfer_id = str(uuid.uuid4())
+            data_transfer = DataTransfer(id=transfer_id,
+                                        src=Data[id],
+                                        src_machine=src_machine,
+                                        dst_machine=dest_machine,
+                                        date_started=datetime.datetime.now(),
+                                        status="STARTED")
 
     path,fname = os.path.split(dest)
-    if _checkExists(dest_machine,fname,path):        
-        with pny.db_session:
-            DataTransfer[transfer_id].status = "FAILED"
+    if _checkExists(dest_machine,fname,path):
+        if gather_metrics:
+            with pny.db_session:
+                DataTransfer[transfer_id].status = "FAILED"
         return "File already exists", 406    
 
     # perform move or copy on the file
@@ -291,12 +307,14 @@ def _handle_copy_or_move(id, move):
     date_completed = datetime.datetime.now()
 
     if status == FILE_ERROR:
-        with pny.db_session:
-            DataTransfer[transfer_id].status = "FAILED"
+        if gather_metrics:
+            with pny.db_session:
+                DataTransfer[transfer_id].status = "FAILED"
         return message, 500
     if status == NOT_IMPLEMENTED:
-        with pny.db_session:
-            DataTransfer[transfer_id].status = "FAILED"
+        if gather_metrics:
+            with pny.db_session:
+                DataTransfer[transfer_id].status = "FAILED"
         return message, 501
     elif status == OK:
         with pny.db_session:
@@ -309,12 +327,13 @@ def _handle_copy_or_move(id, move):
             else:
                 path,fname = os.path.split(dest)
                 new_id =_register(fname,path,dest_machine,description,type,size,originator,group,dest_storage_technology)
-            data_transfer = DataTransfer[transfer_id]
-            data_transfer.status = "COMPLETED"
-            data_transfer.dst = Data[new_id]
-            data_transfer.date_completed = date_completed
-            data_transfer.completion_time = (data_transfer.date_completed -
-                                             data_transfer.date_started)
+            if gather_metrics:
+                data_transfer = DataTransfer[transfer_id]
+                data_transfer.status = "COMPLETED"
+                data_transfer.dst = Data[new_id]
+                data_transfer.date_completed = date_completed
+                data_transfer.completion_time = (data_transfer.date_completed -
+                                                data_transfer.date_started)
         return new_id, 201
 
 #Creates a new entry in the database
@@ -441,7 +460,15 @@ async def submit_copy_bytes_to_machine(machine_name, src_bytes, dest):
     client = await Client.create(machine_name)
     await client.put(src_bytes, dest)
 
-def _get_data_from_location(registered_data):
+def _get_data_from_location(registered_data, gather_metrics):
+    if gather_metrics:        
+            transfer_id = str(uuid.uuid4())
+            data_transfer = DataTransfer(id=transfer_id,
+                                        src=registered_data,
+                                        src_machine=registered_data.machine,
+                                        dst_machine="localhost",
+                                        date_started=datetime.datetime.now(),
+                                        status="STARTED")
     if len(registered_data.path) > 0:
         target_src=registered_data.path+"/"+registered_data.filename
     else:
@@ -449,24 +476,39 @@ def _get_data_from_location(registered_data):
     if registered_data.machine == "localhost":   
         if registered_data.storage_technology == "FILESYSTEM":
             readFile = open(_getLocalPathPrepend()+target_src, "rb")
-            data_payload=readFile.read()
-            readFile.close()
-            return data_payload, 200
+            contents=readFile.read()
+            readFile.close()            
         elif registered_data.storage_technology == "VESTECDB":
             localData=LocalDataStorage.get(filename=target_src)
-            return localData.contents, 200
+            contents=localData.contents            
     else:
         contents=asyncio.run(submit_remote_get_data(registered_data.machine, target_src))
-        return contents, 200
+
+    if gather_metrics:
+        data_transfer = DataTransfer[transfer_id]
+        data_transfer.status = "COMPLETED"
+        data_transfer.dst = registered_data
+        data_transfer.date_completed = datetime.datetime.now()
+        data_transfer.completion_time = (data_transfer.date_completed - data_transfer.date_started)
+    return contents, 200
 
 async def submit_remote_get_data(target_machine_name, src_file):
     client = await Client.create(target_machine_name)              
     return await client.get(src_file)     
 
 @pny.db_session
-def _put_data_to_location(data_payload, data_uuid):
-    registered_data=Data[data_uuid]
+def _put_data_to_location(data_payload, data_uuid, gather_metrics):
+    registered_data=Data[data_uuid]    
     if registered_data is not None:
+        if gather_metrics:        
+            transfer_id = str(uuid.uuid4())
+            data_transfer = DataTransfer(id=transfer_id,
+                                        src=registered_data,
+                                        src_machine="localhost",
+                                        dst_machine=registered_data.machine,
+                                        date_started=datetime.datetime.now(),
+                                        status="STARTED")
+
         # If we are provided with a string then perform an implicit conversion to bytes
         if isinstance(data_payload, str): data_payload=bytes(data_payload, encoding='utf8')
         if len(registered_data.path) > 0:
@@ -482,8 +524,16 @@ def _put_data_to_location(data_payload, data_uuid):
                 new_data_item=LocalDataStorage(contents=data_payload, filename=target_dest, filetype="")            
         else:
             asyncio.run(submit_remote_put_data(registered_data.machine, data_payload, target_dest))
+        if gather_metrics:
+                data_transfer = DataTransfer[transfer_id]
+                data_transfer.status = "COMPLETED"
+                data_transfer.dst = registered_data
+                data_transfer.date_completed = datetime.datetime.now()
+                data_transfer.completion_time = (data_transfer.date_completed - data_transfer.date_started)
         return "Data put completed", 201
     else:
+        if gather_metrics:            
+            DataTransfer[transfer_id].status = "FAILED"
         return "Registration error", 500    
 
 async def submit_remote_put_data(target_machine_name, data, dest_file):

@@ -56,15 +56,17 @@ def getInfoForDataInDM(data_uuid=None):
     else:
         raise DataManagerException(response.status_code, response.text)
 
-def getByteDataViaDM(data_uuid):
-    retrieved_data=requests.get(_get_DM_URL()+'/get/'+data_uuid)    
+def getByteDataViaDM(data_uuid, gather_metrics=False):
+    arguments = { 'gather_metrics':gather_metrics }
+
+    retrieved_data=requests.get(_get_DM_URL()+'/get/'+data_uuid, data=arguments)    
     if retrieved_data.status_code == 200:        
         return retrieved_data.content
     else:
         raise DataManagerException(retrieved_data.status_code, retrieved_data.text)
 
 def putByteDataViaDM(filename, machine, description, type, originator, payload, group = "none", storage_technology=None, path=None, 
-        associate_with_incident=False, incidentId=None, kind="", comment=None):
+        associate_with_incident=False, incidentId=None, kind="", comment=None, gather_metrics=False):
     if associate_with_incident and incidentId is None:
         raise DataManagerException(400, "Must supply an incident ID when associating dataset with an incident")
 
@@ -75,7 +77,8 @@ def putByteDataViaDM(filename, machine, description, type, originator, payload, 
                     'type':type,
                     'payload':payload, 
                     'originator':originator,
-                    'group' : group }
+                    'group' : group,
+                    'gather_metrics':gather_metrics }
     if storage_technology is not None:
         arguments["storage_technology"]=storage_technology
     if path is not None:
@@ -120,9 +123,10 @@ def downloadDataToTargetViaDM(filename, machine, description, type, originator, 
     else:
         raise DataManagerException(returnUUID.status_code, returnUUID.text)
 
-def moveDataViaDM(data_uuid, dest_name, dest_machine, dest_storage_technology=None):
+def moveDataViaDM(data_uuid, dest_name, dest_machine, dest_storage_technology=None, gather_metrics=True):
     arguments = {   'dest': dest_name, 
-                    'machine':dest_machine }
+                    'machine':dest_machine,
+                    'gather_metrics':gather_metrics }
     if dest_storage_technology is not None:
         arguments["storage_technology"]=dest_storage_technology
 
@@ -132,9 +136,10 @@ def moveDataViaDM(data_uuid, dest_name, dest_machine, dest_storage_technology=No
     else:
         raise DataManagerException(response.status_code, response.text)
 
-def copyDataViaDM(data_uuid, dest_name, dest_machine, dest_storage_technology=None):
+def copyDataViaDM(data_uuid, dest_name, dest_machine, dest_storage_technology=None, gather_metrics=True):
     arguments = {   'dest': dest_name, 
-                    'machine':dest_machine }
+                    'machine':dest_machine,
+                    'gather_metrics':gather_metrics }
     if dest_storage_technology is not None:
         arguments["storage_technology"]=dest_storage_technology
 
