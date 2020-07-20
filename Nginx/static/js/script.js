@@ -602,7 +602,7 @@ function loadIncidentDetails(incident) {
         for (sim of incident.simulations) {    
             incident_html+="<td>"+sim.kind+"</td><td>"+sim.created+"</td><td>";
             if (sim.status_message != null) {
-                incident_html+="<span class=\"link\" onclick=\"displayInfoMessage('"+sim.status_message+"');\">";
+                incident_html+="<span class=\"link\" onclick=\"displayInfoMessage('"+sim.status_message.replace(/"/g, '\\"')+"');\">";
             }
             incident_html+=sim.status;
             if (sim.status_message != null) incident_html+="</span>";
