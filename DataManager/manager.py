@@ -466,7 +466,7 @@ def _get_data_from_location(registered_data, gather_metrics):
             data_transfer = DataTransfer(id=transfer_id,
                                         src=registered_data,
                                         src_machine=registered_data.machine,
-                                        dst_machine="localhost",
+                                        dst_machine="external",
                                         date_started=datetime.datetime.now(),
                                         status="STARTED")
     if len(registered_data.path) > 0:
@@ -504,7 +504,7 @@ def _put_data_to_location(data_payload, data_uuid, gather_metrics):
             transfer_id = str(uuid.uuid4())
             data_transfer = DataTransfer(id=transfer_id,
                                         src=registered_data,
-                                        src_machine="localhost",
+                                        src_machine="external",
                                         dst_machine=registered_data.machine,
                                         date_started=datetime.datetime.now(),
                                         status="STARTED")
