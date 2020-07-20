@@ -773,23 +773,19 @@ function deleteDataItem(data_uuid, incident_uuid) {
 }
 
 function downloadData(data_uuid, filename) {
-    $.ajax({
-        url: "/flask/data/"+data_uuid,
-        type: "GET",
-        //dataType: 'binary',
-        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},        
-        success: function (data) {            
-            var url = URL.createObjectURL(data);
-            var $a = $('<a />', {
-                'href': url,
-                'download': filename,
-                'text': "click"
-            }).hide().appendTo("body")[0].click(); 
-            setTimeout(function() {
-                URL.revokeObjectURL(url);
-            }, 10000);           
-        }
-    }); 
+    var req = new XMLHttpRequest();    
+    req.open("GET", "/flask/data/"+data_uuid, true);
+    req.setRequestHeader("Authorization", 'Bearer ' + sessionStorage.getItem("access_token"))
+    req.responseType = "blob";
+    req.onload = function (event) {
+        var blob = req.response;
+        var link=document.createElement('a');
+        link.href=window.URL.createObjectURL(blob);
+        link.download=filename;
+        link.click();
+    };
+
+    req.send();
 }
 
 function cancelIncident(incident_uuid) {
