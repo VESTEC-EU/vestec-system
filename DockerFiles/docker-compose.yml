@@ -31,6 +31,7 @@ services:
       VESTEC_DM_URI : "http://datamanager:5503/DM"
       VESTEC_SHARED_FILE_LOCATION : "/shared_data"
       JWT_PASSWD: "SECRET"  # to be replaced by docker secrets
+      PYTHONUNBUFFERED: 1
     env_file:
       - environment_variables.env
     volumes:
@@ -51,6 +52,7 @@ services:
     environment:
       VESTEC_MSM_URI: "http://msm:5502/MSM"
       VESTEC_SHARED_FILE_LOCATION : "/shared_data"
+      PYTHONUNBUFFERED: 1
     env_file:
       - environment_variables.env
     volumes:
@@ -70,6 +72,7 @@ services:
     #   - "../Database:/database"
     environment:
       VESTEC_SHARED_FILE_LOCATION : "/shared_data"
+      PYTHONUNBUFFERED: 1
     env_file:
       - environment_variables.env
     volumes:
@@ -90,6 +93,7 @@ services:
     #   - "../Database:/database"
     environment:
       VESTEC_SHARED_FILE_LOCATION : "/shared_data"    
+      PYTHONUNBUFFERED: 1
     env_file:
       - environment_variables.env
     volumes:
@@ -109,6 +113,7 @@ services:
     #   - "../Database:/database"
     environment:
       VESTEC_SHARED_FILE_LOCATION : "/shared_data"    
+      PYTHONUNBUFFERED: 1
     env_file:
       - environment_variables.env
     volumes:
@@ -147,6 +152,7 @@ services:
       VESTEC_MSM_URI: "http://msm:5502/MSM"
       VESTEC_DM_URI : "http://datamanager:5503/DM"
       VESTEC_SHARED_FILE_LOCATION : "/shared_data"
+      PYTHONUNBUFFERED: 1
     env_file:
       - environment_variables.env
     volumes:
@@ -163,6 +169,7 @@ services:
       dockerfile: DataManager/Dockerfile
     environment:
       VESTEC_SHARED_FILE_LOCATION : "/shared_data"
+      PYTHONUNBUFFERED: 1
     env_file:
       - environment_variables.env
     volumes:

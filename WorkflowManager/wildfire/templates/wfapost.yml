@@ -1,0 +1,13 @@
+sim_duration: 6
+normal_gtif:
+  class: File
+  path: test_Fire_Best.tif
+fireshed_gtif:
+  class: File
+  path: test_FireShed_Best.tif
+variance:
+  class: File
+  path: test_Fire_Variance.tif
+mean:
+  class: File
+  path: test_Fire_Mean.tif

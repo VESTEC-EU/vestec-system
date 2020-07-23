@@ -258,9 +258,8 @@ function getJobWizard() {
         url: "/flask/getmyworkflows",
         type: "GET",
         headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
-        success: function(response) {
-            var workflows = JSON.parse(response.workflows);
-            console.log(workflows);
+        success: function(response) {            
+            var workflows = JSON.parse(response.workflows);            
             $("#incidentType").empty();
             for (item in workflows) {
                 item = workflows[item];
@@ -611,7 +610,7 @@ function loadIncidentDetails(incident) {
         for (sim of incident.simulations) {
             incident_html+="<td>"+sim.kind+"</td><td>"+sim.created+"</td><td>";
             if (sim.status_message != null) {
-                incident_html+="<span class=\"link\" onclick=\"displayInfoMessage('"+sim.status_message+"');\">";
+                incident_html+="<span class=\"link\" onclick=\"displayInfoMessage('"+sim.status_message.replace(/"/g, '\\"')+"');\">";
             }
             incident_html+=sim.status;
             if (sim.status_message != null) incident_html+="</span>";
@@ -792,23 +791,19 @@ function deleteDataItem(data_uuid, incident_uuid) {
 }
 
 function downloadData(data_uuid, filename) {
-    $.ajax({
-        url: "/flask/data/"+data_uuid,
-        type: "GET",
-        //dataType: 'binary',
-        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
-        success: function (data) {
-            var url = URL.createObjectURL(data);
-            var $a = $('<a />', {
-                'href': url,
-                'download': filename,
-                'text': "click"
-            }).hide().appendTo("body")[0].click();
-            setTimeout(function() {
-                URL.revokeObjectURL(url);
-            }, 10000);
-        }
-    });
+    var req = new XMLHttpRequest();    
+    req.open("GET", "/flask/data/"+data_uuid, true);
+    req.setRequestHeader("Authorization", 'Bearer ' + sessionStorage.getItem("access_token"))
+    req.responseType = "blob";
+    req.onload = function (event) {
+        var blob = req.response;
+        var link=document.createElement('a');
+        link.href=window.URL.createObjectURL(blob);
+        link.download=filename;
+        link.click();
+    };
+
+    req.send();
 }
 
 function cancelIncident(incident_uuid) {

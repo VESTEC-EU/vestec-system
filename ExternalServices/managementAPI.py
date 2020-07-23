@@ -22,6 +22,7 @@ from Database.log import DBLog
 from WorkflowManager import workflow
 from pony.orm.serialization import to_dict
 from flask import Flask, request, jsonify, send_file, Response
+import base64
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, fresh_jwt_required, get_jwt_identity, set_access_cookies, unset_jwt_cookies
 from ExternalDataInterface.client import getEDIHealth, getAllEDIEndpoints, removeEndpoint, ExternalDataInterfaceException
 from MachineStatusManager.client import retrieveMachineStatuses, addNewMachine, MachineStatusManagerException, deleteMachine, enableMachine, disableMachine, enableTestModeOnMachine, disableTestModeOnMachine, getMSMHealth
@@ -192,27 +193,12 @@ def getDataMetadata(data_uuid, incident_uuid, username):
 def downloadData(data_uuid):    
     try:
         file_info=getInfoForDataInDM(data_uuid)
-        byte_data=getByteDataViaDM(data_uuid)
-        return send_file(io.BytesIO(byte_data.encode()),
+        byte_data=getByteDataViaDM(data_uuid, gather_metrics=True)
+        return send_file(io.BytesIO(byte_data),
                      attachment_filename=file_info["filename"],
                      mimetype=file_info["type"])
     except DataManagerException as err:
-        return jsonify({"msg" : err.message}), err.status_code
-
-    if (file_info["storage_technology"]=="VESTECDB" and file_info["machine"]=="localhost"):
-        print(file_info["path"]+"/"+file_info["filename"])
-        if "path" in file_info and file_info["path"] is not None:
-            data_dump=LocalDataStorage.get(filename=file_info["path"]+"/"+file_info["filename"])
-        else:
-            data_dump=LocalDataStorage.get(filename=file_info["filename"])
-        if data_dump is not None:
-            return send_file(io.BytesIO(data_dump.contents),
-                     attachment_filename=data_dump.filename,
-                     mimetype=data_dump.filetype)
-        else:
-            return jsonify({"msg" : "File not found"}), 400
-
-    return jsonify({"msg" : "Only datasets stored on VESTEC server currently supported"}), 400
+        return jsonify({"msg" : err.message}), err.status_code    
 
 @pny.db_session
 def deleteData(data_uuid, incident_uuid, username):

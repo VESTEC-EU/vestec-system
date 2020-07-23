@@ -479,8 +479,10 @@ def _Cleanup(ch, method, properties, body):
     msgid = msg["MessageID"]
     log = MessageLog[msgid]
     log.date_received = datetime.datetime.now()
-    log.status = "PROCESSING"
+    log.status = "COMPLETE"
     log.consumer = ConsumerID
+    log.date_completed = datetime.datetime.now()
+    pny.commit()
 
     logger.info("Cleaning up Incident %s" % IncidentID)
     print(" [*] Cleaning up incident %s"%IncidentID)
@@ -491,10 +493,7 @@ def _Cleanup(ch, method, properties, body):
     if msg["CleanPersist"]:
         Persist._Cleanup(IncidentID)
 
-    logger.info("Clean up of incident %s complete!" % IncidentID)
-
-    log.date_completed = datetime.datetime.now()
-    log.status = "COMPLETE"
+    logger.info("Clean up of incident %s complete!" % IncidentID)    
 
     # finally acknowledge completion of message to rabbitmq
     ch.basic_ack(delivery_tag=method.delivery_tag)

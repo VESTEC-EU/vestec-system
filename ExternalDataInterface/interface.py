@@ -25,8 +25,16 @@ poll_scheduler=BackgroundScheduler(executors={"default": ThreadPoolExecutor(1)})
 def scheduleHandler(id, seconds):
     id = str(id)
     # start this 5 seconds from now
-    runon = datetime.datetime.now()+ datetime.timedelta(seconds=5)
-    poll_scheduler.add_job(pollDataSource, 'interval',args=[id], seconds=seconds, id = id, next_run_time = runon)
+    runon = datetime.datetime.now()+ datetime.timedelta(seconds=5)    
+    if seconds >= 600: 
+        misfire_grace_time=60
+    elif seconds >= 300: 
+        misfire_grace_time=30
+    elif seconds >= 60: 
+        misfire_grace_time=10
+    else:
+        misfire_grace_time=1
+    poll_scheduler.add_job(pollDataSource, 'interval',args=[id], seconds=seconds, id = id, next_run_time = runon, misfire_grace_time=misfire_grace_time)
     
     print("Scheduled pull handler with ID %s"%id)
 
@@ -50,7 +58,7 @@ def pollDataSource(id):
         return
     
     #get the header from the endpoint, and send it off to the workflow
-    x = requests.head(handler.endpoint, allow_redirects=True)
+    x = requests.head(handler.endpoint, allow_redirects=True, verify=False)
     if x.ok:
         data_packet=generateDataPacket(x.headers, "pull",handler.endpoint,handler.incidentid)
         data_packet["status_code"]=x.status_code        
