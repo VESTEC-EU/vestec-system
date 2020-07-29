@@ -548,7 +548,16 @@ function testIncident(incidentID) {
         },
         error: function(response) {            
         }
-    }); 
+    });
+}
+
+function combinePerformanceData(performance_data) {
+  var perf_data_str = "Number of performance data sets: " + performance_data.length + "<br /><br />";
+  for (perf_data of performance_data) {
+    perf_data_str += "Type: " + perf_data.data_type + "<br />";
+    perf_data_str += "Raw data: " + perf_data.raw_json.replace(/"/g, '&quot;') + "<br /><br />";
+  }
+  return perf_data_str;
 }
 
 function loadIncidentDetails(incident) {
@@ -627,6 +636,10 @@ function loadIncidentDetails(incident) {
                 incident_html+="&nbsp;&nbsp;&nbsp;&nbsp;";
                 incident_html+="<img src='../img/cross.png' class='click_button' width=26 height=26 title='Cancel simulation' onClick=\"cancelSimulation('"+sim.uuid+"','"+incident.uuid+"')\">";
             }
+            if (sim.performance_data.length > 0) {
+                incident_html+="&nbsp;&nbsp;&nbsp;&nbsp;";
+                incident_html+="<img src='../img/utilities-system-monitor-4.png' class='click_button' width=26 height=26 title='Show performance data' onClick=\"displayInfoMessageHTML('" + combinePerformanceData(sim.performance_data) + "');\"/>"
+            }
             incident_html+="</td></tr>";
         }
         incident_html+="</table></div>";
@@ -671,6 +684,11 @@ function loadIncidentDetails(incident) {
     incident_html+="<div id=\"workflow_diagram\" class=\"jobDetails self-center\"></div>"    
 
     return incident_html;
+}
+
+function displayInfoMessageHTML(message) {
+    $("#dialog-message-text").html(message);
+    $( "#dialog-message" ).dialog("open");
 }
 
 function displayInfoMessage(message) {

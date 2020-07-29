@@ -11,6 +11,7 @@ from networkx.drawing.nx_agraph import to_agraph
 import datetime
 from operator import itemgetter
 import sys
+import json
 sys.path.append("../")
 from DataManager.client import getInfoForDataInDM, DataManagerException
 
@@ -108,6 +109,22 @@ def packageSimulation(sim):
     simulation_dict["requested_walltime"]=sim.requested_walltime
     if sim.machine is not None:
         simulation_dict["machine"]=sim.machine.machine_name
+
+    perf_data_dicts = []
+    for perf_data in sim.performance_data:
+        try:
+            perf_dict = {}
+            perf_dict["data_type"] = str(perf_data.data_type)
+            perf_dict["raw_json"] = json.dumps(json.loads(perf_data.raw_json))
+
+            perf_data_dicts.append(perf_dict)
+        except Exception as e:
+            # if there's anything wrong with the stored data, continue
+            print("error in adding perf_data: {}".format(e), flush=True)
+            pass
+
+    simulation_dict["performance_data"] = perf_data_dicts
+
     return simulation_dict
 
 def packageDataset(stored_ds):
