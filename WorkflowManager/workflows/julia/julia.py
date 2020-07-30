@@ -4,7 +4,7 @@ from numba import jit
 import datetime
 import os
 
-import workflow
+from manager import workflow
 
 #calculates a julia set (accellerated by numba)
 @jit(nopython=True)

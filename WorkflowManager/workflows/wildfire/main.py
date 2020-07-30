@@ -1,7 +1,7 @@
 import sys
-sys.path.append("../")
-sys.path.append("../../")
-import workflow
+# sys.path.append("../")
+# sys.path.append("../../")
+from manager import workflow
 import pony.orm as pny
 from Database import Incident
 

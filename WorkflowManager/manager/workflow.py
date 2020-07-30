@@ -1,7 +1,7 @@
 import pika
 import functools
 import sys
-sys.path.append("../")
+#sys.path.append("../")
 import json
 import pony.orm as pny
 import uuid

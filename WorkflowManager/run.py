@@ -1,31 +1,32 @@
-import utils
+import sys
+sys.path.append("../")
+#import manager.utils
 import logging
-import workflow
+from manager import workflow
 
 # set the logging level of the workflow logger
 workflow.SetLoggingLevel(logging.DEBUG)
 
 
-import fire
-import MesoNH
-#import julia
-#import quick
-import simple
-import hotspot
-import performance_data
-import wildfire
+
+#from workflows.julia import julia
+#from workflows.quicksort import quicksort
+from workflows.simple import simple
+#import workflowshotspot
+from workflows.performance_data import performance_data
+from workflows.wildfire import wildfire
 
 # set the logging level of the workflow logger
 workflow.SetLoggingLevel(logging.WARNING)
 
 workflow.OpenConnection()
 
-fire.RegisterHandlers()
-MesoNH.RegisterHandlers()
+#fire.RegisterHandlers()
+#MesoNH.RegisterHandlers()
 #julia.RegisterHandlers()
 #quick.RegisterHandlers()
 simple.RegisterHandlers()
-hotspot.RegisterHandlers()
+#hotspot.RegisterHandlers()
 performance_data.RegisterHandlers()
 wildfire.RegisterHandlers()
 

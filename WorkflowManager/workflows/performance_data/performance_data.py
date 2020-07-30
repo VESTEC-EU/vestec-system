@@ -1,7 +1,7 @@
 import sys
 
-sys.path.append("../")
-import workflow
+#sys.path.append("../")
+from manager import workflow
 import os
 import pony.orm as pny
 import requests

@@ -18,7 +18,7 @@ from uuid import uuid4
 import Utils.log as log
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
-from WorkflowManager import workflow
+from WorkflowManager.manager import workflow
 from mproxy.client import Client
 from MachineStatusManager.client import matchBestMachine, MachineStatusManagerException
 import asyncio

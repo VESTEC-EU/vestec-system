@@ -1,20 +1,25 @@
 # Workflow Manager documentation
 
 ## Files
-* `workflow.py` -  Contains the machinery of the workflow. Should be imported by anything that wants to use the workflow functionality
-* `lock.py` - Contains code around making specific handlers atomic. This is automatically imported by workflow.py
-* `persist.py` - Contains code for handlers to persist data. This is automatically imported by workflow.py
-* `manager.py` - This is a process that executes the workflow
-* `fire.py` - Contains example handlers for the forest fire workflow
-* `MesoNH.py` - Contains example handlers for MesoNH workflows
-* `example.py` - Sets off an example forest fire workflow
-* `graph.py` - Given an IncidentID, this will create an image visualising the workflow graph
-* `simulation.py` - Contains functions for recording simulations run on HPC machines to the database. If run directly, periodically checks the statuses of running simulations on the HPC machine, and if completed, will send a message to the workflow notifying it of the finished simulation
-* `julia.py` - example workflow that constructs an image of a Mandelbrot set from many small Julia sets
-* `quick.py` - An implement of the quicksort algorithm using the workflow manager 
+* `manager/`
+   * `workflow.py` -  Contains the machinery of the workflow. Should be imported by anything that wants to use the workflow functionality
+   * `lock.py` - Contains code around making specific handlers atomic. This is automatically imported by workflow.py
+   * `persist.py` - Contains code for handlers to persist data. This is automatically imported by workflow.py
+* `scripts/`
+   * `graph.py` - Given an IncidentID, this will create an image visualising the workflow graph
+   * `killIncidents.py` - kills all active incidents
+
+* `run.py` - This executes the workflow manager
+* `workflows/`
+   * Contains workflows we have implemented so far
+* `Dockerfile` - The dockerfile for the workflow manager
+* `requirements.txt` - Python requirements
+* `hotspots/`
+   * This directory is for temporary data when the wildfire workflow is running. This shoud be removed at a later date
+
 
 ## Requirements
-* The python module `pika` is required. It can be installed with `pip`
+* The python module `pika` is required. It can be installed with `pip`. `requirements.txt` contains the full list of python dependencies.
 * A RabbitMQ server must be installed. One can be started with docker using '`docker run -p 5672:5672 rabbitmq`'
 
 
@@ -60,7 +65,7 @@ If one consumer is executing code inside this region, another consumer will wait
 ## Example Workflow
 Consider we have two nodes connected together called A and B, whose workflow is `Start -> A -> B -> End`. An example code to define and execute the workflow is:
 ```python
-import workflow
+from manager import workflow
 
 #define the handlers for A and B
 @workflow.handler
@@ -104,53 +109,3 @@ if __name__ == "__main__":
     workflow.execute()
 ```
 
-## The Fire and MesoNH workflows
-At present the workflow defined in `MesoNH.py` and `fire.py` (and executed in `example.py`) is very simplified and only represents a skeleton workflow. The handlers only pass on messages to the appropriate parts of the workflow, and do not process anything. The workflow is as shown below:
-
-![workflow](example.png)
-
-In order for the fire simulation to be run it requires three dependencies: terrain data, hotspot data and post-processed output data from MesoNH. In order to obtain the MesoNH output data, we must first collect data from a weather forecast, feed this into MesoNH, then reduce the MesoNH data. The handlers for each of these dependencies send messages to the fire simulation queue to say they have completed their tasks. Each time a message comes into the queue, the fire simulation handler is called and it checks to see if all three dependencies are met. If they are, it runs the simulation, else it does nothing and waits for another message.
-
-If the `remote` argument is passed to `example.py` when it is run, this will request that a dummy fire simulation is run on ARCHER. In this case, the workflow submits the job to ARCHER. Running `simulation.py` will periodically poll ARCHER's queue and when the job is completed, will send a message to the workflow to handle the simulation's results.
-
-## Running the example workflow
-The example contained in `example.py` runs the fire workflow (see above). To run this we first need
-* A running RabbitMQ server (e.g. use a rabbitmq docker container exposing port 5672)
-* `manager.py` to be running (this is the "workflow engine" that listens for messages and executes the handlers)
-
-If we then run `example.py [remote]` it will send messages to the terrain, hotspot and weather data handlers to kickstart the workflow. If we chose the `remote` option, we then want to start `simulation.py` to monitor the queue and alert the workflow manager to the finsihed job. The output from `manager.py` (after everything has finished) should be:
-```
-python manager.py 
- [*] Opening connection to RabbitMQ server
-Database initialised
-
- [*] Workflow Manager ready to accept messages. To exit press CTRL+C 
-
-In weather data handler
-In Fire hotspot handler
-In Fire terrain handler
-In weather simulation handler
-In fire simulation handler
-   Hotspot data available
-Will do nothing - waiting for data
-In fire simulation handler
-   Hotspot data available
-   Terrain data available
-Will do nothing - waiting for data
-In weather results handler
-In fire simulation handler
-   Hotspot data available
-   Terrain data available
-   Weather data available
-Will execute fire simulation remotely
-Connecting to login.archer.ac.uk
-Submitted remote job 6901077.sdb
-Remote simulation results available!
-Connecting to login.archer.ac.uk
-Simulation results are:
---------------------------------------------------------------------------------
-lots of fire - simulated remotely!
---------------------------------------------------------------------------------
-
-
-```

@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import workflow
+from manager import workflow
 import json
 import sys
 import os

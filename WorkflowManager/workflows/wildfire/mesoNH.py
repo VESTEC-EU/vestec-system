@@ -1,12 +1,12 @@
 import sys
-sys.path.append("../")
-sys.path.append("../../")
+# sys.path.append("../")
+# sys.path.append("../../")
 import os
 import requests
 import pony.orm as pny
 import yaml
 import datetime
-import workflow
+from manager import workflow
 from .weatherdata import getLatestURLs
 
 from Database import Incident

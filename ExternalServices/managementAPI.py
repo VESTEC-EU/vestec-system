@@ -19,7 +19,7 @@ from Database.activity import Activity
 from Database.workflow import RegisteredWorkflow, Simulation
 from Database.localdatastorage import LocalDataStorage
 from Database.log import DBLog
-from WorkflowManager import workflow
+from WorkflowManager.manager import workflow
 from pony.orm.serialization import to_dict
 from flask import Flask, request, jsonify, send_file, Response
 import base64

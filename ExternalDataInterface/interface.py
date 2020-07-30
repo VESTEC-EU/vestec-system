@@ -9,7 +9,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import pony.orm as pny
 from Database import initialiseDatabase
 from Database.edistorage import EDIHandler
-from WorkflowManager import workflow
+from WorkflowManager.manager import workflow
 
 from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
 

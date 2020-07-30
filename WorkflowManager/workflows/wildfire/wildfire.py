@@ -1,10 +1,10 @@
 import sys
-sys.path.append("../")
+# sys.path.append("../")
 import pony.orm as pny
 from Database.workflow import Simulation, Incident
 from SimulationManager.client import createSimulation, submitSimulation, SimulationManagerException, cancelSimulation
 from DataManager.client import moveDataViaDM, DataManagerException, getInfoForDataInDM, putByteDataViaDM, registerDataWithDM, copyDataViaDM
-import workflow
+from manager import workflow
 import yaml
 import datetime
 

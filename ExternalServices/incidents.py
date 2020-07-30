@@ -1,4 +1,4 @@
-from WorkflowManager import workflow
+from WorkflowManager.manager import workflow
 from Database.users import User
 from Database.workflow import Incident, RegisteredWorkflow, MessageLog, StoredDataset
 from Database.DataManager import DataTransfer
