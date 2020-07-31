@@ -1,7 +1,6 @@
 import pika
 import functools
 import sys
-#sys.path.append("../")
 import json
 import pony.orm as pny
 import uuid
@@ -9,16 +8,10 @@ import datetime
 import time
 import os
 
-try:
-#     from .db import db, MessageLog, Incident, initialise_database, initialiseDatabase
-    from . import utils
-    from . import persist
-    from .lock import atomic, _CleanLock
-except Exception: #ImportError
-#     from db import db, MessageLog, Incident, initialise_database, initialiseDatabase
-    import utils
-    import persist
-    from lock import atomic, _CleanLock
+
+from . import utils
+from . import persist
+from .lock import atomic, _CleanLock
 
 
 from Database.workflow import MessageLog, Incident

@@ -88,7 +88,7 @@ def putByteDataViaDM(filename, machine, description, type, originator, payload, 
     if response.status_code == 201:
         if associate_with_incident:
             if comment is None: comment=description
-            _associateDataWithIncident(incidentId, returnUUID.text, filename, kind, comment)
+            _associateDataWithIncident(incidentId, response.text, filename, kind, comment)
         return response.text
     else:
         raise DataManagerException(response.status_code, response.text)

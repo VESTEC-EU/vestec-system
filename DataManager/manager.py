@@ -521,7 +521,7 @@ def _put_data_to_location(data_payload, data_uuid, gather_metrics):
                 newFile.write(data_payload)
                 newFile.close()
             elif registered_data.storage_technology == "VESTECDB":                
-                new_data_item=LocalDataStorage(contents=data_payload, filename=target_dest, filetype="")            
+                new_data_item=LocalDataStorage(contents=data_payload, filename=target_dest, filetype=registered_data.type)            
         else:
             asyncio.run(submit_remote_put_data(registered_data.machine, data_payload, target_dest))
         if gather_metrics:

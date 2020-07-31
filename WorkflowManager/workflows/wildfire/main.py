@@ -1,6 +1,4 @@
 import sys
-# sys.path.append("../")
-# sys.path.append("../../")
 from manager import workflow
 import pony.orm as pny
 from Database import Incident
@@ -65,9 +63,11 @@ def wildfire_shutdown_response(msg):
     if (mesoNHFinished and hotspotFinished): workflow.Cancel(msg["IncidentID"])
 
 def RegisterHandlers():
+    print("registering handlers")
     workflow.RegisterHandler(handler = wildfire_init,queue="wildfire_init")
     workflow.RegisterHandler(handler = wildfire_shutdown,queue="wildfire_shutdown")
     workflow.RegisterHandler(handler = wildfire_shutdown_response,queue="wildfire_shutdown_response")
     hotspots.RegisterHandlers()
     mesoNH.RegisterHandlers()
     wildfire.RegisterHandlers()
+    print("Done")

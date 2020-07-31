@@ -12,7 +12,7 @@ from Database import LocalDataStorage
 import geopandas as gpd
 import time
 from ExternalDataInterface.client import registerEndpoint, ExternalDataInterfaceException, removeEndpoint
-from DataManager.client import downloadDataToTargetViaDM, registerDataWithDM, DataManagerException, getLocalFilePathPrepend
+from DataManager.client import downloadDataToTargetViaDM, registerDataWithDM, DataManagerException, getLocalFilePathPrepend, putByteDataViaDM, getByteDataViaDM
 
 from Database import Incident
 
@@ -20,27 +20,19 @@ from Database import Incident
 ######### ATTENTION #################
 #For this to work, you need to have a subdirectory inside WorkflwoManager called `hotspots`
 #
-# For each incident a directory is in hotspots. This directory will contain
+# For each incident a directory is created in hotspots. This directory will contain
 # - a MODIS directory for MODIS data
 # - a VIIRS directory for VIIRS data
 # Each sensor's directory will then contain subdirectories for each input data timestamp
-# These subdirectories will contain an input and output directory with the shape file
-# downloaded from the internet in input, and the geojson in the output
+# These directories will contain the downloaded satellite data
 # The directory structure for an incident is therefore:
 #   .
 # ├──   MODIS
 # │  └──   2020-05-21_144339
-# │     ├──   input
-# │     │  └──   MODIS_C6_Europe_48h.zip
-# │     └──   output
-# │        └──   MODIS_hotspots.json
-# │        
+# │     
 # └──   VIIRS
 #    └──   2020-05-21_144900
-#       ├──   input
-#       │  └──   VNP14IMGTDL_NRT_Europe_48h.zip
-#       └──   output
-#          └──   VIIRS_hotspots.json
+#      
 #
 # Presently you run a workflow by executing this file. It will create a new incident, register pull handlers on the EDI and will generate hotspots for the specified region.
 
@@ -53,8 +45,9 @@ VIIRSurl = "https://vestec.wildfireanalyst.com/static/hotspots/viirs_suominpp_10
 
 hotspotEndpoint="WFAHotspot"
 
-#set up the hotspots workdir
-wkdir = os.path.abspath("hotspots")
+#set the hotspots workdir
+#EVENTUALLY THIS SHOULD BE IN A MOUNTED, PERSISTED LOCATION VISIBLE TO ALL CONTAINERS 
+wkdir = os.path.abspath("workflows/wildfire/hotspots")
 
 @workflow.handler
 def wildfire_hotspot_init_standalone(msg):
@@ -72,15 +65,13 @@ def _handle_init(msg):
     incident = msg["IncidentID"]
     
     #make the working directory for this incident
-    os.mkdir(os.path.join(wkdir,incident))
+    os.makedirs(os.path.join(wkdir,incident),exist_ok = True)
 
     #make sure the coordinates are in the incident DB
     with pny.db_session:
         i = Incident[incident]
         if i.lower_right_latlong == "" or i.upper_left_latlong=="":
             raise ValueError("Region coordinates not provided with incident")
-
-    # workflow.setIncidentActive(incident)
 
     #register EDI to poll for MODIS data
     try:
@@ -150,32 +141,35 @@ def wildfire_modis_newdata(msg):
     if not check_exists(persisted,modified,type="MODIS"):
         print("\nNew data for MODIS! - %s"%modified)
         
-        #create the needed directories
+        #create the directory for this timestamp
         datestr = parse_timestamp(modified)
-        
         basedir = os.path.join(wkdir,incident,"MODIS",datestr)
-        filedir = os.path.join(basedir,"input")
 
-        os.makedirs(getLocalFilePathPrepend()+filedir,exist_ok=True)
+        os.makedirs(getLocalFilePathPrepend()+basedir,exist_ok=True)
         
-        #select the filename (with full path) for the file to be downloaded
-        filename = os.path.join(filedir,os.path.basename(MODISurl))
+        #Thefilename (with full path) for the file to be downloaded
+        filename = os.path.join(basedir,os.path.basename(MODISurl))
+
+        name = os.path.basename(MODISurl)
+        path = basedir
         
-        #instruct its download
-        dm_download(file = filename,
-                    machine = "localhost",
-                    description = "MODIS input datafile for %s"%modified,
-                    type="application/zip",
-                    originator = "hotspot MODIS hadler",
-                    group = "hotspot",
-                    url = MODISurl,
-                    incident = incident)
+        downloadDataToTargetViaDM(filename=name,
+                                  path=path,
+                                  machine="localhost",
+                                  description = "MODIS input datafile for %s"%modified, 
+                                  type = "application/zip", 
+                                  originator = "hotspot MODIS handler",
+                                  url= MODISurl,
+                                  protocol = "http",
+                                  group = "hotspot",
+                                  storage_technology="FILESYSEM",
+                                  associate_with_incident=True, 
+                                  incidentId=incident)
         
         #unzip it
-        unzip(filename, filedir)
+        unzip(filename, basedir)
                      
-        
-        #persist this new timestamp (and the file)
+        #persist this new timestamp (and the filename)
         d = {
             "modified": modified,
             "filename": filename,
@@ -189,7 +183,6 @@ def wildfire_modis_newdata(msg):
             "baseDir": basedir,
             "inputFile": filename,
             "sensor": "MODIS",
-            "regionFile": os.path.join(wkdir,incident,"region","northern_italy.shp"),
             "date": modified
         }
         workflow.send(msg,"wildfire_process_hotspots")
@@ -211,31 +204,34 @@ def wildfire_viirs_newdata(msg):
     if not check_exists(persisted,modified,type="VIIRS"):
         print("\nNew data for VIIRS! - %s"%modified)
         
-        #create the needed directories
+        #create the directory to download into
         datestr = parse_timestamp(modified)
-        
         basedir = os.path.join(wkdir,incident,"VIIRS",datestr)
-        filedir = os.path.join(basedir,"input")
 
-        os.makedirs(getLocalFilePathPrepend()+filedir,exist_ok=True)
+        os.makedirs(getLocalFilePathPrepend()+basedir,exist_ok=True)
         
-        #select the filename (with full path) for the file to be downloaded
-        filename = os.path.join(filedir,os.path.basename(VIIRSurl))
+        #get the filename (with full path) for the file to be downloaded
+        filename = os.path.join(basedir,os.path.basename(VIIRSurl))
+
+        name = os.path.basename(VIIRSurl)
+        path = basedir
         
-        #instruct its download
-        dm_download(file = filename,
-                    machine = "localhost",
-                    description = "VIIRS input datafile for %s"%modified,
-                    type="application/zip",
-                    originator = "hotspot VIIRS hadler",
-                    group = "hotspot",
-                    url = VIIRSurl,
-                    incident = incident)
+        downloadDataToTargetViaDM(filename=name,
+                                  path=path,
+                                  machine="localhost",
+                                  description = "VIIRS input datafile for %s"%modified, 
+                                  type = "application/zip", 
+                                  originator = "hotspot VIIRS handler",
+                                  url= VIIRSurl,
+                                  protocol = "http",
+                                  group = "hotspot",
+                                  storage_technology="FILESYSEM",
+                                  associate_with_incident=True, 
+                                  incidentId=incident)
         
         #unzip it
-        unzip(filename, filedir)
+        unzip(filename, basedir)
                      
-        
         #persist this new timestamp (and the file)
         d = {
             "modified": modified,
@@ -250,7 +246,6 @@ def wildfire_viirs_newdata(msg):
             "baseDir": basedir,
             "inputFile": filename,
             "sensor": "VIIRS",
-            "regionFile": os.path.join(wkdir,incident,"region","northern_italy.shp"),
             "date": modified
         }
         workflow.send(msg,"wildfire_process_hotspots")
@@ -284,28 +279,30 @@ def wildfire_process_hotspots(msg):
         raise ValueError("Unable to parse region coordinates") from e
 
     points = [lonmin,latmax,lonmax,latmin]
-
     
-    #This needs to be taken from the Incident table in the DB eventually
-    # print(points)
-    # print([1.8347167968750002, 53.38332836757156, 11.744384765625, 48.75618876280552])
-    #points = [1.8347167968750002, 53.38332836757156, 11.744384765625, 48.75618876280552]
+    #extract the hotspots from the data
+    hotspots = extract_hotspots(points=points,inputshp = inputfile,sensor = sensor, outputdir=outputdir)
+
+    json_contents=json.dumps(hotspots,indent=1)
+
+    filename = "%s_hotspots.json"%sensor
+    path = getLocalFilePathPrepend()+outputdir
     
-    #make the directry to place the hotspots files
-    os.mkdir(getLocalFilePathPrepend()+outputdir)
+    #write this json data to the VESTECDB local data storage
+    id = putByteDataViaDM(filename = filename, 
+                     machine = "localhost", 
+                     description = "%s hotspots for region on %s"%(sensor,date), 
+                     type = "application/json", 
+                     originator = "process hotspots handler", 
+                     payload = json_contents.encode("ascii"), 
+                     group = "hotspot", 
+                     storage_technology="VESTECDB", 
+                     path=path, 
+                     associate_with_incident=True, 
+                     incidentId=incident
+                     )
 
-    outfile = extract_hotspots(points=points,inputshp = inputfile,sensor = sensor, outputdir=outputdir)
-
-    fileID = dm_register(file=outfile,
-                machine="localhost",
-                description = "%s hotspots for region on %s"%(sensor,date),
-                originator = "process hotspots handler",
-                type="application/json",
-                group = "hotspot",
-                storage_technology= "VESTECDB",
-                incident = incident)
-
-    #clean up files we no longer need
+    #clean up files we no longer need (the shape files extracted from the zip)
     removedir = os.path.dirname(inputfile)
     files = os.listdir(getLocalFilePathPrepend()+removedir)
     toremove = []
@@ -316,9 +313,12 @@ def wildfire_process_hotspots(msg):
         print("Deleting %s"%file)
         os.remove(os.path.join(getLocalFilePathPrepend()+removedir,file))
 
+    outfile = os.path.join(path,filename)
+
     message = {
         "IncidentID": incident,
         "file": outfile,
+        "file_id": id,
         "date": date
     }
 
@@ -330,19 +330,20 @@ def wildfire_consolidate_hotspots(msg):
     incident = msg["IncidentID"]
     hotspotsfile = msg["file"]
     date = msg["date"]
+    file_id = msg["file_id"]
     
-    #open the new hotspots file and read them in
-    with open(getLocalFilePathPrepend()+hotspotsfile,"r") as f:
-            newhotspots=json.load(f)
+    #Get the data from the new hotspots file from the DM
+    json_data = getByteDataViaDM(file_id).decode("ascii")
+    newhotspots = json.loads(json_data)
     
-
     consolidated = workflow.Persist.Get(incident)
     
-    #get the latest consolidated hotspot data
+    #get the latest consolidated hotspot data from the DM
     if len(consolidated) != 0:
-        latestfile = consolidated[-1]["file"]
-        with open(getLocalFilePathPrepend()+latestfile,"r") as f:
-            hotspots=json.load(f)
+        fid = consolidated[-1]["file_id"]
+        json_data = getByteDataViaDM(fid).decode("ascii")
+        hotspots = json.loads(json_data)
+        
 
     #no existing hotspot data
     if len(consolidated) == 0:
@@ -364,47 +365,34 @@ def wildfire_consolidate_hotspots(msg):
 
         basedir = os.path.join(wkdir,incident,"consolidated",timestamp)
 
-        os.makedirs(getLocalFilePathPrepend()+basedir,exist_ok=True)
-
         file = os.path.join(basedir,"hotspots.json")
 
         contents = json.dumps(hotspots,indent=1)
 
-        with open(getLocalFilePathPrepend()+file,"w") as f:
-            f.write(contents)
+        #store the new consolidated hotspots in the database
+        id = putByteDataViaDM(filename = "hotspots.json", 
+                     path=basedir, 
+                     machine = "localhost", 
+                     description = "Consolidated hotspots for region on %s"%(date), 
+                     type = "application/json", 
+                     originator = "consolidate hotspots handler", 
+                     payload = contents.encode("ascii"), 
+                     group = "hotspot", 
+                     storage_technology="VESTECDB", 
+                     associate_with_incident=True, 
+                     incidentId=incident
+                     )
 
-        with pny.db_session:
-            print("File name is "+file)
-            fileobj = LocalDataStorage.get(filename = file)
-            if fileobj is None:
-                new_file = LocalDataStorage(contents=contents.encode("ascii"), filename=file, filetype="application/json")
-                needRegister=True
-            else:
-                needRegister=False
-                fileobj.contents=contents.encode("ascii")
         
-        if needRegister:
-            fileID = dm_register(file=file,
-                machine="localhost",
-                description = "Consolidated hotspots for region on %s"%(date),
-                originator = "consolidate hotspots handler",
-                type="application/json",
-                group = "hotspot",
-                storage_technology= "VESTECDB",
-                incident = incident)
+        nhot = len(hotspots["features"])
 
-        print("\nConsolidate hotspots: Created new consolidated hotspots file for %s with %d new hotspots"%(date,added))
+        print("\nConsolidate hotspots: Created new consolidated hotspots file for %s with %d new hotspots, %d total"%(date,added,nhot))
 
-        workflow.Persist.Put(incident,{"file": file, "date": date})
+        workflow.Persist.Put(incident,{"file": file, "date": date, "file_id": id})
 
     else:
         print("\nConsolidate hotspots: No new hotspots")
         
-
-
-
-
-
 
 
 def check_exists(persisted,modified,type):
@@ -425,36 +413,7 @@ def zip(files,target):
     for f in files:
         file.write(getLocalFilePathPrepend()+f)
     file.close()
-
-#register a file with the DM
-def dm_register(file,machine,description,type,originator,group, incident, storage_technology):
-    print("Registering %s with DataManager"%file)
-    path, filename = os.path.split(file)
-
-    if storage_technology == "VESTECDB":
-        with pny.db_session:
-            fileobj = LocalDataStorage.get(filename = file)
-            size = len(fileobj.contents)
-    else:
-        size = os.path.getsize(file)
-
-    try:
-        return registerDataWithDM(filename, machine, description, type, size, originator, group = group, storage_technology=storage_technology, path=path, 
-            associate_with_incident=True, incidentId=incident, kind=group)
-    except DataManagerException as err:
-        print("Error registering data with DM, "+err.message)
-        return None
-
-#download a file with the DM
-def dm_download(file,machine,description,type,originator,group,url,incident):
-    print("Asking dm to download %s"%url)
-    path, filename = os.path.split(file)
-
-    try:
-        downloadDataToTargetViaDM(filename, machine, description, type, originator, url, "http", group = group, path=path, 
-            associate_with_incident=True, incidentId=incident, kind=group)
-    except DataManagerException as err:
-        print("Error downloading data to target machine, "+err.message)        
+ 
 
 #from a MODIS/VIIRS "modified" timestamp, produce a more 'friendly' datestring
 def parse_timestamp(datestr):
@@ -534,24 +493,11 @@ def extract_hotspots(points, inputshp, sensor, outputdir):
     d["type"] = "FeatureCollection"
     d["crs"] = data["crs"]
     d["features"] = hotspots
-
-    outfile = os.path.join(outputdir,"%s_hotspots.json"%sensor)
-    
-    contents=json.dumps(d,indent=1)
-
-    #write file to disk so it can be used in future workflow stages
-    # WE NEED A WAY OF GETTING DATA BACK FROM THE DM
-    f=open(getLocalFilePathPrepend()+outfile,"w")
-    f.write(contents)
-    f.close()
-
-    with pny.db_session:
-        new_file = LocalDataStorage(contents=contents.encode("ascii"), filename=outfile, filetype="application/json")    
     
     #delete the input json file (no longer needed)
     os.remove(getLocalFilePathPrepend()+inputjson)
 
-    return outfile
+    return d
 
 
 @workflow.handler
@@ -591,13 +537,4 @@ def RegisterHandlers():
     workflow.RegisterHandler(wildfire_tecnosylva_hotspots,"wildfire_tecnosylva_hotspots")
     workflow.RegisterHandler(wildfire_consolidate_hotspots,"wildfire_consolidate_hotspots")
 
-#kick off an incident for the hotspot workflow
-if __name__ == "__main__":
-    upperLeft = "1.8347167968750002/53.38332836757156"
-    lowerRight = "11.744384765625/48.75618876280552"
-    incident = workflow.CreateIncident("hotspot", "test_hotspot",upper_left_latlong=upperLeft,lower_right_latlong=lowerRight)
 
-    workflow.OpenConnection()
-    workflow.send({"IncidentID": incident},"hotspot_init")
-    workflow.FlushMessages()
-    workflow.CloseConnection()

@@ -1,5 +1,4 @@
 import sys
-# sys.path.append("../")
 import pony.orm as pny
 from Database.workflow import Simulation, Incident
 from SimulationManager.client import createSimulation, submitSimulation, SimulationManagerException, cancelSimulation
@@ -66,7 +65,7 @@ def wildfire_fire_simulation(msg):
 
         try:
             callbacks = {'COMPLETED': 'wildfire_fire_results'}
-            sim_id=createSimulation(IncidentID, 1, "0:05:00", "Wildfire simulation", "wfa.sh", queuestate_callbacks=callbacks, template_dir="templates/wildfire_template")
+            sim_id=createSimulation(IncidentID, 1, "0:05:00", "Wildfire simulation", "wfa.sh", queuestate_callbacks=callbacks, template_dir="workflows/wildfire/templates/wildfire_template")
             with pny.db_session:
                 simulation=Simulation[sim_id]    
                 machine_name=simulation.machine.machine_name
@@ -96,7 +95,7 @@ def _buildWFAYaml(incidentId, weather_datainfo):
     upperLeftLon, upperLeftLat = upperLeft.split("/")
     lowerRightLon, lowerRightLat = lowerRight.split("/")
 
-    sample_configuration_file = open("wildfire/templates/wfa.yml")
+    sample_configuration_file = open("workflows/wildfire/templates/wfa.yml")
     yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)    
     yaml_template["upperleft"]["lat"]=float(upperLeftLat)
     yaml_template["upperleft"]["lon"]=float(upperLeftLon)
@@ -194,7 +193,7 @@ def _buildWFAPostYaml(incidentId, simulation_directory, machine_basedir):
 
     if simulation_directory[-1] != "/": simulation_directory+="/"
 
-    sample_configuration_file = open("wildfire/templates/wfapost.yml")
+    sample_configuration_file = open("workflows/wildfire/templates/wfapost.yml")
     yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)    
     yaml_template["normal_gtif"]["path"]=machine_basedir+simulation_directory+"test_Fire_Best.tif"
     yaml_template["fireshed_gtif"]["path"]=machine_basedir+simulation_directory+"test_FireShed_Best.tif"

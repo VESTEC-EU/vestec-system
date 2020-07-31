@@ -14,8 +14,6 @@
    * Contains workflows we have implemented so far
 * `Dockerfile` - The dockerfile for the workflow manager
 * `requirements.txt` - Python requirements
-* `hotspots/`
-   * This directory is for temporary data when the wildfire workflow is running. This shoud be removed at a later date
 
 
 ## Requirements
