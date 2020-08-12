@@ -1,0 +1,4 @@
+FROM nginx
+EXPOSE 80
+COPY default-local.conf /etc/nginx/conf.d/
+CMD ["nginx", "-g", "daemon off;"]
