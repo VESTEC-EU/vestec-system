@@ -12,7 +12,7 @@ from Database.generate_db import initialiseStaticInformation
 from Database.machine import Machine
 from Database.queues import Queue
 from Database.users import User
-from Database.workflow import RegisteredWorkflow, Simulation
+from Database.workflow import RegisteredWorkflow, Simulation, Incident
 import datetime
 from uuid import uuid4
 import Utils.log as log
@@ -33,6 +33,36 @@ logger = log.VestecLogger("Simulation Manager")
 @app.route("/SM/health", methods=["GET"])
 def get_health():
     return jsonify({"status": 200}), 200
+
+@app.route("/SM/info/<simulation_id>",methods=["GET"])
+@pny.db_session
+def get_sim_info(simulation_id):
+    try:
+        sim = Simulation[simulation_id]
+    except pny.core.ObjectNotFound:
+        return "No simulation matching %s found"%simulation_id, 404
+    
+    d = {}
+    d["uuid"] = simulation_id
+    d["IncidentID"] = sim.incident.uuid
+    d["date_created"] = str(sim.date_created)
+    d["status"] = sim.status
+    d["status_updated"] = str(sim.status_updated)
+    d["directory"] = sim.directory
+    d["status_message"] = sim.status_message
+    d["machine"] = sim.machine.machine_name
+    d["queue"] = sim.queue
+    d["jobID"] = sim.jobID
+    d["wkdir"] = sim.wkdir
+    d["executable"] = sim.executable
+    d["kind"] = sim.kind
+    d["results_handler"] = sim.results_handler
+    d["requested_walltime"] = sim.requested_walltime
+    d["walltime"] = sim.walltime
+    d["num_nodes"] = sim.num_nodes
+
+    return json.dumps(d), 200
+
 
 @app.route("/SM/refresh/<simulation_id>", methods=["POST"])
 @pny.db_session
@@ -119,17 +149,27 @@ def create_job():
         template_dir = ""
 
     try:                
-        matched_machine_id=matchBestMachine(requested_walltime, num_nodes)        
-        stored_machine=Machine.get(machine_id=matched_machine_id)                
+        matched_machine_id=matchBestMachine(requested_walltime, num_nodes)   
+        stored_machine=Machine.get(machine_id=matched_machine_id)        
         asyncio.run(create_job_on_machine(stored_machine.machine_name, directory, template_dir))        
         job_status="CREATED"
+        
     except MachineStatusManagerException as err:        
         job_status="ERROR"
         status_message="Error allocating machine to job, "+err.message
         stored_machine=None
         return "Error allocating job to machine", 400
-
-    simulation = Simulation(uuid=uuid, incident=incident_id, kind=kind, date_created=datetime.datetime.now(), num_nodes=num_nodes, 
+    except asyncio.exceptions.TimeoutError:
+        return "Timeout contating remote machine", 504
+    
+    #fetch incident, make sure it exists
+    try:
+        incident = Incident[incident_id]
+    except pny.core.ObjectNotFound:
+        return "Invalid IncidentID", 500
+    
+    #create simulation in the DB
+    simulation = Simulation(uuid=uuid, incident=incident, kind=kind, date_created=datetime.datetime.now(), num_nodes=num_nodes, 
                     requested_walltime=requested_walltime, executable=executable, status=job_status, status_updated=datetime.datetime.now(), directory=directory)
     if (job_status=="ERROR"):
         simulation.status_message=status_message
@@ -137,15 +177,15 @@ def create_job():
         simulation.machine=stored_machine
     if ("queuestate_calls" in data):
         for key, value in data["queuestate_calls"].items():
-            simulation.queue_state_calls.create(queue_state=key, call_name=value)    
+            simulation.queue_state_calls.create(queue_state=key, call_name=value)  
     
     return jsonify({"simulation_id": uuid}), 201
 
 async def create_job_on_machine(machine_name, directory, simulation_template_dir):        
-    client = await Client.create(machine_name)
-    mk_directory=await client.mkdir(directory, "-p")
+    client = await asyncio.wait_for(Client.create(machine_name),timeout=3.0)
+    mk_directory=await asyncio.wait_for(client.mkdir(directory, "-p"),timeout=3.0)
     if (simulation_template_dir != ""):    
-        copy_template_submission = await client.cp(simulation_template_dir+"/*", directory, "-R")    
+        copy_template_submission = await asyncio.wait_for(client.cp(simulation_template_dir+"/*", directory, "-R"),timeout=3.0)    
 
 @pny.db_session
 def poll_outstanding_sim_statuses():
@@ -200,7 +240,6 @@ def issueWorkFlowStageCalls(workflow_stages_to_run):
             origionatorPrettyStr="Simulation Ending"
         elif wf_call["status"] == "HELD":
             origionatorPrettyStr="Simulation Held"
-
         workflow.send(message=msg, queue=wf_call["targetName"], providedCaller=origionatorPrettyStr)
 
     workflow.FlushMessages()
