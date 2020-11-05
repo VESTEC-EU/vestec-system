@@ -26,7 +26,7 @@ def dm_tests_complete(msg):
 
     workflow.send(msg,"run_tests")
 
-
+#creates testfile1.txt
 @workflow.handler
 def dm_tests_register(msg):
     incident = msg["IncidentID"]
@@ -95,6 +95,7 @@ def dm_tests_retreive(msg):
 
     workflow.send(msg,"dm_tests_copy")
 
+#copies testfile1.txt to testfile2.txt
 @workflow.handler
 def dm_tests_copy(msg):
     incident = msg["IncidentID"]
@@ -106,7 +107,7 @@ def dm_tests_copy(msg):
     file1id = msg["file1"]
 
     try:
-        file2id=client.copyDataViaDM(file1id,os.path.join(dir,fname),"localhost")
+        file2id=client.copyDataViaDM(file1id,os.path.join(dir,fname),"localhost",associate_with_incident=True, incident=incident)
     except client.DataManagerException as e:
         print(e.message)
         logTest("dm_copy","FAIL",logdir,e.message)
@@ -144,7 +145,7 @@ def dm_tests_copy(msg):
     workflow.send(msg,"dm_tests_move")
     
 
-
+#moves testfile2.txt to testfile3.txt
 @workflow.handler
 def dm_tests_move(msg):
     incident = msg["IncidentID"]
@@ -209,18 +210,21 @@ def dm_tests_search(msg):
     dir = os.path.abspath(logdir)
     
     try:
-        #print(os.listdir(dir))
-        result = client.searchForDataInDM("testfile1.txt","localhost","dir")
+        result = client.searchForDataInDM("testfile1.txt","localhost",dir)
     except client.DataManagerException as e:
-        #print(e)
-        logTest("dm_search","FAIL",logdir,"Unable to locate file with search")
+        logTest("dm_search","FAIL",logdir,"Unable to locate file with search: %s"%e.message)
         msg["total_tests"]+=1
         msg["failed_tests"]+=1
     else:
-        print(result)
-        logTest("dm_search","PASS",logdir)
-        msg["total_tests"]+=1
-        msg["passed_tests"]+=1
+        if result["id"] == msg["file1"]:
+            logTest("dm_search","PASS",logdir)
+            msg["total_tests"]+=1
+            msg["passed_tests"]+=1
+        else:
+            logTest("dm_search","FAIL",logdir,"Wrong file id returned. Got %s. Should be %s"%(result["id"],msg["file1"]))
+            msg["total_tests"]+=1
+            msg["failed_tests"]+=1
+
     
     workflow.send(msg,"dm_tests_put")
 

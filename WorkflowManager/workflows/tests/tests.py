@@ -8,6 +8,12 @@ from .utils import logfile
 
 
 from DataManager.client import getLocalFilePathPrepend
+from DataManager import client
+
+from Utils.log import VestecLogger
+from Database import LogType
+
+logger = VestecLogger("Testsuite")
 
 import os
 
@@ -26,6 +32,8 @@ def init_tests(msg):
     incident = msg["IncidentID"]
 
     logdir = os.path.join(getLocalFilePathPrepend(),"test_results",incident)
+
+    logger.Log(type=LogType.Activity,comment="Started tests",incidentId=incident)
 
     os.makedirs(logdir)
 
@@ -83,6 +91,25 @@ def run_tests(msg):
 @workflow.handler
 def abort_tests(msg):
     incident = msg["IncidentID"]
+    logdir = msg["logdir"]
+
+    logger.Log(type="error",comment="Tests aborted due to error",incidentId=incident)
+
+    try:
+        client.registerDataWithDM(filename="tests.log",
+                                machine = "localhost",
+                                description = "Test results",
+                                type = "text",
+                                size = os.path.getsize(os.path.join(logdir,"tests.log")),
+                                originator = "complete_tests",
+                                path = logdir,
+                                associate_with_incident=True,
+                                incidentId=incident)
+    except client.DataManagerException:
+        workflow.logger.warn("Unable to register test results with DM")
+        logger.Log(type=LogType.Error,comment="Unable to register test results with DM",incidentId=incident)
+    
+
     workflow.Cancel(incident)
 
 
@@ -99,6 +126,23 @@ def complete_tests(msg):
         f.write("  Passed = %d\n"%msg["passed_tests"])
         f.write("  Failed = %d\n"%msg["failed_tests"])
         f.write("  Total  = %d\n"%msg["total_tests"])
+    
+    logger.Log(type=LogType.Activity,comment="Tests complete",incidentId=incident)
+    
+    try:
+        client.registerDataWithDM(filename="tests.log",
+                                machine = "localhost",
+                                description = "Test results",
+                                type = "text",
+                                size = os.path.getsize(os.path.join(logdir,"tests.log")),
+                                originator = "complete_tests",
+                                path = logdir,
+                                associate_with_incident=True,
+                                incidentId=incident)
+    except client.DataManagerException:
+        workflow.logger.warn("Unable to register test results with DM")
+        logger.Log(type=LogType.Error,comment="Unable to register test results with DM",incidentId=incident)
+    
     
     workflow.Complete(incident)
 

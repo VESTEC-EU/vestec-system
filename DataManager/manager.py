@@ -26,19 +26,25 @@ NOT_IMPLEMENTED = 2
 def get_health():
     return flask.jsonify({"status": 200}), 200
 
+#searches for data object with filename, machine and directory.
+# at the moment can only return 1 result (changeme?)
 @app.route("/DM/search",methods=["GET"])
 @pny.db_session
 def search():
     filename=flask.request.args.get("filename", None)
     path=flask.request.args.get("path", None)
     machine=flask.request.args.get("machine", None)
+    print(filename,machine,path)
     if filename is None or machine is None:
         return "Need filename and machine", 501
     else:        
-        if path is not None:
-            data_obj=Data.get(filename=filename, machine=machine, path=path)
-        else:
-            data_obj=Data.get(filename=filename, machine=machine)
+        try:
+            if path is not None:
+                data_obj=Data.get(filename=filename, machine=machine, path=path)
+            else:
+                data_obj=Data.get(filename=filename, machine=machine)
+        except pny.core.MultipleObjectsFoundError:
+            return "Multiple search results found", 400
         if data_obj is None:
             return "No such data object registered", 404
         else:

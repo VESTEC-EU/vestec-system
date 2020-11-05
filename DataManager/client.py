@@ -1,7 +1,7 @@
 import os
 import requests
 import pony.orm as pny
-from Database import Incident
+from Database import Incident, StoredDataset
 import datetime
 
 class DataManagerException(Exception):
@@ -37,9 +37,10 @@ def registerDataWithDM(filename, machine, description, type, size, originator, g
         raise DataManagerException(returnUUID.status_code, returnUUID.text)
 
 def searchForDataInDM(filename, machine, path=None):
-    appendStr="filename="+machine+"&machine="+machine
+    appendStr="filename="+filename+"&machine="+machine
     if path is not None:
-        appendStr+="path="+path
+        appendStr+="&path="+path
+
     foundDataResponse = requests.get(_get_DM_URL()+'/search?'+appendStr)
     if foundDataResponse.status_code == 200:
         return foundDataResponse.json()
@@ -132,20 +133,33 @@ def moveDataViaDM(data_uuid, dest_name, dest_machine, dest_storage_technology=No
 
     response=requests.post(_get_DM_URL()+'/move/'+data_uuid, data=arguments)
     if response.status_code == 201:
+        id = response.text
+        #if this file is associated with an incident make sure its filename is updated in the database 
+        _renameAssociatedData(id, os.path.split(dest_name)[1])
         return response.text
     else:
         raise DataManagerException(response.status_code, response.text)
 
-def copyDataViaDM(data_uuid, dest_name, dest_machine, dest_storage_technology=None, gather_metrics=True):
+def copyDataViaDM(data_uuid, dest_name, dest_machine, dest_storage_technology=None, gather_metrics=True,associate_with_incident=False, incident=None, kind=""):
     arguments = {   'dest': dest_name, 
                     'machine':dest_machine,
                     'gather_metrics':gather_metrics }
     if dest_storage_technology is not None:
         arguments["storage_technology"]=dest_storage_technology
 
+    if associate_with_incident and incident is None:
+        raise DataManagerException(400, "Must supply an incident ID when associating dataset with an incident")
+
     response=requests.post(_get_DM_URL()+'/copy/'+data_uuid, data=arguments)
     if response.status_code == 201:
-        return response.text
+        id = response.text
+        #if requested, make sure this copy is associated with the requested incident
+        if associate_with_incident: 
+            data = getInfoForDataInDM(id)
+            name = data["filename"]
+            comment = "Copy of %s"%(data_uuid)
+            _associateDataWithIncident(incident, id, name, kind, comment)
+        return id
     else:
         raise DataManagerException(response.status_code, response.text)
 
@@ -179,3 +193,14 @@ def _get_DM_URL():
 def _associateDataWithIncident(IncidentID, data_uuid, name, type, comment):
     incident=Incident[IncidentID]
     incident.associated_datasets.create(uuid=data_uuid, name=name, type=type, comment=comment, date_created=datetime.datetime.now())
+
+#If a file is moved, make sure that it's filaname in the StoredDataset table is correct 
+@pny.db_session
+def _renameAssociatedData(data_uuid, newname):
+    try:
+        dataset = StoredDataset.get(uuid=data_uuid)
+        dataset.name = newname
+    except pny.core.ObjectNotFound:
+        pass
+    
+    

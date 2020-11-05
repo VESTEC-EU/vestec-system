@@ -14,6 +14,16 @@ def workflow_tests_init(msg):
     workflow.send(msg,"workflow_tests_persist")
 
 
+@workflow.handler
+def workflow_tests_complete(msg):
+    incident = msg["IncidentID"]
+    logdir = msg["logdir"]
+
+   
+
+    workflow.send(msg,"complete_tests")
+
+
 #calls itself repetedly until it has been called 10 times. Calculates the sum of the first 10 Fibonacci numbers
 @workflow.handler
 def workflow_tests_persist(msg):
@@ -52,15 +62,7 @@ def workflow_tests_persist(msg):
         workflow.send(msg,"run_tests")
 
 
-@workflow.handler
-def workflow_tests_complete(msg):
-    incident = msg["IncidentID"]
-    logdir = msg["logdir"]
 
-    with logfile(logdir) as f:
-        f.write("Workflow tests complete\n")
-
-    workflow.send(msg,"complete_tests")
 
 def RegisterHandlers():
     workflow.RegisterHandler(workflow_tests_init,"workflow_tests_init")
