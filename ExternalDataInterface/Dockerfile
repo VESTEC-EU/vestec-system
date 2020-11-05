@@ -1,4 +1,4 @@
-FROM python:3-slim
+FROM python:3.8-slim
 EXPOSE 5501
 COPY ExternalDataInterface/requirements.txt /app/ExternalDataInterface/requirements.txt
 RUN pip install -r /app/ExternalDataInterface/requirements.txt
