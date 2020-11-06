@@ -11,6 +11,7 @@ workflow.SetLoggingLevel(logging.DEBUG)
 from workflows.simple import simple
 from workflows.performance_data import performance_data
 from workflows.wildfire import main as wildfire
+from workflows.tests import tests
 
 # set the logging level of the workflow logger
 workflow.SetLoggingLevel(logging.WARNING)
@@ -23,6 +24,7 @@ workflow.OpenConnection()
 simple.RegisterHandlers()
 performance_data.RegisterHandlers()
 wildfire.RegisterHandlers()
+tests.RegisterHandlers()
 
 workflow.execute()
 
