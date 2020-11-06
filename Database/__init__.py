@@ -7,6 +7,6 @@ from .users import User
 from .localdatastorage import LocalDataStorage
 from .edistorage import EDIHandler
 from .DataManager import Data, DataTransfer
-from .workflow import Incident, MessageLog, Simulation
+from .workflow import Incident, MessageLog, Simulation, StoredDataset
 from .performance_data import PerformanceData, PerformanceDataType
 from .log import LogType, DBLog
