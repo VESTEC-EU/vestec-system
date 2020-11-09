@@ -1,31 +1,44 @@
-ARCHER:
-  SSHkey: rsa_archer
-  available_nodes: 4920
-  basedir: /work/d170/d170/vestecgg/results
-  cores_per_node: 24
-  host: login.archer.ac.uk
+BESKOW:
+  SSHkey: id_rsa.pub
+  available_nodes: 1
+  basedir: /cfs/klemming/nobackup/w/wdchien/beskow_local
+  cores_per_node: 32
+  host: beskow.pdc.kth.se
   main_queue: standard
   queues:
-  - {max_nodes: 4920, max_time: '24:00:00', min_time: '00:01:00', queue_name: standard}
-  - {max_nodes: 256, max_time: '48:00:00', min_time: '24:00:00', queue_name: long}
-  - {max_nodes: 8, max_time: '00:20:00', min_time: '00:01:00', queue_name: short}
-  - {max_nodes: 512, max_time: '03:00:00', min_time: '00:01:00', queue_name: low}
-  - {max_nodes: 376, max_time: '48:00:00', min_time: '00:01:00', queue_name: largemem}
   - {max_nodes: 1, max_time: '24:00:00', min_time: '00:01:00', queue_name: serial}
-  scheduler: pbs
-  username: vestecgg
-
-CIRRUS:
-  SSHkey: rsa_cirrus
-  available_nodes: 280
-  basedir: /lustre/home/z04/gpsgibb/vestec
-  cores_per_node: 36
-  host: cirrus.epcc.ed.ac.uk
-  main_queue: workq
-  queues:
-  - {max_nodes: 70, max_time: '96:00:00', min_time: '00:01:00', queue_name: workq}
-  - {max_nodes: 15, max_time: '336:00:00', min_time: '00:01:00', queue_name: indy}
-  - {max_nodes: 280, max_time: '48:00:00', min_time: '00:01:00', queue_name: large}
-  scheduler: pbs
-  username: gpsgibb
-
+  scheduler: slurm
+  username: wdchien
+  #ARCHER:
+  #        #  SSHkey: rsa_archer
+  #  SSHkey: id_rsa.pub
+  #  available_nodes: 4920
+  #  basedir: /work/d170/d170/vestecgg/results
+  #  cores_per_node: 24
+  #  host: login.archer.ac.uk
+  #  main_queue: standard
+  #  queues:
+  #  - {max_nodes: 4920, max_time: '24:00:00', min_time: '00:01:00', queue_name: standard}
+  #  - {max_nodes: 256, max_time: '48:00:00', min_time: '24:00:00', queue_name: long}
+  #  - {max_nodes: 8, max_time: '00:20:00', min_time: '00:01:00', queue_name: short}
+  #  - {max_nodes: 512, max_time: '03:00:00', min_time: '00:01:00', queue_name: low}
+  #  - {max_nodes: 376, max_time: '48:00:00', min_time: '00:01:00', queue_name: largemem}
+  #  - {max_nodes: 1, max_time: '24:00:00', min_time: '00:01:00', queue_name: serial}
+  #  scheduler: pbs
+  #  username: vestecgg
+  #
+  #CIRRUS:
+  #        #  SSHkey: rsa_cirrus
+  #  SSHkey: id_rsa.pub
+  #  available_nodes: 280
+  #  basedir: /lustre/home/z04/gpsgibb/vestec
+  #  cores_per_node: 36
+  #  host: cirrus.epcc.ed.ac.uk
+  #  main_queue: workq
+  #  queues:
+  #  - {max_nodes: 70, max_time: '96:00:00', min_time: '00:01:00', queue_name: workq}
+  #  - {max_nodes: 15, max_time: '336:00:00', min_time: '00:01:00', queue_name: indy}
+  #  - {max_nodes: 280, max_time: '48:00:00', min_time: '00:01:00', queue_name: large}
+  #  scheduler: pbs
+  #  username: gpsgibb
+  #

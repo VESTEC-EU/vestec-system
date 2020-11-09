@@ -29,7 +29,7 @@ class RemoteConnection:
         keyfile = os.path.join(keydir,machine["SSHkey"])
         #print("Key= %s"%keyfile)
 
-        kwargs = {"key_filename": [keyfile],}
+        kwargs = {"key_filename": [keyfile],"gss_auth": True,}
 
         self.host=machine["host"]
         self.user=machine["username"]
@@ -135,7 +135,7 @@ class RemoteConnection:
 
 #A test code. Connects to a remote machine and does some things
 if __name__ == "__main__":
-    host = "ARCHER"
+    host = "BESKOW"
     me = socket.gethostname()
 
     c=RemoteConnection(host)
