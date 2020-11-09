@@ -14,6 +14,9 @@ def initialiseStaticInformation():
     cirrus = Machine(machine_id=str(uuid4()), machine_name="CIRRUS", host_name="cirrus.epcc.ed.ac.uk", 
                      scheduler="PBS", num_nodes=280, cores_per_node=36, base_work_dir="/lustre/home/????")
 
+    hpda = Machine(machine_id=str(uuid4()), machine_name="HPDA", host_name="fe-store01.sc.bs.dlr.de",
+                   scheduler="SLURM", num_nodes=4, cores_per_node=56, base_work_dir="/home/kont_ma/VESTEC-install/work")
+
     pny.commit()
 
     archer.queues.create(queue_id=str(uuid4()), queue_name="standard", max_nodes=4920, min_walltime=60,
