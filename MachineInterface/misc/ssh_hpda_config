@@ -1,0 +1,7 @@
+Host hpda
+  ControlMaster auto
+  ControlPath /root/.ssh/controlmasters/%r@%h:%p
+  ControlPersist 24h
+  HostName fe-store01.sc.bs.dlr.de
+  User kont_ma
+
