@@ -1,5 +1,6 @@
 import os
 import requests
+import json
 
 class SimulationManagerException(Exception):
     def __init__(self, status_code, message):
@@ -41,6 +42,13 @@ def cancelSimulation(sim_id):
     response = requests.delete(_get_SM_URL()+'/simulation/'+sim_id)
     if response.status_code != 200:
         raise SimulationManagerException(response.status_code, response.text)
+
+#returns information about the simulation with sim_id as a dictionary
+def getSimulationInfo(sim_id):
+    response = requests.get(_get_SM_URL()+'/info/'+sim_id)
+    if response.status_code != 200:
+        raise SimulationManagerException(response.status_code, response.text)
+    return json.loads(response.text)
 
 def getSMHealth():
     try:
