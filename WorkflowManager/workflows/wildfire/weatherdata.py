@@ -16,15 +16,17 @@ def yyyymm(date):
     return "%04d%02d"%(year,month)
 
 def tryURL(url):
-    r = requests.head(url)
-    #print(r.status_code)
-    if r.status_code != 200:
-        #print(r.headers)
-        return False
-    else:
-        return True
+    try:
+        r = requests.head(url,timeout = 5.0)
+        #print(r.status_code)
+        if r.status_code == 200:
+            return True
+    except requests.exceptions.Timeout:
+        print("Warning, timeout on searching for new GFS data")
+    return False
 
 
+#returns the two latest GFS results
 def getLatestURLs(verbose = False):
 
 
