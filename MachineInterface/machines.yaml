@@ -6,3 +6,7 @@ machines:
         type: openssh
         hostname: archer        
         remote_base_dir: .
+    Cirrus:
+        type: openssh
+        hostname: cirrus        
+        remote_base_dir: .
