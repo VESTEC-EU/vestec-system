@@ -41,7 +41,8 @@ def sm_tests_create(msg):
                                 num_nodes = 1,
                                 requested_walltime="0:0:1",
                                 kind = "test bjob",
-                                executable = "testing testing",
+                                executable = "subtest.sh",
+                                template_dir="templates",
                                 queuestate_callbacks= {
                                     "RUNNING": "sm_tests_check",
                                     "COMPLETED": "sm_tests_check",
@@ -123,14 +124,16 @@ def sm_tests_submit(msg):
 #refreshes the simulation status (if in test mode this should also move the status on one point)
 @workflow.handler
 def sm_tests_refresh(msg):
+    print('sm_tests_refresh', msg)
     sim_id = msg["simulations"][0]
-    
 
     try:
         client.refreshSimilation(sim_id)
     except client.SimulationManagerException as e:
+        print('sm_tests_refresh',e)
         try:
             info = client.getSimulationInfo(sim_id)
+            print('sm_tests_refresh getsimulationinfo', info)
         except client.SimulationManagerException as e2:
             logTest("sm_refresh","FAIL",logdir,e.message)
             msg["total_tests"]+=1
@@ -138,6 +141,7 @@ def sm_tests_refresh(msg):
             cleanup(msg)
             return
         if info["status"] != "COMPLETE" or info["status"] != "CANCELLED":
+            print('sm_tests_refresh getsimulationinfo fail', e.message)
             logTest("sm_refresh","FAIL",logdir,e.message)
             msg["total_tests"]+=1
             msg["failed_tests"]+=1
@@ -154,6 +158,7 @@ def sm_tests_check(msg):
     
     if msg["originator"] == "sm_tests_submit":
         workflow.Persist.Put(incident,msg)
+        print('force change state')
 
         #if in test mode this will force the simulation to change state, triggering a new message
         workflow.send(msg,"sm_tests_refresh")
@@ -161,7 +166,10 @@ def sm_tests_check(msg):
     
     elif msg["originator"] == "Simulation Running":
         #get the first persisted message - should be from sm_test_submit
-        msg = workflow.Persist.Get(incident)[0]
+        #msg = workflow.Persist.Get(incident)[0]
+        msg = workflow.Persist.Get(incident)
+        print('sim running', len(msg), msg)
+        msg = msg[0]
         logdir = msg["logdir"]
 
         logTest("sm_running","PASS",logdir)
@@ -176,7 +184,10 @@ def sm_tests_check(msg):
     
     elif msg["originator"] == "Simulation Completed":
         #get the latest persisted message - should be [1]
-        msg = workflow.Persist.Get(incident)[1]
+        #msg = workflow.Persist.Get(incident)[1]
+        msg = workflow.Persist.Get(incident)
+        print('sim complete', len(msg), msg)
+        msg = msg[1]
         logdir = msg["logdir"]
 
         logTest("sm_completed","PASS",logdir)

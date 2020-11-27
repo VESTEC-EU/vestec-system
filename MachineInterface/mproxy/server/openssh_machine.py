@@ -33,7 +33,12 @@ class OpenSSHMachineConnection(ThrottlableMixin):
         return output, errors
 
     def _checkForErrors(self, errorString, reportError=True):        
+        print('checking error string ', errorString)
         if "Connection to " in errorString and " closed." in errorString:
+            print('conn closed okay')
+            return False
+        elif "Submitted batch job " in errorString:
+            print('job submitted okay')
             return False
         elif len(errorString.strip()) == 0 or (len(errorString.strip().split('\n')) == 1 and "Shared connection to" in errorString):
             return False
@@ -46,6 +51,8 @@ class OpenSSHMachineConnection(ThrottlableMixin):
         cmd = "ssh -p " + str(self.port) + " -tt " + self.username + "@" + self.hostname+" \"cd "+self.remote_base_dir+" ; "+command+"\""
         print(cmd)
         output, errors= self._execute_command(cmd)
+        print('output', output)
+        print('errors', errors)
         errorRaised=self._checkForErrors(errors)
         return CmdResult(stdout=output, stderr=errors, error=errorRaised)
 
@@ -141,8 +148,11 @@ class OpenSSHMachineConnection(ThrottlableMixin):
             command_to_run += "cd "+directory+" ; "
         command_to_run+=self.queue_system.getSubmissionCommand(executable)        
         run_info=self.run(command_to_run)        
+        print(run_info)
         if not self._checkForErrors(run_info.stderr):
-            return [self.queue_system.isStringQueueId(run_info.stdout), run_info.stdout]
+            print('queue id', (run_info.stdout.split(' ')[-1]))
+            #return [self.queue_system.isStringQueueId(run_info.stdout.split(' ')[-1]), run_info.stdout]
+            return [True, run_info.stdout.split(' ')[-1]]
         else:
             return [False, run_info.stderr]
 

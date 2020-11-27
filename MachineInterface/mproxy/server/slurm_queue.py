@@ -7,7 +7,7 @@ class SlurmQueueProcessor:
     def getQueueStatusForSpecificJobsCommand(self, queue_ids):
         job_queue_str=""
         for queue_id in queue_ids:
-            job_queue_str+=queue_id+" "
+            job_queue_str+=queue_id+","
         return "sacct --format jobid,elapsed,state -j "+job_queue_str
 
     def getSubmissionCommand(self, scriptname):
@@ -22,19 +22,26 @@ class SlurmQueueProcessor:
     def parseQueueStatus(self, queue_raw_data):
         jobs={}
         header_data=queue_raw_data.split('\n')[0]
-        if len(header_data) == 3:
+        print(header_data.split())
+        print(len(header_data.split()))
+        if len(header_data.split()) == 3:
+            print('parse sacct')
             # sacct data
             for line in queue_raw_data.split('\n'):                
                 tokens=line.split()
+                print(tokens)
                 if len(tokens) >=3 and self.isStringQueueId(tokens[0]):                        
                         jobs[tokens[0]]=JobStatus(tokens[0], self.getConvertSlurmAccountingJobStatusCode(tokens[2]), tokens[1] if tokens[1] != "0:00" else "") 
         else:
+            print('parse squeue')
             # squeue data
             for line in queue_raw_data.split('\n'):                
                 tokens=line.split()
+                print(tokens)
                 if len(tokens) >=6 and self.isStringQueueId(tokens[0]):
                     jobs[tokens[0]]=JobStatus(tokens[0], self.getConvertSlurmQueueJobStatusCode(tokens[4]), tokens[5] if tokens[5] != "0:00" else "")                    
 
+        print('parseQueueStatus', jobs)
         return jobs
 
     def getSummaryOfMachineStatus(self, job_queue_info):

@@ -106,11 +106,13 @@ def submit_job():
     if simulation.status == "CREATED":
         submission_data=asyncio.run(submit_job_to_machine(simulation.machine.machine_name, simulation.num_nodes, simulation.requested_walltime, simulation.directory, simulation.executable))
         if (submission_data[0]):
+            print(submission_data[0], submission_data[1])
             simulation.jobID=submission_data[1]
             simulation.status="QUEUED"
             simulation.status_updated=datetime.datetime.now()
             return "Job submitted", 200
         else:
+            print('error',submission_data[0], submission_data[1])
             simulation.status="ERROR"
             simulation.status_message=submission_data[1]
             simulation.status_updated=datetime.datetime.now()
