@@ -2,6 +2,13 @@ amqp:
     hostname: localhost
 
 machines:
+    Blackdog:
+        type: fabricssh
+        hostname: 130.237.222.173
+        remote_base_dir: /home/vestec
+        username: vestec
+        port: 25005
+        SSHkey: /home/user/.ssh/id_rsa.pub
     ARCHER:
         type: openssh
         hostname: archer        

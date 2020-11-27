@@ -29,9 +29,10 @@ class MachineConnectionFactory:
         host = conf["hostname"]
         user = conf["username"]
         keyfile = conf["SSHkey"]
+        port = conf["port"]
 
         return fabric.Connection(
-            host, user=user, connect_kwargs={"key_filename": keyfile}
+            host, user=user, port=port, connect_kwargs={"key_filename": keyfile}
         )    
 
     def _mk_fab_machine_connection(self, name, queue_system, machine, conf):
@@ -42,8 +43,17 @@ class MachineConnectionFactory:
 
     def _mk_openssh_machine_connection(self, name, queue_system, machine, conf):
         from .openssh_machine import OpenSSHMachineConnection
-        
-        return OpenSSHMachineConnection(queue_system, machine.host_name, machine.base_work_dir)
+
+        if hasattr(conf, 'username'):
+            username = conf.username
+        else:
+            username = 'user'
+        if hasattr(conf, 'port'):
+            port = conf.port
+        else:
+            port = 22
+
+        return OpenSSHMachineConnection(queue_system, machine.host_name, machine.base_work_dir, username=username, port=port)
 
     def _mk_dummy_machine_connection(self, name, queue_system, machine, conf):
         from .dummy_machine import DummyMachineConnection

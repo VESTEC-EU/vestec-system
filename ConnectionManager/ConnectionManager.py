@@ -33,12 +33,13 @@ class RemoteConnection:
 
         self.host=machine["host"]
         self.user=machine["username"]
+        self.port=machine["port"]
 
         print("Connecting to %s"%self.host)
 
         try:
 
-            self.connection = fabric.Connection(host=self.host, user=self.user,connect_kwargs=kwargs)
+            self.connection = fabric.Connection(host=self.host, user=self.user, port=self.port, connect_kwargs=kwargs)
 
             self.active = True
 
@@ -135,7 +136,7 @@ class RemoteConnection:
 
 #A test code. Connects to a remote machine and does some things
 if __name__ == "__main__":
-    host = "BESKOW"
+    host = "Blackdog"
     me = socket.gethostname()
 
     c=RemoteConnection(host)

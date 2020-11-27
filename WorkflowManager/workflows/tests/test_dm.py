@@ -44,11 +44,14 @@ def dm_tests_register(msg):
 
     path,fname = os.path.split(fname)
 
-    size = os.path.getsize(fname)
+    # steven: abs path to local host
+    #size = os.path.getsize(fname)
+    size = os.path.getsize(os.path.join(path, fname))
 
     #register this file
     try:
         fileid=client.registerDataWithDM(fname,"localhost","test file","txt",size,originator="vestec_tests",associate_with_incident=True,incidentId=incident,path=path)
+        print(fileid)
     except client.DataManagerException as e:
         print(e.message)
         logTest("dm_register","FAIL",logdir,e.message)

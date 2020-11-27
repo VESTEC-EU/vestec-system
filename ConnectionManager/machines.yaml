@@ -1,14 +1,15 @@
-BESKOW:
+Blackdog:
   SSHkey: id_rsa.pub
   available_nodes: 1
-  basedir: /cfs/klemming/nobackup/w/wdchien/beskow_local
-  cores_per_node: 32
-  host: beskow.pdc.kth.se
+  basedir: /home/vestec
+  cores_per_node: 4
+  host: 130.237.222.173
+  port: 25005
   main_queue: standard
   queues:
   - {max_nodes: 1, max_time: '24:00:00', min_time: '00:01:00', queue_name: serial}
   scheduler: slurm
-  username: wdchien
+  username: vestec
   #ARCHER:
   #        #  SSHkey: rsa_archer
   #  SSHkey: id_rsa.pub
