@@ -42,7 +42,7 @@ def sm_tests_create(msg):
                                 requested_walltime="0:0:1",
                                 kind = "test bjob",
                                 executable = "subtest.sh",
-                                template_dir="templates",
+                                template_dir="template",
                                 queuestate_callbacks= {
                                     "RUNNING": "sm_tests_check",
                                     "COMPLETED": "sm_tests_check",

@@ -412,6 +412,7 @@ def _copy(src, src_machine, src_storage_technology, dest, dest_machine, dest_sto
         if src_machine == "localhost":
             if src_storage_technology == "FILESYSTEM":
                 asyncio.run(transfer_file_to_or_from_machine(dest_machine, _getLocalPathPrepend()+src, dest, download=False))
+                return OK, "copied"
             elif src_storage_technology == "VESTECDB":
                 data_item=LocalDataStorage.get(filename=src)
                 asyncio.run(submit_copy_bytes_to_machine(dest_machine, data_item.contents, dest))
@@ -423,6 +424,7 @@ def _copy(src, src_machine, src_storage_technology, dest, dest_machine, dest_sto
         elif dest_machine == "localhost":
             if dest_storage_technology == "FILESYSTEM":
                 asyncio.run(transfer_file_to_or_from_machine(src_machine, src, _getLocalPathPrepend()+dest, download=True))
+                return OK, "copied"
             elif dest_storage_technology == "VESTECDB":
                 byte_contents=asyncio.run(submit_copy_bytes_from_machine(src_machine, src, move))
                 new_file = LocalDataStorage(contents=byte_contents, filename=dest, filetype="")

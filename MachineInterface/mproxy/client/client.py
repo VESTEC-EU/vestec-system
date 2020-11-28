@@ -29,6 +29,7 @@ class Client:
 
     # TODO: It would be nice to have these all method descriptors done
     # by a class decorator
+    download = proxy(API.download)
     run = proxy(API.run)
     put = proxy(API.put)
     get = proxy(API.get)

@@ -65,7 +65,8 @@ class OpenSSHMachineConnection(ThrottlableMixin):
         temp = tempfile.NamedTemporaryFile()
         temp.write(src_bytes)
         temp.flush()
-        output, errors=self._execute_command("scp "+temp.name+" "+self.hostname+":"+full_destination)
+        print('put', "scp -P " + str(self.port) + " " +temp.name+" \""+ self.username + "@" +self.hostname+":"+full_destination+"\"")
+        output, errors=self._execute_command("scp -P " + str(self.port) + " " +temp.name+" \""+ self.username + "@" +self.hostname+":"+full_destination+"\"")
         self._checkForErrors(errors)
         temp.close()
 
@@ -76,7 +77,8 @@ class OpenSSHMachineConnection(ThrottlableMixin):
         else:
             full_src=self.remote_base_dir+"/"+src
         temp = tempfile.NamedTemporaryFile(mode="rb")
-        output, errors=self._execute_command("scp "+self.hostname+":"+full_src+" "+temp.name)
+        print('get', "scp -P " + str(self.port) + " \"" + self.username + "@" + self.hostname+":"+full_src+"\" "+temp.name)
+        output, errors=self._execute_command("scp -P " + str(self.port) + " \"" + self.username + "@" + self.hostname+":"+full_src+"\" "+temp.name)
         if not self._checkForErrors(errors):
             read_bytes=temp.read()
             temp.close()
@@ -85,18 +87,22 @@ class OpenSSHMachineConnection(ThrottlableMixin):
             return b''
 
     @throttle
-    def upload(src_file, dest_file):
-        run_info=self._execute_command("scp "+src_file+" "+self.hostname+":"+dest_file)
-        self._checkForErrors(run_info.stderr)
+    def upload(self, src_file, dest_file):
+        print('upload', "scp -P " + str(self.port) + " \"" + src_file+"\" \"" + self.username + "@" + self.hostname+":"+dest_file+"\"")
+        run_info=self._execute_command("scp -P " + str(self.port) + " \"" + src_file+" \"" + self.username + "@" + self.hostname+":"+dest_file+"\"")
+        self._checkForErrors(run_info[1])
 
     @throttle
-    def download(src_file, dest_file):
-        run_info=self._execute_command("scp "+self.hostname+":"+src_file+" "+dest_file)
-        self._checkForErrors(run_info.stderr)
+    def download(self, src_file, dest_file):
+        #cmd = "ssh -p " + str(self.port) + " -tt " + self.username + "@" + self.hostname+" \"cd "+self.remote_base_dir+" ; "+command+"\""
+        print('download', "scp -P " + str(self.port) + " \"" + self.username + "@" + self.hostname+":"+src_file+"\" \""+dest_file+"\"")
+        run_info=self._execute_command("scp -P " + str(self.port) + " \"" + self.username + "@" + self.hostname+":"+src_file+"\" \""+dest_file+"\"")
+        self._checkForErrors(run_info[1])
 
     @throttle
-    def remote_copy(src_file, dest_machine, dest_file):
-        run_info=self.run("scp "+file+" "+dest_machine+":"+dest_file)
+    def remote_copy(self, src_file, dest_machine, dest_file):
+        print('remote_copy', "scp -P " + str(self.port) + " \"" + src_file + "\" \"" + self.username + "@" + dest_machine+":"+dest_file+"\"")
+        run_info=self.run("scp -P " + str(self.port) + " \"" + src_file + "\" \"" + self.username + "@" + dest_machine+":"+dest_file+"\"")
         self._checkForErrors(run_info.stderr)        
 
     def checkForUpdateToQueueData(self):
@@ -169,7 +175,8 @@ class OpenSSHMachineConnection(ThrottlableMixin):
 
     @throttle
     def ls(self, d="."):
-        run_info=self.run("ls -l "+d)
+        #run_info=self.run("ls -l "+d)
+        run_info=self.run("find "+d+" -type f -ls")
         self._checkForErrors(run_info.stderr)
         line_info=[]
         for line in run_info.stdout.splitlines():
