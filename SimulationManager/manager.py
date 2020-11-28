@@ -200,6 +200,7 @@ def handleRefreshOfSimulations(simulations):
     queueid_to_sim={}
     workflow_stages_to_run=[]
     for sim in simulations:
+        print(sim)
         queueid_to_sim[sim.jobID]=sim
         if (not sim.machine.machine_name in machine_to_queueid):
             machine_to_queueid[sim.machine.machine_name]=[]

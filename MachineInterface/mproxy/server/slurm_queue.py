@@ -31,7 +31,8 @@ class SlurmQueueProcessor:
                 tokens=line.split()
                 print(tokens)
                 if len(tokens) >=3 and self.isStringQueueId(tokens[0]):                        
-                        jobs[tokens[0]]=JobStatus(tokens[0], self.getConvertSlurmAccountingJobStatusCode(tokens[2]), tokens[1] if tokens[1] != "0:00" else "") 
+                    print('sacct', self.isStringQueueId(tokens[0]), self.getConvertSlurmAccountingJobStatusCode(tokens[2]))
+                    jobs[tokens[0]]=JobStatus(tokens[0], self.getConvertSlurmAccountingJobStatusCode(tokens[2]), tokens[1] if tokens[1] != "0:00" else "") 
         else:
             print('parse squeue')
             # squeue data

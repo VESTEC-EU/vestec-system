@@ -151,8 +151,11 @@ class OpenSSHMachineConnection(ThrottlableMixin):
         print(run_info)
         if not self._checkForErrors(run_info.stderr):
             print('queue id', (run_info.stdout.split(' ')[-1]))
-            #return [self.queue_system.isStringQueueId(run_info.stdout.split(' ')[-1]), run_info.stdout]
-            return [True, run_info.stdout.split(' ')[-1]]
+            if 'error' not in run_info.stdout:
+                #return [self.queue_system.isStringQueueId(run_info.stdout.split(' ')[-1]), run_info.stdout]
+                return [True, run_info.stdout.split(' ')[-1]]
+            else:
+                return [False, run_info.stderr]
         else:
             return [False, run_info.stderr]
 

@@ -26,6 +26,7 @@ def manually_add_data(message):
     header, encoded = file_contents_to_add["payload"].split(",", 1)
     filetype=header.split(":", 1)[1].split(";", 1)[0]
     data = b64decode(encoded)
+    print(header, encoded)
 
     incidentId=message["IncidentID"]
     new_file = LocalDataStorage(contents=data, filename=incidentId+"/"+file_contents_to_add["filename"], filetype=filetype)
@@ -45,7 +46,7 @@ def test_workflow(message):
     callbacks = {'COMPLETED': 'simple_workflow_execution_completed'}    
 
     try:
-        sim_id=createSimulation(message["IncidentID"], 100, "00:10", "test run", "subtest.sh", callbacks, template_dir="template")
+        sim_id=createSimulation(message["IncidentID"], 100, "00:10", "test run", "subtest.sh", callbacks, template_dir="templates")
     except SimulationManagerException as err:
         print("Error creating simulation "+err.message)
         return
