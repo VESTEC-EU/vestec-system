@@ -15,7 +15,7 @@ from SimulationManager.client import createSimulation, submitSimulation, Simulat
 from ExternalDataInterface.client import registerEndpoint, ExternalDataInterfaceException, removeEndpoint
 
 # create and submit jobs
-def launch_simulation(msg, callback='spaceweather_postprocess'):
+def _launch_simulation(msg, callback='spaceweather_postprocess'):
     print("\nSpaceweather simulation submit handler")
     IncidentID      = msg["IncidentID"]
     CaseName        = msg['SimulationCase']
@@ -43,24 +43,30 @@ def launch_simulation(msg, callback='spaceweather_postprocess'):
 @workflow.handler
 def spaceweather_base_simulation(msg):
     print("\nSpaceweather base simulation")
+    IncidentId = msg["IncidentID"]
     try:
-        launch_simulation(msg, callback='spaceweather_base_postprocess')
+        _launch_simulation(msg)
+        workflow.send(queue="spaceweather_postprocess", message=msg) # dummy connection
     except e:
         print('Error launching base case '+e.message)
 
 @workflow.handler
 def spaceweather_GuideCase1_simulation(msg):
     print("\nSpaceweather GuideCase1 simulation")
+    IncidentId = msg["IncidentID"]
     try:
-        launch_simulation(msg)
+        _launch_simulation(msg)
+        workflow.send(queue="spaceweather_postprocess", message=msg) # dummy connection
     except e:
         print('Error launching GuideCase1 case '+e.message)
 
 @workflow.handler
 def spaceweather_GuideCase2_simulation(msg):
     print("\nSpaceweather GuideCase2 simulation")
+    IncidentId = msg["IncidentID"]
     try:
-        launch_simulation(msg)
+        _launch_simulation(msg)
+        workflow.send(queue="spaceweather_postprocess", message=msg) # dummy connection
     except e:
         print('Error launching base case '+e.message)
  
@@ -89,87 +95,99 @@ def spaceweather_init(msg):
 
 # space weather shutdown
 @workflow.handler
-def spaceweather_base_postprocess(msg):
-    print("\nSpaceweather simulation postprocess handler")
-
-    IncidentID = msg["IncidentID"]
-    simulationId = msg["simulationId"]
-    simulationIdPostfix=simulationId.split("-")[-1]
-    directoryListing=msg["directoryListing"]
-    print("\nResults available for wildfire analyst simulation!") 
-    print(msg)
-
-    with pny.db_session:
-        myincident = Incident[IncidentID]
-        simulation=Simulation[simulationId]
-        machine_name=simulation.machine.machine_name
-        machine_basedir=simulation.machine.base_work_dir
-        if machine_basedir[-1] != "/": machine_basedir+="/"
-    print(myincident, simulation, machine_name, machine_basedir)
-    print(simulation.directory)
-    workflow.send(queue='spaceweather_postprocess', message=msg)
-
-    if simulation is not None:
-        result_files={}
-        for entry in directoryListing:
-            # '193993425     96 -rw-rw-r--   1 vestec   vestec      97574 Nov 28 15:48 incident-bb97271000f5/simulation-a350bba3ee36/output_log.txt'
-            tokens=entry.split()
-            if len(tokens) == 11 and "pdiags.cdb" in tokens[-1]:
-                result_files[tokens[-1]]=int(tokens[6])
-#        print(result_files)
-
-        data_uuids = []
-        for filepath, filesize in result_files.items():
-            filename  = os.path.basename(filepath)
-            directory = os.path.dirname(filepath)
-            print(filename, directory, filesize)
-#def registerDataWithDM(filename, machine, description, type, size, originator, group = "none", storage_technology=None, path=None, 
-#                       associate_with_incident=False, incidentId=None, kind="", comment=None):
-            try:
-                if ".vtu" in filename:
-                    data_uuid=registerDataWithDM(filename.replace('(', r'\(').replace(')', r'\)'), machine_name, "spaceweahter base simulation", "application/xml", filesize, 
-                                                 "vtu", path=directory, associate_with_incident=True, incidentId=IncidentID, kind="spaceweather simulation vtu file", 
-                                                 comment="Created by iPICmini on "+machine_name)
-                elif ".csv" in filename:
-                    data_uuid=registerDataWithDM(filename.replace('(', r'\(').replace(')', r'\)'), machine_name, "spaceweahter base simulation ouput list", "text/csv", filesize, 
-                                                 "csv", path=directory, associate_with_incident=True, incidentId=IncidentID, kind="spaceweather simulation vtu list", 
-                                                 comment="Created by iPICmini on "+machine_name)
-            except DataManagerException as err:
-                print("Error registering spaceweahter base result data with data manager, aborting "+err.message)
-
-            data_uuids.append(data_uuid)
-        print(data_uuids)
-
-#        def copyDataViaDM(data_uuid, dest_name, dest_machine, dest_storage_technology=None, gather_metrics=True,associate_with_incident=False, incident=None, kind=""):
-#        for i, filepath in enumerate(result_files):
-#            data_uuid = data_uuids[i]
-#            filename  = os.path.basename(filepath)
-#            directory = os.path.dirname(filepath)
-#            print('copy', getLocalFilePathPrepend() + filename)
-#            try:
-#                copyDataViaDM(data_uuid, getLocalFilePathPrepend() + filename, "localhost", dest_storage_technology="FILESYSTEM", gather_metrics=True, associate_with_incident=True, incident=IncidentID)
-#            except DataManagerException as err:
-#                print("Error copying spaceweahter base result data from HPC system to vestec system, aborting "+err.message)
-
-###
-@workflow.handler
 def spaceweather_postprocess(msg):
+
     IncidentID = msg["IncidentID"]
-    CaseName   = msg['originator']
-
-    workflow.Persist.Put(IncidentID, {'type': 'postprocessed'})
+    originator = msg['originator']
     logs = workflow.Persist.Get(IncidentID)
-    print(logs)
+    print("\nSpaceweather simulation postprocess handler", IncidentID)
 
-    completed = 0
-    if len(logs) >= 3:
-        for log in logs:
-            if 'type' in log or log['type'] == 'postprocessed':
-                completed = completed + 1
+    if originator == 'Simulation Completed':
+        simulationId = msg["simulationId"]
+        simulationIdPostfix=simulationId.split("-")[-1]
+        directoryListing=msg["directoryListing"]
 
-    if completed >= 3:
-        print('All simulation completed')
-        workflow.send(queue='spaceweather_shutdown', message=msg)
+        print("\nResults available for wildfire analyst simulation!") 
+
+        with pny.db_session:
+            myincident = Incident[IncidentID]
+            simulation=Simulation[simulationId]
+            machine_name=simulation.machine.machine_name
+            machine_basedir=simulation.machine.base_work_dir
+            if machine_basedir[-1] != "/": machine_basedir+="/"
+
+        if simulation is not None:
+            result_files={}
+            for entry in directoryListing:
+                # '193993425     96 -rw-rw-r--   1 vestec   vestec      97574 Nov 28 15:48 incident-bb97271000f5/simulation-a350bba3ee36/output_log.txt'
+                tokens=entry.split()
+                if len(tokens) == 11 and ("pdiags.cdb" in tokens[-1] or "tcomp.cdb" in tokens[-1]):
+                    result_files[tokens[-1]]=int(tokens[6])
+
+            data_uuids = []
+            for filepath, filesize in result_files.items():
+                filename  = os.path.basename(filepath)
+                directory = os.path.dirname(filepath)
+                print(filename, directory, filesize)
+
+                # register output data with data manager
+                try:
+                    if ".vtu" in filename:
+                        data_uuid=registerDataWithDM(filename.replace('(', r'\(').replace(')', r'\)'), machine_name, "spaceweahter simulation ("+simulation.kind+")",
+                                                     "application/xml", filesize, "vtu", path=directory, associate_with_incident=True, incidentId=IncidentID,
+                                                     kind=simulation.kind, comment="Basecase created by iPICmini on "+machine_name)
+                    elif ".ttk" in filename:
+                        data_uuid=registerDataWithDM(filename.replace('(', r'\(').replace(')', r'\)'), machine_name, "spaceweahter simulation ("+simulation.kind+") ouput list",
+                                                     "application/octet-stream", filesize, "ttk", path=directory, associate_with_incident=True, incidentId=IncidentID,
+                                                     kind=simulation.kind, comment="Basecase created by iPICmini on "+machine_name)
+                    elif ".csv" in filename:
+                        data_uuid=registerDataWithDM(filename.replace('(', r'\(').replace(')', r'\)'), machine_name, "spaceweahter simulation ("+simulation.kind+") ouput list",
+                                                     "text/csv", filesize, "csv", path=directory, associate_with_incident=True, incidentId=IncidentID,
+                                                     kind=simulation.kind, comment="Basecase created by iPICmini on "+machine_name)
+                except DataManagerException as err:
+                    print("Error registering spaceweahter base result data with data manager, aborting "+err.message)
+
+                data_uuids.append(data_uuid)
+
+            print(data_uuids)
+            workflow.Persist.Put(IncidentID, {'type': 'postprocessed'})
+            logs = workflow.Persist.Get(IncidentID)
+            print(logs)
+    
+            completed = 0
+            for log in logs:
+                if 'type' in log or log['type'] == 'postprocessed':
+                    completed = completed + 1
+
+            if completed >= 3:
+                print('All simulation completed')
+                workflow.send(queue='spaceweather_shutdown', message=msg)
+
+    else:
+        print("Ignore originator with "+originator)
+        return
+
+#@workflow.handler
+#def spaceweather_postprocess(msg):
+#    IncidentID = msg["IncidentID"]
+#    originator = msg["originator"]
+#
+#    if originator == 'Simulation Compmleted':
+#        workflow.Persist.Put(IncidentID, {'type': 'postprocessed'})
+#        logs = workflow.Persist.Get(IncidentID)
+#        print(logs)
+#
+#        completed = 0
+#        if len(logs) >= 3:
+#            for log in logs:
+#                if 'type' in log or log['type'] == 'postprocessed':
+#                    completed = completed + 1
+#
+#        if completed >= 3:
+#            print('All simulation completed')
+#            workflow.send(queue='spaceweather_shutdown', message=msg)
+#    else:
+#        workflow.Persist.Put(IncidentID, { 'orginator': originator })
 
 ####
     #workflow.Persist.Put(IncidentID, {"type": "postprocssed", "originator": CaseName})
@@ -203,5 +221,4 @@ def RegisterHandles():
     workflow.RegisterHandler(spaceweather_GuideCase2_simulation, "spaceweather_GuideCase2_simulation")
     workflow.RegisterHandler(spaceweather_init,                  "spaceweather_init")
     workflow.RegisterHandler(spaceweather_postprocess,           "spaceweather_postprocess")
-    workflow.RegisterHandler(spaceweather_base_postprocess,      "spaceweather_base_postprocess")
     workflow.RegisterHandler(spaceweather_shutdown,              "spaceweather_shutdown")
