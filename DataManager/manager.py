@@ -1,3 +1,4 @@
+import os
 import sys
 sys.path.append("../")
 sys.path.append("../MachineInterface")
@@ -640,5 +641,6 @@ def _getLocalPathPrepend():
         return ""
 
 if __name__ == "__main__":
+    del os.environ['VESTEC_SHARED_FILE_LOCATION']
     initialiseDatabase()
     app.run(host='0.0.0.0', port=5503)
