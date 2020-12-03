@@ -1,8 +1,8 @@
-FROM python:3.7-slim
+FROM python:3.8-slim
 EXPOSE 5000
+RUN apt-get update && apt-get install -y curl
+COPY DataManager/requirements.txt /app/DataManager/requirements.txt
+RUN pip install -r /app/DataManager/requirements.txt
 COPY . /app
 WORKDIR /app/DataManager
-RUN apt update
-RUN apt install -y curl
-RUN pip install -r /app/DataManager/requirements.txt
 CMD python manager.py
