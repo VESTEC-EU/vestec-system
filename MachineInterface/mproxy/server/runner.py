@@ -1,16 +1,23 @@
 import asyncio
 import aio_pika
+import sys
+sys.path.append("../")
 from .machine import MachineConnectionFactory
+import pony.orm as pny
+from Database.machine import Machine
 from .rpc_server import RpcServer
 from ..core.connect import aio_pika_connect_params
 import os
 import time
 
 class ServerRunner:
-    def __init__(self, config, names):
-        self.config = config
-        self.names = names
-        self.mc_factory = MachineConnectionFactory(config["machines"])
+    @pny.db_session
+    def __init__(self):        
+        self.names = []
+        configuredMachines=pny.select(configuredMachines for configuredMachines in Machine)
+        for machine in configuredMachines:
+            self.names.append(machine.machine_name)
+        self.mc_factory = MachineConnectionFactory()
         self.connection = None
 
     async def start(self, loop=None):
