@@ -23,9 +23,17 @@ def external_data_arrival_handler(message):
 @pny.db_session
 def manually_add_data(message):    
     file_contents_to_add = json.loads(message["data"]["payload"])
-    header, encoded = file_contents_to_add["payload"].split(",", 1)
-    filetype=header.split(":", 1)[1].split(";", 1)[0]
-    data = b64decode(encoded)
+    if ("," in file_contents_to_add["payload"]):
+        header, encoded = file_contents_to_add["payload"].split(",", 1)        
+        data = b64decode(encoded)
+    else:
+        header=file_contents_to_add["payload"]
+        data=""
+
+    if (":" in header and ";" in header):        
+        filetype=header.split(":", 1)[1].split(";", 1)[0]
+    else:
+        filetype=""
 
     incidentId=message["IncidentID"]
     new_file = LocalDataStorage(contents=data, filename=incidentId+"/"+file_contents_to_add["filename"], filetype=filetype)
