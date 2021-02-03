@@ -327,8 +327,10 @@ def disableTestModeMachine(machine_id):
 @pny.db_session
 def deleteWorkflow(retrieved_data):
     workflow_kind = retrieved_data.get("kind", None)
-    item=RegisteredWorkflow.get(kind=workflow_kind)
-    item.delete()
+    registeredworkflows=RegisteredWorkflow.select(lambda wf: wf.kind == workflow_kind)
+    if (len(registeredworkflows) >= 1):
+        # If there is more than one matching then just grab the first one
+        list(registeredworkflows)[0].delete()
     pny.commit()    
     return jsonify({"status": 200, "msg": "Workflow deleted"})
 
@@ -351,11 +353,16 @@ def addWorkflow(retrieved_data):
     init_queue_name = retrieved_data.get("initqueuename", None)
     data_queue_name = retrieved_data.get("dataqueuename", None)
     shutdown_queue_name = retrieved_data.get("shutdownqueuename", None)
-    istestWorkflow = retrieved_data.get("testworkflow", None)    
-    newwf = RegisteredWorkflow(kind=workflow_kind, init_queue_name=init_queue_name, data_queue_name=data_queue_name, shutdown_queue_name=shutdown_queue_name, test_workflow=istestWorkflow)
+    istestWorkflow = retrieved_data.get("testworkflow", None)
 
-    pny.commit()    
-    return jsonify({"status": 200, "msg": "Workflow added"})
+    registeredworkflows=RegisteredWorkflow.select(lambda wf: wf.kind == workflow_kind)
+    if (len(registeredworkflows) == 0):
+        # No existing workflow of this kind, all good we will add it
+        newwf = RegisteredWorkflow(kind=workflow_kind, init_queue_name=init_queue_name, data_queue_name=data_queue_name, shutdown_queue_name=shutdown_queue_name, test_workflow=istestWorkflow)
+        pny.commit()    
+        return jsonify({"status": 200, "msg": "Workflow added"})
+    else:
+        return jsonify({"status": 401, "msg": "Existing workflow of that same kind"}), 401
 
 def getAllUsers():
     return jsonify({"status": 200, "users": json.dumps(logins.get_all_users())})
