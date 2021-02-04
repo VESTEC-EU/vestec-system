@@ -13,11 +13,17 @@ class MachineConnectionFactory:
                                      "dummy": self._mk_dummy_machine_connection }
 
         self.queue_processors = { "pbs" : self._mk_pbs_queue_processor }
+        self.queue_processors = { "slurm" : self._mk_slurm_queue_processor }
 
     def _mk_pbs_queue_processor(self):
         from .pbs_queue import PBSQueueProcessor
 
         return PBSQueueProcessor()
+
+    def _mk_slurm_queue_processor(self):
+        from .slurm_queue import SlurmQueueProcessor
+
+        return SlurmQueueProcessor()
 
     def _mk_fab_conn(self, conf):
         host = conf["hostname"]

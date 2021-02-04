@@ -112,18 +112,18 @@ def createIncident(username):
         if incident_duration is not None:
             incident_duration=int(incident_duration)
     except ValueError:
-        return jsonify({"msg": "If incident duration is provided then it must be an integer"}), 400
+        return jsonify({"status": 400, "msg": "If incident duration is provided then it must be an integer"}), 400
 
     if RegisteredWorkflow.get(kind=incident_kind) is None:
-        return jsonify({"msg": "Incident kind is unknown, this must match a registered workflow that you have permission to access"}), 400
+        return jsonify({"status": 400, "msg": "Incident kind is unknown, this must match a registered workflow that you have permission to access"}), 400
     else:        
         if logins.can_user_access_workflow(username, incident_kind):
             if incident_name and incident_kind:
                 job_id = incidents.createIncident(incident_name, incident_kind, username, incident_upper_left_latlong, incident_lower_right_latlong, incident_duration)
                 logger.Log(log.LogType.Website, ("Creation of incident kind %s of name %s by %s" % (incident_name, incident_kind, username)), user=username)
-                return jsonify({"msg": "Incident successfully created.", "incidentid" : job_id}), 201
+                return jsonify({"status": 201, "msg": "Incident successfully created.", "incidentid" : job_id}), 201
             else:
-                return jsonify({"msg": "Incident name or type is missing"}), 400
+                return jsonify({"status": 400, "msg": "Incident name or type is missing"}), 400
         else:
             return jsonify({"msg": "Permission denied to access the workflow kind that this incident is created with, you will need this added for your user"})
 
@@ -198,7 +198,7 @@ def downloadData(data_uuid):
                      attachment_filename=file_info["filename"],
                      mimetype=file_info["type"])
     except DataManagerException as err:
-        return jsonify({"msg" : err.message}), err.status_code    
+        return jsonify({"status" : err.status_code, "msg" : err.message}), err.status_code    
 
 @pny.db_session
 def deleteData(data_uuid, incident_uuid, username):
@@ -206,11 +206,11 @@ def deleteData(data_uuid, incident_uuid, username):
     if success:
         try:
             deleteDataViaDM(data_uuid)        
-            return jsonify({"msg": "Data deleted"}), 200
+            return jsonify({"status": 200, "msg": "Data deleted"})
         except DataManagerException as err:
-            return jsonify({"msg" : err.message}), err.status_code
+            return jsonify({"status" : err.status_code, "msg" : err.message}), err.status_code
     else:
-        return jsonify({"msg": "Data deletion failed, no incident data set that you can edit"}), 401
+        return jsonify({"status" : 401, "msg": "Data deletion failed, no incident data set that you can edit"}), 401
 
 @pny.db_session
 def performRefreshSimulation(request_json):       
@@ -219,9 +219,9 @@ def performRefreshSimulation(request_json):
         refreshSimilation(sim_uuid)
         sim = Simulation[sim_uuid]
         packagedSim=incidents.packageSimulation(sim)
-        return jsonify({"simulation": json.dumps(packagedSim)}), 200
+        return jsonify({"status" : 200, "simulation": json.dumps(packagedSim)}), 200
     except SimulationManagerException as err:
-        return jsonify({"msg" : err.message}), err.status_code
+        return jsonify({"status" : err.status_code, "msg" : err.message}), err.status_code
  
 @pny.db_session
 def performCancelSimulation(sim_uuid, username):
@@ -229,7 +229,7 @@ def performCancelSimulation(sim_uuid, username):
         cancelSimulation(sim_uuid)
         return "Similation cancelled successfully", 200
     except SimulationManagerException as err:
-        return jsonify({"msg" : err.message}), err.status_code
+        return jsonify({"status" : err.status_code, "msg" : err.message}), err.status_code
     
 @pny.db_session
 def getLogs():
@@ -267,9 +267,9 @@ def deleteEDIHandler(retrieved_data):
     pollperiod = retrieved_data.get("pollperiod", None)   
     try:
         removeEndpoint(incidentid, endpoint, queuename, pollperiod)
-        return jsonify({"msg": "Handler removed"}), 200
+        return jsonify({"status" : 200, "msg": "Handler removed"}), 200
     except ExternalDataInterfaceException as err:
-        return jsonify({"msg": err.message}), err.status_code        
+        return jsonify({"status" : err.status_code, "msg": err.message}), err.status_code        
 
 def performRetrieveMachineStatuses():
     return jsonify({"status": 200, "machine_statuses": retrieveMachineStatuses()})
@@ -285,50 +285,52 @@ def performAddNewMachine(retrieved_data):
 
     try:
         addNewMachine(machine_name, host_name, scheduler, connection_type, num_nodes, cores_per_node, base_work_dir)
-        return jsonify({"msg": "Machine added"}), 200
+        return jsonify({"status" : 200, "msg": "Machine added"}), 200
     except MachineStatusManagerException as err:
-        return jsonify({"msg": err.message}), err.status_code
+        return jsonify({"status" : err.status_code, "msg": err.message}), err.status_code
 
 def performDeleteMachine(machine_id):
     try:
         deleteMachine(machine_id)
-        return jsonify({"msg": "Machine deleted"}), 200
+        return jsonify({"status" : 200, "msg": "Machine deleted"}), 200
     except MachineStatusManagerException as err:
-        return jsonify({"msg": err.message}), err.status_code
+        return jsonify({"status" : err.status_code, "msg": err.message}), err.status_code
 
 def performEnableMachine(machine_id):
     try:
         enableMachine(machine_id)
-        return jsonify({"msg": "Machine enabled"}), 200
+        return jsonify({"status" : 200, "msg": "Machine enabled"}), 200
     except MachineStatusManagerException as err:
-        return jsonify({"msg": err.message}), err.status_code
+        return jsonify({"status" : err.status_code, "msg": err.message}), err.status_code
 
 def performDisableMachine(machine_id):
     try:
         disableMachine(machine_id)
-        return jsonify({"msg": "Machine disabled"}), 200
+        return jsonify({"status" : 200, "msg": "Machine disabled"}), 200
     except MachineStatusManagerException as err:
-        return jsonify({"msg": err.message}), err.status_code
+        return jsonify({"status" : err.status_code, "msg": err.message}), err.status_code
 
 def enableTestModeMachine(machine_id):
     try:
         enableTestModeOnMachine(machine_id)
-        return jsonify({"msg": "Test mode enabled"}), 200
+        return jsonify({"status" : 200, "msg": "Test mode enabled"}), 200
     except MachineStatusManagerException as err:
-        return jsonify({"msg": err.message}), err.status_code
+        return jsonify({"status" : err.status_code, "msg": err.message}), err.status_code
 
 def disableTestModeMachine(machine_id):
     try:
         disableTestModeOnMachine(machine_id)
-        return jsonify({"msg": "Test mode disabled"}), 200
+        return jsonify({"status" : 200, "msg": "Test mode disabled"}), 200
     except MachineStatusManagerException as err:
-        return jsonify({"msg": err.message}), err.status_code
+        return jsonify({"status" : err.status_code, "msg": err.message}), err.status_code
 
 @pny.db_session
 def deleteWorkflow(retrieved_data):
     workflow_kind = retrieved_data.get("kind", None)
-    item=RegisteredWorkflow.get(kind=workflow_kind)
-    item.delete()
+    registeredworkflows=RegisteredWorkflow.select(lambda wf: wf.kind == workflow_kind)
+    if (len(registeredworkflows) >= 1):
+        # If there is more than one matching then just grab the first one
+        list(registeredworkflows)[0].delete()
     pny.commit()    
     return jsonify({"status": 200, "msg": "Workflow deleted"})
 
@@ -351,11 +353,16 @@ def addWorkflow(retrieved_data):
     init_queue_name = retrieved_data.get("initqueuename", None)
     data_queue_name = retrieved_data.get("dataqueuename", None)
     shutdown_queue_name = retrieved_data.get("shutdownqueuename", None)
-    istestWorkflow = retrieved_data.get("testworkflow", None)    
-    newwf = RegisteredWorkflow(kind=workflow_kind, init_queue_name=init_queue_name, data_queue_name=data_queue_name, shutdown_queue_name=shutdown_queue_name, test_workflow=istestWorkflow)
+    istestWorkflow = retrieved_data.get("testworkflow", None)
 
-    pny.commit()    
-    return jsonify({"status": 200, "msg": "Workflow added"})
+    registeredworkflows=RegisteredWorkflow.select(lambda wf: wf.kind == workflow_kind)
+    if (len(registeredworkflows) == 0):
+        # No existing workflow of this kind, all good we will add it
+        newwf = RegisteredWorkflow(kind=workflow_kind, init_queue_name=init_queue_name, data_queue_name=data_queue_name, shutdown_queue_name=shutdown_queue_name, test_workflow=istestWorkflow)
+        pny.commit()    
+        return jsonify({"status": 200, "msg": "Workflow added"})
+    else:
+        return jsonify({"status": 401, "msg": "Existing workflow of that same kind"}), 401
 
 def getAllUsers():
     return jsonify({"status": 200, "users": json.dumps(logins.get_all_users())})
