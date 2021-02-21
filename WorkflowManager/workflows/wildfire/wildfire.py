@@ -65,7 +65,7 @@ def wildfire_fire_simulation(msg):
 
         try:
             callbacks = {'COMPLETED': 'wildfire_fire_results'}
-            sim_id=createSimulation(IncidentID, 1, "0:05:00", "Wildfire simulation", "wfa.sh", queuestate_callbacks=callbacks, template_dir="workflows/wildfire/templates/wildfire_template")
+            sim_id=createSimulation(IncidentID, 1, "0:05:00", "Wildfire simulation", "wfa.sh", queuestate_callbacks=callbacks, template_dir="templates/wildfire_template")
             with pny.db_session:
                 simulation=Simulation[sim_id]    
                 machine_name=simulation.machine.machine_name
@@ -151,20 +151,9 @@ def wildfire_fire_results(msg):
                 post_proc_simulation=Simulation[pp_sim_id]
                 post_proc_machine_name=post_proc_simulation.machine.machine_name                
 
-            try:                 
-                putByteDataViaDM("config.json", machine_name, "Wildfire post-processing configuration", "text/plain", "Wildfire workflow", 
-                    "{\n  \"simDuration\": "+str(myincident.duration)+"\n}\n", path=post_proc_simulation.directory)
-
-                putByteDataViaDM("sim_id", machine_name, "Wildfire post-processing simulation ID token", "text/plain", "Wildfire workflow", 
-                    simulationIdPostfix, path=post_proc_simulation.directory)
-
-                copyDataViaDM(data_uuid_test_fire_best, machine_basedir+post_proc_simulation.directory+"/input/normal/test_Fire_Best.tif", machine_name, gather_metrics=False)
-                copyDataViaDM(data_uuid_test_fireshed_best, machine_basedir+post_proc_simulation.directory+"/input/fireshed/test_FireShed_Best.tif", machine_name, gather_metrics=False)
-                copyDataViaDM(data_uuid_test_variance, machine_basedir+post_proc_simulation.directory+"/input/probabilistic/test_Fire_Variance.tif", machine_name, gather_metrics=False)
-                copyDataViaDM(data_uuid_test_mean, machine_basedir+post_proc_simulation.directory+"/input/probabilistic/test_Fire_Mean.tif", machine_name, gather_metrics=False)
-                
-                #putByteDataViaDM("wfapost.yml", machine_name, "Wildfire post-processing configuration", "text/plain", "Wildfire workflow", 
-                #    _buildWFAPostYaml(IncidentID, simulation.directory, machine_basedir), path=post_proc_simulation.directory)                    
+            try:
+                putByteDataViaDM("wfapost.yml", machine_name, "Wildfire post-processing configuration", "text/plain", "Wildfire workflow", 
+                    _buildWFAPostYaml(IncidentID, simulation.directory, machine_basedir), path=post_proc_simulation.directory)                    
             except DataManagerException as err:
                 print("Can not write wildfire post processing configuration to simulation location"+err.message)
                 return
