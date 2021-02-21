@@ -12,14 +12,15 @@ pgd:
 
 gfs_gribs:
   - class: File
-    path: /work/d170/shared/data/mesonh/GFS/gfsanl_3_20190711_0000_000.grb2
+    path: /lustre/home/shared/dc118/data/mesonh/GFS/gfsanl_3_20190711_0000_000.grb2
   - class: File
-    path: /work/d170/shared/data/mesonh/GFS/gfsanl_3_20190711_0600_000.grb2
+    path: /lustre/home/shared/dc118/data/mesonh/GFS/gfsanl_3_20190711_0600_000.grb2
 ini_nameroots:
   - GFS20190711.00
   - GFS20190711.06
 
 sim_processes: 4
+segment_length: 1800
 
 turblen: BL89
 turbdim: 1DIM
@@ -29,7 +30,7 @@ output_name: fire_input.nc
 
 ncl_root:
   class: Directory
-  path: /work/y07/y07/cse/ncl/6.4.0
+  path: /lustre/sw/ncl/ncl-6.6.2
 ncl_resfile:
   class: File
-  path: /work/y07/y07/cse/ncl/6.4.0/share/hluresfile
+  path: /lustre/sw/ncl/ncl-6.6.2/share/hluresfile
