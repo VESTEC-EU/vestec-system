@@ -1,6 +1,8 @@
 Database/vestec.sqlite
 WorkflowManager/hotspots/*
 WorkflowManager/*.png
+WorkflowManager/workflows/wildfire/hotspots/*
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
