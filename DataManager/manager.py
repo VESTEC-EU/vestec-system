@@ -132,7 +132,7 @@ def _perform_registration(form_data):
         storage_technology = form_data["storage_technology"]
     else:
         storage_technology = "FILESYSTEM"
-
+    
     if _checkExists(machine,fname,path):
         return "File already exists", 406
 
@@ -624,7 +624,7 @@ async def submit_run_command_on_machine(machine_name, command, listfile):
 def _checkExists(machine,filename,path):    
     entries = pny.select(d for d in Data if (d.status!="DELETED" and d.status!="UNKNOWN") and d.machine == machine and d.path==path and d.filename == filename)
 
-    if len(entries)>0:
+    if len(entries)>0:        
         return True
     else:
         return False

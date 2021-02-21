@@ -110,7 +110,7 @@ def submit_job():
             simulation.status="QUEUED"
             simulation.status_updated=datetime.datetime.now()
             return "Job submitted", 200
-        else:
+        else:            
             simulation.status="ERROR"
             simulation.status_message=submission_data[1]
             simulation.status_updated=datetime.datetime.now()
