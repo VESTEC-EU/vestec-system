@@ -137,7 +137,7 @@ class OpenSSHMachineConnection(ThrottlableMixin):
         command_to_run+=self.queue_system.getSubmissionCommand(executable)        
         run_info=self.run(command_to_run)        
         if not self._checkForErrors(run_info.stderr):
-            return [self.queue_system.isStringQueueId(run_info.stdout), run_info.stdout]
+            return [self.queue_system.doesSubmissionReportContainQueueId(run_info.stdout), self.queue_system.extractQueueIdFromSubmissionReport(run_info.stdout)]
         else:
             return [False, run_info.stderr]
 
