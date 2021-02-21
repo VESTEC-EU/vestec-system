@@ -7,7 +7,7 @@ class SlurmQueueProcessor:
     def getQueueStatusForSpecificJobsCommand(self, queue_ids):
         job_queue_str=""
         for queue_id in queue_ids:
-            job_queue_str+=queue_id+" "
+            job_queue_str+=queue_id+","
         return "sacct --format jobid,elapsed,state -j "+job_queue_str
 
     def getSubmissionCommand(self, scriptname):
