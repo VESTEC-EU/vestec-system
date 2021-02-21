@@ -12,7 +12,7 @@ from Database import LocalDataStorage
 import geopandas as gpd
 import time
 from ExternalDataInterface.client import registerEndpoint, ExternalDataInterfaceException, removeEndpoint
-from DataManager.client import downloadDataToTargetViaDM, registerDataWithDM, DataManagerException, getLocalFilePathPrepend, putByteDataViaDM, getByteDataViaDM
+from DataManager.client import downloadDataToTargetViaDM, registerDataWithDM, DataManagerException, getLocalFilePathPrepend, putByteDataViaDM, getByteDataViaDM, deleteDataViaDM
 
 from Database import Incident
 
@@ -326,8 +326,8 @@ def wildfire_process_hotspots(msg):
 
 @workflow.atomic
 @workflow.handler
-def wildfire_consolidate_hotspots(msg):
-    incident = msg["IncidentID"]
+def wildfire_consolidate_hotspots(msg):    
+    incident = msg["IncidentID"]    
     hotspotsfile = msg["file"]
     date = msg["date"]
     file_id = msg["file_id"]
@@ -342,7 +342,7 @@ def wildfire_consolidate_hotspots(msg):
     if len(consolidated) != 0:
         fid = consolidated[-1]["file_id"]
         json_data = getByteDataViaDM(fid).decode("ascii")
-        hotspots = json.loads(json_data)
+        hotspots = json.loads(json_data)        
         
 
     #no existing hotspot data
@@ -355,10 +355,12 @@ def wildfire_consolidate_hotspots(msg):
     for hotspot in newhotspots["features"]:
         if hotspot not in hotspots["features"]:
             hotspots["features"].append(hotspot)
-            added +=1
+            added +=1            
     
     if added > 0:
-
+        if len(consolidated) != 0:
+            fid = consolidated[-1]["file_id"]
+            deleteDataViaDM(fid)
         #we have new data. Write a new json
 
         timestamp = parse_timestamp(date)
@@ -367,7 +369,7 @@ def wildfire_consolidate_hotspots(msg):
 
         file = os.path.join(basedir,"hotspots.json")
 
-        contents = json.dumps(hotspots,indent=1)
+        contents = json.dumps(hotspots,indent=1)        
 
         #store the new consolidated hotspots in the database
         id = putByteDataViaDM(filename = "hotspots.json", 
