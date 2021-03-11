@@ -5,4 +5,4 @@ RUN pip install -r /app/MachineInterface/requirements.txt
 COPY . /app
 WORKDIR /app/MachineInterface
 RUN cat /app/MachineInterface/misc/ssh_archer_config >> /etc/ssh/ssh_config
-CMD python interface.py --config machines.yaml
+CMD python interface.py

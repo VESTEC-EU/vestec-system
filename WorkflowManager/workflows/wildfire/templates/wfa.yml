@@ -12,7 +12,7 @@ mdt_geotiff:
   path: wfadata/_2_dem_extract_10m_extract.tif
 weather_data:
   class: File
-  path: fire_input.nc
+  path: weather_output.nc
 upperleft:
   lat: 42.5006
   lon: 2.62

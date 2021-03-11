@@ -18,5 +18,7 @@ class Machine(db.Entity):
     
     status = pny.Optional(str)
     status_last_checked = pny.Optional(datetime.datetime)
+    username=pny.Optional(str, nullable=True)
+    key_location=pny.Optional(str, nullable=True)    
 
     simulations = pny.Set("Simulation")

@@ -7,7 +7,7 @@ class SlurmQueueProcessor:
     def getQueueStatusForSpecificJobsCommand(self, queue_ids):
         job_queue_str=""
         for queue_id in queue_ids:
-            job_queue_str+=queue_id+" "
+            job_queue_str+=queue_id+","
         return "sacct --format jobid,elapsed,state -j "+job_queue_str
 
     def getSubmissionCommand(self, scriptname):
@@ -19,15 +19,29 @@ class SlurmQueueProcessor:
     def isStringQueueId(self, raw_str):
         return raw_str.isnumeric() and "." not in raw_str
 
+    def doesSubmissionReportContainQueueId(self, raw_str):
+        salt="Submitted batch job"
+        if salt in raw_str:
+            id_code=raw_str[raw_str.index(salt) + len(salt):]
+            return id_code.strip().isnumeric()
+        return False
+
+    def extractQueueIdFromSubmissionReport(self, raw_str):
+        salt="Submitted batch job"
+        if salt in raw_str:
+            id_code=raw_str[raw_str.index(salt) + len(salt):]
+            return id_code.strip()
+        return ""
+
     def parseQueueStatus(self, queue_raw_data):
         jobs={}
         header_data=queue_raw_data.split('\n')[0]
-        if len(header_data) == 3:
+        if len(header_data.split()) == 3:
             # sacct data
             for line in queue_raw_data.split('\n'):                
                 tokens=line.split()
                 if len(tokens) >=3 and self.isStringQueueId(tokens[0]):                        
-                        jobs[tokens[0]]=JobStatus(tokens[0], self.getConvertSlurmAccountingJobStatusCode(tokens[2]), tokens[1] if tokens[1] != "0:00" else "") 
+                        jobs[tokens[0]]=JobStatus(tokens[0], self.getConvertSlurmAccountingJobStatusCode(tokens[2]), tokens[1] if tokens[1] != "0:00" else "")
         else:
             # squeue data
             for line in queue_raw_data.split('\n'):                

@@ -303,7 +303,7 @@ def wildfire_mesonh_results(msg):
     IncidentID = msg["IncidentID"]
     simulationId = msg["simulationId"]
 
-    weatherFileCreated, weatherFileSize=_doesSimulationDirectoryContainFile(msg["directoryListing"], "fire_input.nc")
+    weatherFileCreated, weatherFileSize=_doesSimulationDirectoryContainFile(msg["directoryListing"], "weather_output.nc")
     if not weatherFileCreated:
         with pny.db_session:
             simulation=Simulation[simulationId]
@@ -319,7 +319,7 @@ def wildfire_mesonh_results(msg):
 
     if simulation is not None:
         try:                
-            data_uuid=registerDataWithDM("fire_input.nc", machine_name, "MesoNH weather forecast", "application/octet-stream", weatherFileSize, 
+            data_uuid=registerDataWithDM("weather_output.nc", machine_name, "MesoNH weather forecast", "application/octet-stream", weatherFileSize, 
                 "MesoNH simulation", path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="Weather forecast", 
                 comment="Created by MesoNH on "+machine_name)
         except DataManagerException as err:

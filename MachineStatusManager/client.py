@@ -28,7 +28,7 @@ def matchBestMachine(walltime, num_nodes):
     if matched_machine.status_code == 200:
         return matched_machine.json()["machine_id"]             
     else:    
-        raise MachineStatusManagerException(status.status_code, status.json()["msg"])       
+        raise MachineStatusManagerException(matched_machine.status_code, matched_machine.json()["msg"])       
 
 def enableTestModeOnMachine(machine_id):
     status=requests.post(_get_MSM_URL() + '/enable_testmode/'+machine_id)

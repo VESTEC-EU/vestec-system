@@ -19,6 +19,12 @@ class PBSQueueProcessor:
     def isStringQueueId(self, raw_str):
         return ".sdb" in raw_str
 
+    def doesSubmissionReportContainQueueId(self, raw_str):
+        return self.isStringQueueId(raw_str)
+
+    def extractQueueIdFromSubmissionReport(self, raw_str):
+        return raw_str
+
     def parseQueueStatus(self, queue_raw_data):
         jobs={}        
 

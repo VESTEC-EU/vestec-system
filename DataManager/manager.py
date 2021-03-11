@@ -132,7 +132,7 @@ def _perform_registration(form_data):
         storage_technology = form_data["storage_technology"]
     else:
         storage_technology = "FILESYSTEM"
-
+    
     if _checkExists(machine,fname,path):
         return "File already exists", 406
 
