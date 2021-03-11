@@ -160,7 +160,7 @@ def create_job():
         stored_machine=None
         return "Error allocating job to machine", 400
     except asyncio.exceptions.TimeoutError:
-        return "Timeout contating remote machine", 504
+        return "Timeout contacting remote machine", 504
     
     #fetch incident, make sure it exists
     try:
