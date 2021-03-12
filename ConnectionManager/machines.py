@@ -84,3 +84,23 @@ machines["CIRRUS"] = {
         }
     ]
 }
+
+
+machines["HPDA"] = {
+    "host": "fe-store01.sc.bs.dlr.de",
+    "username": "holk_jo",
+    "SSHkey": "",
+    "basedir": "/home/holk_jo/VESTEC/VESTEC-INSTALL",
+    "available_nodes": 4,
+    "cores_per_node": 56,
+    "scheduler": "slurm",
+    "main_queue": "cpu",
+    "queues": [
+        {
+            "queue_name": 'cpu',
+            "max_nodes": 4,
+            "min_time": "00:01:00",
+            "max_time": "168:00:00"
+        }
+    ]
+}

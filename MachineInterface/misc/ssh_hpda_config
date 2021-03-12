@@ -3,5 +3,12 @@ Host hpda
   ControlPath /root/.ssh/controlmasters/%r@%h:%p
   ControlPersist 24h
   HostName fe-store01.sc.bs.dlr.de
-  User kont_ma
+  User holk_jo
+
+Host fe-store01.sc.bs.dlr.de
+  ControlMaster auto
+  ControlPath /root/.ssh/controlmasters/%r@%h:%p
+  ControlPersist 24h
+  HostName fe-store01.sc.bs.dlr.de
+  User holk_jo
 

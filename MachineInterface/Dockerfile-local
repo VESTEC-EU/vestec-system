@@ -6,4 +6,4 @@ COPY . /app
 WORKDIR /app/MachineInterface
 RUN cat /app/MachineInterface/misc/ssh_hpda_config >> /etc/ssh/ssh_config
 RUN mkdir -p /root/.ssh/controlmasters
-CMD python interface.py --config machines.yaml
+CMD python interface.py

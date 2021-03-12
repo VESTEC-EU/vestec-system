@@ -15,7 +15,7 @@ def initialiseStaticInformation():
                      scheduler="PBS", num_nodes=280, cores_per_node=36, base_work_dir="/lustre/home/????")
 
     hpda = Machine(machine_id=str(uuid4()), machine_name="HPDA", host_name="fe-store01.sc.bs.dlr.de",
-                   scheduler="SLURM", num_nodes=4, cores_per_node=56, base_work_dir="/home/kont_ma/VESTEC-install/work")
+                   scheduler="SLURM", num_nodes=4, cores_per_node=56, base_work_dir="/home/holk_jo/VESTEC/VESTEC-install")
 
     pny.commit()
 
@@ -46,5 +46,9 @@ def initialiseStaticInformation():
     cirrus.queues.create(queue_id=str(uuid4()), queue_name="large", max_nodes=280, min_walltime=60,
                          max_walltime=172800, default=0)
 
+    
+    hpda.queues.create(queue_id=str(uuid4()), queue_name="cpu", max_nodes=4, min_walltime=60,
+                         max_walltime=604800, default=0)
+    
     pny.commit()
 
