@@ -207,13 +207,21 @@ def wildfire_post_results(msg):
     
     for entry in directoryListing:
         tokens=entry.split()
-        if len(tokens) == 9 and ".png" in tokens[8]:            
+        if len(tokens) == 9 and ".png" in tokens[8]:
             try:                
                 registerDataWithDM(tokens[8], machine_name, "WFA post-processing", "image/png", int(tokens[4]), "WFA output PNG", 
                     path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA image file", 
                     comment="Created by WFA post-processor on "+machine_name)
             except DataManagerException as err:
-                print("Error registering WFA post-processed PNG '"+tokens[8]+"' with data manager, aborting "+err.message)            
+                print("Error registering WFA post-processed PNG '"+tokens[8]+"' with data manager, aborting "+err.message)
+
+        if len(tokens) == 9 and ".kmz" in tokens[8]:
+            try:
+                registerDataWithDM(tokens[8], machine_name, "WFA post-processing", "image/octet-stream", int(tokens[4]), "WFA output KMZ",
+                    path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA KMZ file",
+                    comment="Created by WFA post-processor on "+machine_name)
+            except DataManagerException as err:
+                print("Error registering WFA post-processed KMZ '"+tokens[8]+"' with data manager, aborting "+err.message)
 
 def RegisterHandlers():
     workflow.RegisterHandler(wildfire_fire_simulation,"wildfire_fire_simulation")
