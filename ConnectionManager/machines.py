@@ -90,7 +90,7 @@ machines["HPDA"] = {
     "host": "fe-store01.sc.bs.dlr.de",
     "username": "holk_jo",
     "SSHkey": "",
-    "basedir": "/home/holk_jo/VESTEC/VESTEC-INSTALL",
+    "basedir": "/home/holk_jo/VESTEC/VESTEC-install",
     "available_nodes": 4,
     "cores_per_node": 56,
     "scheduler": "slurm",
