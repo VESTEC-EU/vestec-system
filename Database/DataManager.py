@@ -45,5 +45,6 @@ class DataTransfer(db.Entity):
     date_started = pny.Required(datetime.datetime, precision=6)
     date_completed = pny.Optional(datetime.datetime, precision=6)
     completion_time = pny.Optional(datetime.timedelta, precision=6)
+    transfer_rate = pny.Optional(float, precision = 6)
     status = pny.Required(str)
 

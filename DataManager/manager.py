@@ -340,6 +340,7 @@ def _handle_copy_or_move(id, move):
                 data_transfer.date_completed = date_completed
                 data_transfer.completion_time = (data_transfer.date_completed -
                                                 data_transfer.date_started)
+                data_transfer.transfer_rate = float(data.size)/data_transfer.completion_time
         return new_id, 201
 
 #Creates a new entry in the database
@@ -496,6 +497,7 @@ def _get_data_from_location(registered_data, gather_metrics):
         data_transfer.dst = registered_data
         data_transfer.date_completed = datetime.datetime.now()
         data_transfer.completion_time = (data_transfer.date_completed - data_transfer.date_started)
+        data_transfer.transfer_rate = float(registered_data.size)/data_transfer.completion_time
     return contents, 200
 
 async def submit_remote_get_data(target_machine_name, src_file):
@@ -536,6 +538,7 @@ def _put_data_to_location(data_payload, data_uuid, gather_metrics):
                 data_transfer.dst = registered_data
                 data_transfer.date_completed = datetime.datetime.now()
                 data_transfer.completion_time = (data_transfer.date_completed - data_transfer.date_started)
+                data_transfer.transfer_rate = float(registered_data.size)/data_transfer.completion_time
         return "Data put completed", 201
     else:
         if gather_metrics:            
