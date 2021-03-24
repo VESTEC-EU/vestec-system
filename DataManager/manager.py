@@ -282,6 +282,8 @@ def _handle_copy_or_move(id, move):
     dest_machine = flask.request.form["machine"]
     dest = flask.request.form["dest"]
 
+    transfer_time_est = estimate_data_transfer_time(id, src_machine, dest_machine)
+
     if "gather_metrics" in flask.request.form:
         gather_metrics=flask.request.form["gather_metrics"].lower() == "true"
     else:
@@ -644,7 +646,7 @@ def _getLocalPathPrepend():
 
 @pny.db_session
 def _find_old_transfer(source, destination):
-    entries = pny.select(T for T in DataTransfer if(T.src = source and T.dst = destination and T.transfer_rate != NULL)
+    entries = pny.select(T for T in DataTransfer if(T.src = source and T.dst = destination and T.transfer_rate != NULL).order_by(DataTransfer.date_started)[-10:]
     return entries
 
 
@@ -652,10 +654,12 @@ def estimate_data_transfer_time(id, source, destination):
     data = Data[id]
     old_transfers = _find_old_transfer(source, destination)
     mean = 0
-    for entry in old_transfers:
-        mean = mean + entry.transfer_rate
-    mean = mean / len(old_transfers)
-    return mean * data.size
+    if(len(old_transfers) != 0):
+        for entry in old_transfers:
+            mean = mean + entry.transfer_rate
+        mean = mean / len(old_transfers)
+        return mean * data.size
+#TODO: What to return if len = 0?
 
 if __name__ == "__main__":
     initialiseDatabase()
