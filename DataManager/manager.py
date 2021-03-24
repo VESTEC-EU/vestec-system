@@ -187,7 +187,8 @@ def GetExternal():
                                      date_started=date_started,
                                      status = "COMPLETED",
                                      date_completed = date_completed,
-                                     completion_time = (date_completed - date_started))
+                                     completion_time = (date_completed - date_started),
+                                     transfer_rate = (date_completed - date_started)/size)
         return id, 201
     elif status == NOT_IMPLEMENTED:
         return message, 501
@@ -639,6 +640,22 @@ def _getLocalPathPrepend():
         return shared_location
     else:
         return ""
+
+
+@pny.db_session
+def _find_old_transfer(source, destination):
+    entries = pny.select(T for T in DataTransfer if(T.src = source and T.dst = destination and T.transfer_rate != NULL)
+    return entries
+
+
+def estimate_data_transfer_time(id, source, destination):
+    data = Data[id]
+    old_transfers = _find_old_transfer(source, destination)
+    mean = 0
+    for entry in old_transfers:
+        mean = mean + entry.transfer_rate
+    mean = mean / len(old_transfers)
+    return mean * data.size
 
 if __name__ == "__main__":
     initialiseDatabase()
