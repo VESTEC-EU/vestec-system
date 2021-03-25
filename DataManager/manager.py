@@ -646,7 +646,7 @@ def _getLocalPathPrepend():
 
 @pny.db_session
 def _find_old_transfer(source, destination):
-    entries = pny.select(T for T in DataTransfer if(T.src = source and T.dst = destination and T.transfer_rate != NULL).order_by(DataTransfer.date_started)[-10:]
+    entries = pny.select(T for T in DataTransfer if(T.src_machine = source and T.dst_machine = destination and T.transfer_rate != NULL).order_by(DataTransfer.date_started)[-10:]
     return entries
 
 
@@ -658,7 +658,11 @@ def estimate_data_transfer_time(id, source, destination):
         for entry in old_transfers:
             mean = mean + entry.transfer_rate
         mean = mean / len(old_transfers)
+        print("Data transfer needs " + mean*data.size)
         return mean * data.size
+    else
+        print("No records of Data-transfers between " + source + " and " + destination + " found.")
+        return -1
 #TODO: What to return if len = 0?
 
 if __name__ == "__main__":
