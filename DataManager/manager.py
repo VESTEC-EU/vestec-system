@@ -282,7 +282,7 @@ def _handle_copy_or_move(id, move):
     dest_machine = flask.request.form["machine"]
     dest = flask.request.form["dest"]
 
-    transfer_time_est = estimate_data_transfer_time(id, src_machine, dest_machine)
+    transfer_time = estimate_data_transfer_time(id, src_machine, dest_machine)
 
     if "gather_metrics" in flask.request.form:
         gather_metrics=flask.request.form["gather_metrics"].lower() == "true"
@@ -644,24 +644,25 @@ def _getLocalPathPrepend():
         return ""
 
 
+
 @pny.db_session
-def _find_old_transfer(source, destination):
-    entries = pny.select(T for T in DataTransfer if(T.src_machine = source and T.dst_machine = destination and T.transfer_rate != NULL).order_by(DataTransfer.date_started)[-10:]
+def find_old_transfer(source, destination):
+    entries = pny.select(T for T in DataTransfer if (T.src_machine == source and T.dst_machine == destination and T.transfer_rate != NULL)).order_by(DataTransfer.date_started)[-10:]
     return entries
 
 
 def estimate_data_transfer_time(id, source, destination):
     data = Data[id]
-    old_transfers = _find_old_transfer(source, destination)
+    old_transfers = find_old_transfer(source, destination)
     mean = 0
     if(len(old_transfers) != 0):
         for entry in old_transfers:
             mean = mean + entry.transfer_rate
         mean = mean / len(old_transfers)
-        print("Data transfer needs " + mean*data.size)
-        return mean * data.size
-    else
-        print("No records of Data-transfers between " + source + " and " + destination + " found.")
+        print("Data transfer needs " + str(mean * data.size))
+        return mean*data.size
+    else:
+        print("No records of Data-transfers between " + source + " and " + destination)
         return -1
 #TODO: What to return if len = 0?
 
