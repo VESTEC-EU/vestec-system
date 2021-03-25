@@ -188,7 +188,7 @@ def GetExternal():
                                      status = "COMPLETED",
                                      date_completed = date_completed,
                                      completion_time = (date_completed - date_started),
-                                     transfer_rate = (date_completed - date_started)/size)
+                                     transfer_rate = float(size) / (date_completed - date_started).total_seconds())
         return id, 201
     elif status == NOT_IMPLEMENTED:
         return message, 501
@@ -343,7 +343,7 @@ def _handle_copy_or_move(id, move):
                 data_transfer.date_completed = date_completed
                 data_transfer.completion_time = (data_transfer.date_completed -
                                                 data_transfer.date_started)
-                data_transfer.transfer_rate = float(data.size)/data_transfer.completion_time
+                data_transfer.transfer_rate = float(data.size)/data_transfer.completion_time.total_seconds()
         return new_id, 201
 
 #Creates a new entry in the database
@@ -500,7 +500,7 @@ def _get_data_from_location(registered_data, gather_metrics):
         data_transfer.dst = registered_data
         data_transfer.date_completed = datetime.datetime.now()
         data_transfer.completion_time = (data_transfer.date_completed - data_transfer.date_started)
-        data_transfer.transfer_rate = float(registered_data.size)/data_transfer.completion_time
+        data_transfer.transfer_rate = float(registered_data.size)/data_transfer.completion_time.total_seconds()
     return contents, 200
 
 async def submit_remote_get_data(target_machine_name, src_file):
@@ -541,7 +541,7 @@ def _put_data_to_location(data_payload, data_uuid, gather_metrics):
                 data_transfer.dst = registered_data
                 data_transfer.date_completed = datetime.datetime.now()
                 data_transfer.completion_time = (data_transfer.date_completed - data_transfer.date_started)
-                data_transfer.transfer_rate = float(registered_data.size)/data_transfer.completion_time
+                data_transfer.transfer_rate = float(registered_data.size)/data_transfer.completion_time.total_seconds()
         return "Data put completed", 201
     else:
         if gather_metrics:            
@@ -660,7 +660,7 @@ def estimate_data_transfer_time(id, source, destination):
             mean = mean + entry.transfer_rate
         mean = mean / len(old_transfers)
         print("Data transfer needs " + str(mean * data.size))
-        return mean*data.size
+        return data.size / mean
     else:
         print("No records of Data-transfers between " + source + " and " + destination)
         return -1
