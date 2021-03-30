@@ -1,0 +1,8 @@
+#!/bin/bash
+
+outfile=/home/holk_jo/VESTEC/VESTEC-install/hwelt.out
+
+echo "Hello, this is the DLR-HPDA cluster :)"
+echo >> $outfile
+date >> $outfile
+echo "Hello, this is the DLR-HPDA cluster :)" >> $outfile
