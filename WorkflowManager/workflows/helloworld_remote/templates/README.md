@@ -1,3 +1,3 @@
-This folder is currently empty.
-
-We may put data here that we want to copy over to the cluster.
+Ensure that the content of this folder is
+copied to the templates directory in the
+work directory on the cluster.

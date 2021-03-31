@@ -16,14 +16,15 @@ from time import sleep
 
 # The remote_hello workflow prints a hello world message on a remote machine
 @workflow.handler
+@pny.db_session
 def remote_hello (message):
   print ("Starting remote hello  (" + message["IncidentID"] + ")")
   # What to call when the execution is completed
-  callbacks = {'COMPLETED': 'simple_workflow_execution_completed'}    
+  callbacks = {'COMPLETED': 'hworld_workflow_execution_completed'}
 
   print("Create Sim")
   try:
-      sim_id=createSimulation(message["IncidentID"], 1, "00:10", "test run", "helloworld.scp", callbacks, template_dir="template")
+      sim_id=createSimulation(message["IncidentID"], 1, "00:10", "test run", "helloworld.srun", callbacks, template_dir="templates")
   except SimulationManagerException as err:
       print("Error creating simulation "+err.message)
       return
@@ -43,7 +44,11 @@ def remote_hello (message):
   except SimulationManagerException as err:
       print("Error submitting simulation "+err.message)
  
+@workflow.handler
+def hworld_workflow_execution_completed(message):
+    print("Stage completed with simulation ID "+message["simulationId"])
  
+
 @workflow.handler
 def shutdown_hworld_remote (message):
   print("Shutdown remote helloworld workflow for " + message["IncidentID"])
@@ -78,3 +83,5 @@ def RegisterHandlers ():
   workflow.RegisterHandler (shutdown_hworld_remote, "shutdown_hworld_remote")
   workflow.RegisterHandler (initialize_hworld_remote, "init_hworld_remote")
   workflow.RegisterHandler (hworld_remote_workflow_execution_completed, "complete_hworld_remote")
+  workflow.RegisterHandler (hworld_workflow_execution_completed, "hworld_workflow_execution_completed")
+

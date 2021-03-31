@@ -1,14 +1,16 @@
-Host hpda
+Host HPDA
   ControlMaster auto
   ControlPath /root/.ssh/controlmasters/%r@%h:%p
-  ControlPersist 24h
+  ControlPersist yes
   HostName fe-store01.sc.bs.dlr.de
   User holk_jo
+  ServerAliveInterval 120
 
 Host fe-store01.sc.bs.dlr.de
   ControlMaster auto
   ControlPath /root/.ssh/controlmasters/%r@%h:%p
-  ControlPersist 24h
+  ControlPersist yes
   HostName fe-store01.sc.bs.dlr.de
   User holk_jo
+  ServerAliveInterval 120
 
