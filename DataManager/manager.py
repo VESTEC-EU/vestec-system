@@ -524,7 +524,7 @@ def _put_data_to_location(data_payload, data_uuid, gather_metrics):
                                         status="STARTED")
         #Estimate transfer time and print it
         transfer_time = estimate_data_transfer_time(data_uuid,"external", registered_data.machine)
-        print("ESTIMATED TIME: " + str(transfer_time))
+        print("Put ESTIMATED TIME: " + str(transfer_time))
 
 
         # If we are provided with a string then perform an implicit conversion to bytes
@@ -651,27 +651,43 @@ def _getLocalPathPrepend():
         return ""
 
 
-
+"""
+Search for old transfers of data between source and destination in the database
+Input: source       the source machine
+       destination  the destination machine
+Return: Maximal 10 entries of recent data transfer
+"""
 @pny.db_session
 def find_old_transfer(source, destination):
+    #Check for T.transfer_rate != None, because transfer_rate is an optional field
     entries = pny.select(T for T in DataTransfer if (T.src_machine == source and T.dst_machine == destination and T.transfer_rate != None )).order_by(DataTransfer.date_started)[:10]
     return entries
 
-
+"""
+Estimate the time of the transfer of data id from machine source to machine destination
+Input: id           the id of the Data
+       source       the source machine
+       destination  the destination machine
+Return: Either an estimation of the time of the Datatransfer, or -1, if we can not
+        estimate the time, due to no records
+"""
 def estimate_data_transfer_time(id, source, destination):
     data = Data[id]
+    #Get old records of transfers from source to destinatoin
     old_transfers = find_old_transfer(source, destination)
     mean = 0
+    #Compute the mean transfer rate
     if(len(old_transfers) != 0):
         for entry in old_transfers:
             mean = mean + entry.transfer_rate
         mean = mean / len(old_transfers)
-        print("Data transfer needs " + str(mean * data.size))
+        print("Data transfer needs " + str(data.size / mean))
         return data.size / mean
     else:
+        #No recordrs of data-transfer from source to destination were found
         print("No records of Data-transfers between " + source + " and " + destination)
         return -1
-#TODO: What to return if len = 0?
+#TODO: Is -1 a good idea to return if len == 0?
 
 if __name__ == "__main__":
     initialiseDatabase()
