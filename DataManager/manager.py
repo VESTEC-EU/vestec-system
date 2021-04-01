@@ -480,7 +480,8 @@ def _get_data_from_location(registered_data, gather_metrics = True):
                                         dst_machine="external",
                                         date_started=datetime.datetime.now(),
                                         status="STARTED")
-
+    transfer_time = estimate_data_transfer_time(registered_data.id, registered_data.machine, "external")
+    print("Get ESTIMATED TIME: " + str(transfer_time))
 
     if len(registered_data.path) > 0:
         target_src=registered_data.path+"/"+registered_data.filename
