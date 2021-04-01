@@ -67,7 +67,7 @@ def getByteDataViaDM(data_uuid, gather_metrics=False):
         raise DataManagerException(retrieved_data.status_code, retrieved_data.text)
 
 def putByteDataViaDM(filename, machine, description, type, originator, payload, group = "none", storage_technology=None, path=None, 
-        associate_with_incident=False, incidentId=None, kind="", comment=None, gather_metrics=False):
+        associate_with_incident=False, incidentId=None, kind="", comment=None, gather_metrics=True):
     if associate_with_incident and incidentId is None:
         raise DataManagerException(400, "Must supply an incident ID when associating dataset with an incident")
 

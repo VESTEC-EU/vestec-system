@@ -32,12 +32,12 @@ CIRRUS:
 HPDA:
   SSHHkey: ""
   available_nodes: 4
-  basedir: /home/holk_jo/VESTEC/VESTEC-install
+  basedir: /home/knap_da/VESTEC/VESTEC-install
   cores_per_node: 56
   host: fe-store01.sc.bs.dlr.de
   main_queue: cpu
   queues:
   - {max_nodes: 4, max_time: '168:00:00', min_time: '00:01:00', queue_name: cpu}
   scheduler: slurm
-  username: holk_jo
+  username: knap_da
 

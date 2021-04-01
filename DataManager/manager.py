@@ -283,6 +283,7 @@ def _handle_copy_or_move(id, move):
     dest = flask.request.form["dest"]
 
     transfer_time = estimate_data_transfer_time(id, src_machine, dest_machine)
+    print("ESTIMATED TIME: " + str(transfer_time))
 
     if "gather_metrics" in flask.request.form:
         gather_metrics=flask.request.form["gather_metrics"].lower() == "true"
@@ -470,7 +471,7 @@ async def submit_copy_bytes_to_machine(machine_name, src_bytes, dest):
     client = await Client.create(machine_name)
     await client.put(src_bytes, dest)
 
-def _get_data_from_location(registered_data, gather_metrics):
+def _get_data_from_location(registered_data, gather_metrics = True):
     if gather_metrics:        
             transfer_id = str(uuid.uuid4())
             data_transfer = DataTransfer(id=transfer_id,
@@ -479,6 +480,8 @@ def _get_data_from_location(registered_data, gather_metrics):
                                         dst_machine="external",
                                         date_started=datetime.datetime.now(),
                                         status="STARTED")
+
+
     if len(registered_data.path) > 0:
         target_src=registered_data.path+"/"+registered_data.filename
     else:
@@ -519,6 +522,10 @@ def _put_data_to_location(data_payload, data_uuid, gather_metrics):
                                         dst_machine=registered_data.machine,
                                         date_started=datetime.datetime.now(),
                                         status="STARTED")
+        #Estimate transfer time and print it
+        transfer_time = estimate_data_transfer_time(data_uuid,"external", registered_data.machine)
+        print("ESTIMATED TIME: " + str(transfer_time))
+
 
         # If we are provided with a string then perform an implicit conversion to bytes
         if isinstance(data_payload, str): data_payload=bytes(data_payload, encoding='utf8')
@@ -647,7 +654,7 @@ def _getLocalPathPrepend():
 
 @pny.db_session
 def find_old_transfer(source, destination):
-    entries = pny.select(T for T in DataTransfer if (T.src_machine == source and T.dst_machine == destination and T.transfer_rate != NULL)).order_by(DataTransfer.date_started)[-10:]
+    entries = pny.select(T for T in DataTransfer if (T.src_machine == source and T.dst_machine == destination and T.transfer_rate != None )).order_by(DataTransfer.date_started)[:10]
     return entries
 
 

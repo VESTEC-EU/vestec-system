@@ -88,9 +88,9 @@ machines["CIRRUS"] = {
 
 machines["HPDA"] = {
     "host": "fe-store01.sc.bs.dlr.de",
-    "username": "holk_jo",
+    "username": "knap_da",
     "SSHkey": "",
-    "basedir": "/home/holk_jo/VESTEC/VESTEC-install",
+    "basedir": "/home/knap_da/VESTEC/VESTEC-install",
     "available_nodes": 4,
     "cores_per_node": 56,
     "scheduler": "slurm",

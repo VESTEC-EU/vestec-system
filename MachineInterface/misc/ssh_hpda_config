@@ -3,7 +3,7 @@ Host HPDA
   ControlPath /root/.ssh/controlmasters/%r@%h:%p
   ControlPersist yes
   HostName fe-store01.sc.bs.dlr.de
-  User holk_jo
+  User knap_da
   ServerAliveInterval 120
 
 Host fe-store01.sc.bs.dlr.de
@@ -11,6 +11,6 @@ Host fe-store01.sc.bs.dlr.de
   ControlPath /root/.ssh/controlmasters/%r@%h:%p
   ControlPersist yes
   HostName fe-store01.sc.bs.dlr.de
-  User holk_jo
+  User knap_da
   ServerAliveInterval 120
 

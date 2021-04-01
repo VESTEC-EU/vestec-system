@@ -42,9 +42,9 @@ def dm_tests_register(msg):
     f.write(incident)
     f.close()
 
+    size = os.path.getsize(fname)
     path,fname = os.path.split(fname)
 
-    size = os.path.getsize(fname)
 
     #register this file
     try:
