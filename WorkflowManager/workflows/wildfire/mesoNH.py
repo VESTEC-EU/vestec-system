@@ -193,7 +193,7 @@ def wildfire_mesonh_simulation(msg):
                 print("Physiographic path is "+simulation.directory)
                 registerDataWithDM("CFIRE02KM.nc", machine_name, "Physiographic data", "application/octet-stream", pgdFileSize, "MesoNH PGD pre-processing", 
                     path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="Physiographic data", 
-                    comment="Created by MesoNH PGD pre-processing which was run on "+machine_name)
+                    comment="Created by MesoNH PGD pre-processing which was run on "+machine_name+" with simulation ID "+simulationId)
             except DataManagerException as err:
                 print("Error registering data with data manager "+err.message)
                 return
@@ -321,7 +321,7 @@ def wildfire_mesonh_results(msg):
         try:                
             data_uuid=registerDataWithDM("weather_output.nc", machine_name, "MesoNH weather forecast", "application/octet-stream", weatherFileSize, 
                 "MesoNH simulation", path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="Weather forecast", 
-                comment="Created by MesoNH on "+machine_name)
+                comment="Created by MesoNH on "+machine_name+" with simulation ID "+simulationId)
         except DataManagerException as err:
             print("Error registering MesoNH result data with data manager "+err.message)
             return            

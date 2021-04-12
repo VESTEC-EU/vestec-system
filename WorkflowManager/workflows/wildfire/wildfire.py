@@ -131,10 +131,10 @@ def wildfire_fire_results(msg):
                 result_files[tokens[8]]=int(tokens[4])
 
         try:
-            data_uuid_test_fire_best=_registerWFAResultFile("test_Fire_Best.tif", result_files, machine_name, simulation.directory, IncidentID)
-            data_uuid_test_fireshed_best=_registerWFAResultFile("test_FireShed_Best.tif", result_files, machine_name, simulation.directory, IncidentID)
-            data_uuid_test_variance=_registerWFAResultFile("test_Fire_Variance.tif", result_files, machine_name, simulation.directory, IncidentID)
-            data_uuid_test_mean=_registerWFAResultFile("test_Fire_Mean.tif", result_files, machine_name, simulation.directory, IncidentID)
+            data_uuid_test_fire_best=_registerWFAResultFile("test_Fire_Best.tif", result_files, machine_name, simulation.directory, IncidentID, simulationId)
+            data_uuid_test_fireshed_best=_registerWFAResultFile("test_FireShed_Best.tif", result_files, machine_name, simulation.directory, IncidentID, simulationId)
+            data_uuid_test_variance=_registerWFAResultFile("test_Fire_Variance.tif", result_files, machine_name, simulation.directory, IncidentID, simulationId)
+            data_uuid_test_mean=_registerWFAResultFile("test_Fire_Mean.tif", result_files, machine_name, simulation.directory, IncidentID, simulationId)
         except WildfireDataAccessException as err:
             with pny.db_session:
                 simulation=Simulation[simulationId]
@@ -163,13 +163,15 @@ def wildfire_fire_results(msg):
             print("Error creating or submitting WFA post-processing simulation "+err.message)
             return
 
-def _registerWFAResultFile(filename, result_files, machine_name, directory, incidentId):
+def _registerWFAResultFile(filename, result_files, machine_name, directory, incidentId, simulationId):
     if filename not in result_files:
-        raise WildfireDataAccessException("Expected result file is not available from the simulation, this indicates the execution failed")
+        return
+        # For now comment this out, we need logic to correctly drive this based on the hotspot data
+        #raise WildfireDataAccessException("Expected result file is not available from the simulation, this indicates the execution failed")
     try:                
         data_uuid=registerDataWithDM(filename, machine_name, "WFA simulation", "application/octet-stream", result_files[filename], 
             "GTIF", path=directory, associate_with_incident=True, incidentId=incidentId, kind="WFA output file", 
-            comment="Created by WFA on "+machine_name)
+            comment="Created by WFA on "+machine_name+" with simulation ID "+simulationId)
         return data_uuid
     except DataManagerException as err:
         print("Error registering WFA result data with data manager, aborting "+err.message)
@@ -211,7 +213,7 @@ def wildfire_post_results(msg):
             try:                
                 registerDataWithDM(tokens[8], machine_name, "WFA post-processing", "image/png", int(tokens[4]), "WFA output PNG", 
                     path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA image file", 
-                    comment="Created by WFA post-processor on "+machine_name)
+                    comment="Created by WFA post-processor on "+machine_name+" with simulation ID "+simulationId)
             except DataManagerException as err:
                 print("Error registering WFA post-processed PNG '"+tokens[8]+"' with data manager, aborting "+err.message)
 
@@ -219,7 +221,7 @@ def wildfire_post_results(msg):
             try:
                 registerDataWithDM(tokens[8], machine_name, "WFA post-processing", "image/octet-stream", int(tokens[4]), "WFA output KMZ",
                     path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="WFA KMZ file",
-                    comment="Created by WFA post-processor on "+machine_name)
+                    comment="Created by WFA post-processor on "+machine_name+" with simulation ID "+simulationId)
             except DataManagerException as err:
                 print("Error registering WFA post-processed KMZ '"+tokens[8]+"' with data manager, aborting "+err.message)
 
