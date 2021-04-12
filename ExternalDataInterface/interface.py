@@ -63,7 +63,7 @@ def pollDataSource(id):
         data_packet=generateDataPacket(x.headers, "pull",handler.endpoint,handler.incidentid)
         data_packet["status_code"]=x.status_code        
         sendMessageToWorkflowEngine(data_packet,handler.queuename,handler.incidentid)
-        logger.Log(log.LogType.Activity, "Forwarded pulled data from '"+handler.endpoint+"' to queue '"+handler.queuename+"'")            
+        logger.Log("Forwarded pulled data from '"+handler.endpoint+"' to queue '"+handler.queuename+"'", handler.incidentid)            
 
 
 #Takes a request header and packages it up into a dict for sending to the workflow
@@ -98,7 +98,7 @@ def forwardToQueue(data, headers, endpoint, queue,incidentid):
     data_packet=generateDataPacket(headers, "push",endpoint,incidentid)        
     data_packet["payload"]=data.decode('ascii')
     sendMessageToWorkflowEngine(data_packet, queue,incidentid)
-    logger.Log(log.LogType.Activity, "Forwarded posted data from '"+ endpoint +"' to queue '"+queue+"'")
+    logger.Log("Forwarded posted data from '"+ endpoint +"' to queue '"+queue+"'", incidentid)
 
 
 #handles when data is posted (pushed) to the system
@@ -106,14 +106,14 @@ def forwardToQueue(data, headers, endpoint, queue,incidentid):
 def handlePostOfData(endpoint, data, headers):    
     handlers = EDIHandler.select(lambda h: h.endpoint==endpoint and h.type == "PUSH")
     if len(handlers) > 0:
-        logger.Log(log.LogType.Activity, "Data posted from '"+endpoint+"' actioning with at least one handler that matches") 
+        logger.Log("Data posted from '"+endpoint+"' actioning with at least one handler that matches") 
 
         for handler in handlers:
             forwardToQueue(data,headers,endpoint,handler.queuename, handler.incidentid)
 
         return jsonify({"msg": "Data received"}), 200
     else:
-        logger.Log(log.LogType.Error, "Data posted from '"+endpoint+"' and ignoring as there are no handlers that match")      
+        logger.Log("Data posted from '"+endpoint+"' and ignoring as there are no handlers that match", incidentId=None, type=log.LogType.Error)
         return jsonify({"msg": "No matching handler registered"}), 404
 
 #if we register a remote host (e.g. www.website.com) as an endpoint and this pushes
@@ -178,11 +178,11 @@ def register():
 
     
     if handlertype=="PUSH":
-        logger.Log(log.LogType.Activity, "Push based handler registered for '"+endpoint+"'")     
+        logger.Log("Push based handler registered for '"+endpoint+"'", incidentid)     
     
     else:
         scheduleHandler(id = handler.id, seconds = pollperiod)
-        logger.Log(log.LogType.Activity, "Poll based handler registered for '"+endpoint+"' with period "+str(pollperiod)+"s")
+        logger.Log("Poll based handler registered for '"+endpoint+"' with period "+str(pollperiod)+"s", incidentid)
     
     return jsonify({"msg": "Handler registered"}), 201
         
@@ -228,7 +228,7 @@ def remove():
     
     #if there are no such handlers, return an error
     if len(handlers) == 0:
-        logger.Log(log.LogType.Error, "No handler found for removal for '"+endpoint+"'")
+        logger.Log("No handler found for removal for '"+endpoint+"'", incidentid, type=log.LogType.Error)
         return jsonify({"msg": "No existing handler registered"}), 404
 
     
@@ -239,7 +239,7 @@ def remove():
 
         handler.delete()
 
-        logger.Log(log.LogType.Activity, "Handler removed for '"+endpoint+"'")
+        logger.Log("Handler removed for '"+endpoint+"'", incidentid)
 
     return jsonify({"msg": "Handler removed"}), 200
 

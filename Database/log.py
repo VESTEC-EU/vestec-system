@@ -4,13 +4,9 @@ from enum import Enum
 import datetime
 
 class LogType(Enum):
-    Unknown=0
-    Activity=1
-    Job=2
-    Query=3
-    Website=4
-    Logins=5
-    Error=6
+    Info=0
+    Warning=1
+    Error=2    
 
 
 class DBLog(db.Entity):

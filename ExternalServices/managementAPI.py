@@ -49,9 +49,8 @@ def signup():
 
     user_create = logins.add_user(username, name, email, password)
 
-    if user_create == 1:
-        msg = "Account created for user %s" % username
-        logger.Log(log.LogType.Logins, msg, user=username)
+    if user_create == 1:        
+        logger.Log("Account created for user %s" % username, user=username)
 
         return jsonify({"status": 201, "msg": "User succesfully created. Log in."})
     else:
@@ -81,7 +80,7 @@ def login():
     else:
         return jsonify({"status": 400, "msg": message})
 
-    logger.Log(log.LogType.Website, str(request), user=username)
+    logger.Log(str(request), user=username)
 
 def changePassword():
     login = request.json
@@ -119,9 +118,9 @@ def createIncident(username):
     else:        
         if logins.can_user_access_workflow(username, incident_kind):
             if incident_name and incident_kind:
-                job_id = incidents.createIncident(incident_name, incident_kind, username, incident_upper_left_latlong, incident_lower_right_latlong, incident_duration)
-                logger.Log(log.LogType.Website, ("Creation of incident kind %s of name %s by %s" % (incident_name, incident_kind, username)), user=username)
-                return jsonify({"status": 201, "msg": "Incident successfully created.", "incidentid" : job_id}), 201
+                incident_id = incidents.createIncident(incident_name, incident_kind, username, incident_upper_left_latlong, incident_lower_right_latlong, incident_duration)
+                logger.Log(("Creation of incident kind %s of name %s by %s" % (incident_name, incident_kind, username)), user=username, incidentId=incident_id)
+                return jsonify({"status": 201, "msg": "Incident successfully created.", "incidentid" : incident_id}), 201
             else:
                 return jsonify({"status": 400, "msg": "Incident name or type is missing"}), 400
         else:
@@ -135,7 +134,7 @@ def getSpecificIncident(incident_uuid, username):
     incident_info=incidents.retrieveIncident(incident_uuid, username)
 
     if (incident_info is None):
-        logger.Log(log.LogType.Website, "User %s raised error retrieving incident %s" % (username, incident_uuid), user=username)
+        logger.Log("User %s raised error retrieving incident %s" % (username, incident_uuid), user=username, incidentId=incident_uuid, type=log.LogType.Error)
         return jsonify({"status": 401, "msg": "Error retrieving incident."})
     else:
         return jsonify({"status": 200, "incident": json.dumps(incident_info)})
@@ -148,20 +147,20 @@ def archiveIncident(incident_uuid, username):
     retval=incidents.archiveIncident(incident_uuid, username)    
 
     if (retval):
-        logger.Log(log.LogType.Website, "User %s archived incident %s" % (username, incident_uuid), user=username)
+        logger.Log("User %s archived incident %s" % (username, incident_uuid), user=username, incidentId=incident_uuid)
         return jsonify({"status": 200, "msg": "Incident archived"})         
     else:
-        logger.Log(log.LogType.Website, "User %s raised error archived incident %s" % (username, incident_uuid), user=username)
+        logger.Log("User %s raised error archived incident %s" % (username, incident_uuid), user=username, incidentId=incident_uuid, type=log.LogType.Error)
         return jsonify({"status": 401, "msg": "Error archiving incident."})
 
 def activateIncident(incident_uuid, username):
     retval=incidents.activateIncident(incident_uuid, username)    
 
     if (retval):
-        logger.Log(log.LogType.Website, "User %s activated incident %s" % (username, incident_uuid), user=username)
+        logger.Log("User %s activated incident %s" % (username, incident_uuid), user=username, incidentId=incident_uuid)
         return jsonify({"status": 200, "msg": "Incident activated"})         
     else:
-        logger.Log(log.LogType.Website, "User %s raised error activating incident %s" % (username, incident_uuid), user=username)
+        logger.Log("User %s raised error activating incident %s" % (username, incident_uuid), user=username, incidentId=incident_uuid, type=log.LogType.Error)
         return jsonify({"status": 401, "msg": "Error retrieving incident."})
 
 def updateDataMetadata(username):
