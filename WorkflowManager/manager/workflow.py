@@ -142,7 +142,7 @@ def Cancel(
         )
         return
     incident.status = status
-    incident.comment = reason
+    incident.comment = (reason[:240] + '..') if len(reason) > 240 else reason
 
     logger.info("Cancelled incident %s" % IncidentID)
     print(" [*] Cancelled Incident %s"%IncidentID)
