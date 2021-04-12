@@ -1,5 +1,6 @@
 from WorkflowManager.manager import workflow
 from Database.users import User
+from Database.log import DBLog
 from Database.workflow import Incident, RegisteredWorkflow, MessageLog, StoredDataset
 from Database.DataManager import DataTransfer
 import pony.orm as pny
@@ -376,4 +377,26 @@ def retrieveIncident(incident_uuid, username):
     incident = Incident.get(uuid=incident_uuid)
     if checkIfUserCanAccessIncident(incident, user):
         return packageIncident(incident, False, True, True, True, True, True)
+    return None
+
+def packageLog(stored_log):
+    log_info={}
+    log_info["timestamp"]=stored_log.timestamp.strftime("%d/%m/%Y, %H:%M:%S")
+    log_info["type"]=stored_log.type.name
+    log_info["originator"]=stored_log.originator
+    log_info["user"]=stored_log.user
+    log_info["comment"]=stored_log.comment
+    return log_info
+
+@pny.db_session
+def retrieveIncidentLogs(incident_uuid, username):
+    user = User.get(username=username)
+    incident = Incident.get(uuid=incident_uuid)
+    if checkIfUserCanAccessIncident(incident, user):
+        logs = pny.select(specific_log for specific_log in DBLog if specific_log.incidentId == incident_uuid)[:]
+        log_packaged_info=[]
+        for stored_log in logs:
+            log_packaged_info.append(packageLog(stored_log))
+        log_packaged_info.reverse()
+        return log_packaged_info
     return None

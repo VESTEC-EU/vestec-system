@@ -130,6 +130,15 @@ def getAllMyIncidents(username, pending_filter, active_filter, completed_filter,
     incident_summaries=incidents.retrieveMyIncidentSummary(username, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter)
     return jsonify({"status": 200, "incidents": json.dumps(incident_summaries)})
 
+def getIncidentLogs(incident_uuid, username):
+    incident_logs=incidents.retrieveIncidentLogs(incident_uuid, username)
+    
+    if (incident_logs is None):    
+        return jsonify({"status": 401, "msg": "Error retrieving incident log"})
+    else:
+        return jsonify({"status": 200, "incidentId": incident_uuid, "logs": json.dumps(incident_logs)})
+
+
 def getSpecificIncident(incident_uuid, username):
     incident_info=incidents.retrieveIncident(incident_uuid, username)
 

@@ -70,6 +70,12 @@ def getMyWorkflows():
     username = get_jwt_identity()
     return managementAPI.getMyWorkflows(username)
 
+@app.route('/flask/incidentlogs/<incident_uuid>', methods=['GET'])
+@pny.db_session
+@fresh_jwt_required
+def getIncidentLogs(incident_uuid):
+    username = get_jwt_identity()
+    return managementAPI.getIncidentLogs(incident_uuid, username)    
 
 @app.route('/flask/createincident', methods=['POST'])
 @jwt_required
