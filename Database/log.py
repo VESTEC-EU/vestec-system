@@ -13,6 +13,6 @@ class DBLog(db.Entity):
     timestamp = pny.Required(datetime.datetime)
     user = pny.Required(str,default="system")
     type = pny.Required(LogType)
-    comment = pny.Required(str)
+    comment = pny.Required(pny.LongStr)
     originator = pny.Required(str)
     incidentId = pny.Optional(str)
