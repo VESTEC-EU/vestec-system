@@ -762,7 +762,13 @@ function getIncidentLogs(incident_uuid) {
             logs = JSON.parse(response.logs);
             $('#incident-log-dialog-contents').load('templates/incidentlog.html #incidentLogScreen', function() {
                 for (log in logs) {
-                    var log_entry = "<tr>";
+                    var log_entry = "<tr";
+                    if (log.type == "Error") {
+                        log_entry += "style=\"background-color:#FFB5B5;\"";
+                    } else if (log.type == "Warn") {
+                        log_entry += "style=\"background-color:#F7F77D;\"";
+                    }
+                    log_entry += ">";                    
                     log = logs[log];
                     log_entry += "<td>" + log.timestamp + "</td>";
                     log_entry += "<td>" + log.type + "</td>";
