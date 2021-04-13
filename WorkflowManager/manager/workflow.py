@@ -19,6 +19,8 @@ from Database import initialiseDatabase
 
 logger = utils.GetLogger(__name__)
 
+test_workflow_name = "test_workflow_health"
+
 # allows a user to set the logging level of the loggers
 def SetLoggingLevel(level):
     utils.SetLevel(level)
@@ -223,7 +225,7 @@ def handler(f):
 
         # Check if parent incident is active. If so, do some book keeping and execute handler
         try:
-            active = _IsActive(incident)
+            active = incident == test_workflow_name or _IsActive(incident)
         except:
             # we handle the lack of a valid IncidentID at the bottom of this function
             # so no need to dupicate code here
@@ -334,10 +336,10 @@ def send(message, queue, src_tag = "", dest_tag = "", providedCaller=None):
         logger.error("workflow.send: Incident ID not included in the message")
         raise Exception(
             "workflow.send: Incident ID not included in the message"
-        ) from None
+        ) from None    
 
     # check if the incident is still active. If not, don't send message
-    if (not _IsActive(incident)) and queue != "_Cleanup":
+    if incident != test_workflow_name and (not _IsActive(incident)) and queue != "_Cleanup":
         logger.warn(
             "Message not queued for sending as incident %s is no longer active"
             % incident
@@ -398,7 +400,7 @@ def FlushMessages():
         dest_tag = message["dest_tag"]
 
         # check if the incident is still active. If not, don't send message
-        if (not _IsActive(incident)) and queue != "_Cleanup":
+        if incident != test_workflow_name and (not _IsActive(incident)) and queue != "_Cleanup":
             logger.warn(
                 "Message(s) not sent as incident %s is no longer active" % incident
             )

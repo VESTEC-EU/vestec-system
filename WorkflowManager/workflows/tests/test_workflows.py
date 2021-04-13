@@ -1,7 +1,13 @@
 import manager.workflow as workflow
 import os
-
+import Utils.log as log
 from .utils import logfile, logTest
+
+logger = log.VestecLogger("Test workflow")
+
+@workflow.handler
+def workflow_running_test(msg):
+    logger.Log("Workflow system running correctly", user="system")
 
 @workflow.handler
 def workflow_tests_init(msg):
@@ -68,3 +74,4 @@ def RegisterHandlers():
     workflow.RegisterHandler(workflow_tests_init,"workflow_tests_init")
     workflow.RegisterHandler(workflow_tests_persist,"workflow_tests_persist")
     workflow.RegisterHandler(workflow_tests_complete,"workflow_tests_complete")
+    workflow.RegisterHandler(workflow_running_test,"workflow_running_test")

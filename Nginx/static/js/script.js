@@ -1451,10 +1451,14 @@ function getSystemHealth() {
                 var health_entry = "<tr>";
                 item = health[item];
                 health_entry += "<td>" + item.name + "</td>";
-                if (item.status == true) {
-                    health_entry += "<td><img src='../img/tick.png' width=32 height=32></td>";
+                if (typeof item.status === "boolean"){
+                    if (item.status == true) {
+                        health_entry += "<td><img src='../img/tick.png' width=32 height=32></td>";
+                    } else {
+                        health_entry += "<td><img src='../img/cross.png' width=32 height=32></td>";
+                    }
                 } else {
-                    health_entry += "<td><img src='../img/cross.png' width=32 height=32></td>";
+                    health_entry += "<td>Last successfully checked: "+item.status+"</td>"
                 }
                 health_entry += "</tr>";
 
@@ -1468,6 +1472,22 @@ function getSystemHealth() {
         }
     });
     });
+}
+
+function updateWorkflowHealth() {
+    checkAuthStillValid();
+    $.ajax({
+        url: "/flask/updateworkflowhealth",
+        type: "POST",        
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        success: function(response) {    
+            getSystemHealth();
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> Update workflow health status failed");
+        }
+    });    
 }
 
 function getLogs() {

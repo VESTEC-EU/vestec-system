@@ -262,8 +262,24 @@ def getComponentHealths():
     component_healths.append({"name" : "External data interface", "status" : getEDIHealth()})    
     component_healths.append({"name" : "Simulation manager", "status" : getSMHealth()})
     component_healths.append({"name" : "Machine status manager", "status" : getMSMHealth()})
-    component_healths.append({"name" : "Data manager", "status" : getDMHealth()})        
+    component_healths.append({"name" : "Data manager", "status" : getDMHealth()})
+
+    workflowLogs = pny.select(specific_log for specific_log in DBLog if specific_log.originator == "Test workflow")[:]
+    if (len(workflowLogs) > 0):
+        most_recent=workflowLogs[-1]
+        component_healths.append({"name" : "Workflow manager", "status" : most_recent.timestamp.strftime("%H:%M:%S, %d/%m/%Y")})
+    else:
+        component_healths.append({"name" : "Workflow manager", "status" : "Never"})
     return jsonify({"status": 200, "health": json.dumps(component_healths)})
+
+def updateWorkflowHealthStatus():
+    workflow.OpenConnection()
+    msg = {}
+    msg["IncidentID"]="test_workflow_health"
+    workflow.send(message=msg, queue="workflow_running_test")
+    workflow.FlushMessages()
+    workflow.CloseConnection()
+    return jsonify({"status": 200})
 
 def getEDIInfo():    
     return jsonify({"status": 200, "handlers": getAllEDIEndpoints()})

@@ -242,6 +242,13 @@ def editUserDetails():
 def deleteUser():    
     return managementAPI.deleteUser(request.json)
 
+@app.route('/flask/updateworkflowhealth', methods=['POST'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def updateWorkflowHealthStatus():
+    return managementAPI.updateWorkflowHealthStatus()
+
 @app.route('/flask/addusertoworkflow', methods=['POST'])
 @pny.db_session
 @fresh_jwt_required
