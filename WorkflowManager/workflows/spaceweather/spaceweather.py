@@ -30,7 +30,7 @@ def _launch_simulation(msg, callback='spaceweather_postprocess'):
         callbacks = { 'COMPLETED': callback }
         sim_id = createSimulation(IncidentID,
                                   1,
-                                  '00:10:00',
+                                  '00:15:00',
                                   CaseName,
                                   'run_spaceweather.sh %s %s %d' % (CaseName, ParaViewAddress, ParaViewPort),
                                   callbacks,
@@ -41,7 +41,7 @@ def _launch_simulation(msg, callback='spaceweather_postprocess'):
         return
 
 @workflow.handler
-def spaceweather_base_simulation(msg):
+def iPIC3D_2D_B0z0_0(msg):
     print("\nSpaceweather base simulation")
     IncidentId = msg["IncidentID"]
     try:
@@ -51,24 +51,34 @@ def spaceweather_base_simulation(msg):
         print('Error launching base case '+e.message)
 
 @workflow.handler
-def spaceweather_GuideCase1_simulation(msg):
-    print("\nSpaceweather GuideCase1 simulation")
+def iPIC3D_2D_B0z0_0195(msg):
+    print("\nSpaceweather B0z 0.0195 simulation")
     IncidentId = msg["IncidentID"]
     try:
         _launch_simulation(msg)
         workflow.send(queue="spaceweather_postprocess", message=msg) # dummy connection
     except e:
-        print('Error launching GuideCase1 case '+e.message)
+        print('Error launching B0z 0.0195 case '+e.message)
 
 @workflow.handler
-def spaceweather_GuideCase2_simulation(msg):
-    print("\nSpaceweather GuideCase2 simulation")
+def iPIC3D_2D_B0z0_00975(msg):
+    print("\nSpaceweather B0z 0.00975 simulation")
     IncidentId = msg["IncidentID"]
     try:
         _launch_simulation(msg)
         workflow.send(queue="spaceweather_postprocess", message=msg) # dummy connection
     except e:
-        print('Error launching base case '+e.message)
+        print('Error launching B0z 0.00975 case '+e.message)
+
+@workflow.handler
+def iPIC3D_2D_B0z0_039(msg):
+    print("\nSpaceweather B0z 0.039 simulation")
+    IncidentId = msg["IncidentID"]
+    try:
+        _launch_simulation(msg)
+        workflow.send(queue="spaceweather_postprocess", message=msg) # dummy connection
+    except e:
+        print('Error launching B0z 0.039 case '+e.message)
  
 # space weather init
 @workflow.handler
@@ -77,21 +87,27 @@ def spaceweather_init(msg):
     IncidentID = msg["IncidentID"]
 
     #workflow.setIncidentActive(IncidentID)
+    pv_address = os.environ['PV_ADDRESS'] if 'PV_ADDRESS' in os.environ else 'steven-XPS-13-9370'
 
-    msg['SimulationCase']  = '2Dxy'
-    msg['ParaViewAddress'] = 'localhost'
-    msg['ParaViewPort']    = 22222
-    workflow.send(queue="spaceweather_base_simulation", message=msg)
+    msg['SimulationCase'] = '2D_B0z0.039'
+    msg['ParaViewAddress'] = pv_address
+    msg['ParaViewPort']    = 22228
+    workflow.send(queue="iPIC3D_2D_B0z0_039", message=msg)
 
-    msg['SimulationCase'] = '2DxyGuideCase1'
-    msg['ParaViewAddress'] = 'localhost'
-    msg['ParaViewPort']    = 22223
-    workflow.send(queue="spaceweather_GuideCase1_simulation", message=msg)
+    msg['SimulationCase'] = '2D_B0z0.00975'
+    msg['ParaViewAddress'] = pv_address
+    msg['ParaViewPort']    = 22226
+    workflow.send(queue="iPIC3D_2D_B0z0_00975", message=msg)
 
-    msg['SimulationCase'] = '2DxyGuideCase2'
-    msg['ParaViewAddress'] = 'localhost'
+    msg['SimulationCase'] = '2D_B0z0.0195'
+    msg['ParaViewAddress'] = pv_address
     msg['ParaViewPort']    = 22224
-    workflow.send(queue="spaceweather_GuideCase2_simulation", message=msg)
+    workflow.send(queue="iPIC3D_2D_B0z0_0195", message=msg)
+
+    msg['SimulationCase']  = '2D_B0z0.0'
+    msg['ParaViewAddress'] = pv_address
+    msg['ParaViewPort']    = 22222
+    workflow.send(queue="iPIC3D_2D_B0z0_0", message=msg)
 
 # space weather shutdown
 @workflow.handler
@@ -136,17 +152,17 @@ def spaceweather_postprocess(msg):
                     #    data_uuid=registerDataWithDM(filename.replace('(', r'\(').replace(')', r'\)'), machine_name, "spaceweahter simulation ("+simulation.kind+")",
                     #                                 "application/xml", filesize, "vtu", path=directory, associate_with_incident=True, incidentId=IncidentID,
                     #                                 kind=simulation.kind, comment="Basecase created by iPICmini on "+machine_name)
-                    if ".ttk" in filename:
-                        data_uuid=registerDataWithDM(filename.replace('(', r'\(').replace(')', r'\)'), machine_name, "spaceweahter simulation ("+simulation.kind+")",
-                                                     "application/octet-stream", filesize, "ttk", path=directory, associate_with_incident=True, incidentId=IncidentID,
-                                                     kind=simulation.kind, comment="Basecase created by iPICmini on "+machine_name)
-                        data_uuids.append(data_uuid)
-                    elif ".csv" in filename:
-                        data_uuid=registerDataWithDM(filename.replace('(', r'\(').replace(')', r'\)'), machine_name, "spaceweahter simulation ("+simulation.kind+")",
-                                                     "text/csv", filesize, "csv", path=directory, associate_with_incident=True, incidentId=IncidentID,
-                                                     kind=simulation.kind, comment="Basecase created by iPICmini on "+machine_name)
-                        data_uuids.append(data_uuid)
-                    elif ".vtk" in filename:
+                    #elif ".ttk" in filename:
+                    #    data_uuid=registerDataWithDM(filename.replace('(', r'\(').replace(')', r'\)'), machine_name, "spaceweahter simulation ("+simulation.kind+")",
+                    #                                 "application/octet-stream", filesize, "ttk", path=directory, associate_with_incident=True, incidentId=IncidentID,
+                    #                                 kind=simulation.kind, comment="Basecase created by iPICmini on "+machine_name)
+                    #    data_uuids.append(data_uuid)
+                    #elif ".csv" in filename:
+                    #    data_uuid=registerDataWithDM(filename.replace('(', r'\(').replace(')', r'\)'), machine_name, "spaceweahter simulation ("+simulation.kind+")",
+                    #                                 "text/csv", filesize, "csv", path=directory, associate_with_incident=True, incidentId=IncidentID,
+                    #                                 kind=simulation.kind, comment="Basecase created by iPICmini on "+machine_name)
+                    #    data_uuids.append(data_uuid)
+                    if ".vtk" in filename and ("B" in filename or "E" in filename or "rho" in filename or "J" in filename) and '2500' in filename:
                         data_uuid=registerDataWithDM(filename.replace('(', r'\(').replace(')', r'\)'), machine_name, "spaceweahter simulation ("+simulation.kind+")",
                                                      "application/octet-stream", filesize, "vtk", path=directory, associate_with_incident=True, incidentId=IncidentID,
                                                      kind=simulation.kind, comment="Basecase created by iPICmini on "+machine_name)
@@ -165,7 +181,7 @@ def spaceweather_postprocess(msg):
                 if 'type' in log or log['type'] == 'postprocessed':
                     completed = completed + 1
 
-            if completed >= 3:
+            if completed >= 4:
                 print('All simulation completed')
                 workflow.send(queue='spaceweather_shutdown', message=msg)
     else:
@@ -221,9 +237,10 @@ def spaceweather_shutdown(msg):
 
 # we have to register them with the workflow system
 def RegisterHandles():
-    workflow.RegisterHandler(spaceweather_base_simulation,       "spaceweather_base_simulation")
-    workflow.RegisterHandler(spaceweather_GuideCase1_simulation, "spaceweather_GuideCase1_simulation")
-    workflow.RegisterHandler(spaceweather_GuideCase2_simulation, "spaceweather_GuideCase2_simulation")
-    workflow.RegisterHandler(spaceweather_init,                  "spaceweather_init")
-    workflow.RegisterHandler(spaceweather_postprocess,           "spaceweather_postprocess")
-    workflow.RegisterHandler(spaceweather_shutdown,              "spaceweather_shutdown")
+    workflow.RegisterHandler(handler=iPIC3D_2D_B0z0_0,         queue="iPIC3D_2D_B0z0_0")
+    workflow.RegisterHandler(handler=iPIC3D_2D_B0z0_0195,      queue="iPIC3D_2D_B0z0_0195")
+    workflow.RegisterHandler(handler=iPIC3D_2D_B0z0_00975,     queue="iPIC3D_2D_B0z0_00975")
+    workflow.RegisterHandler(handler=iPIC3D_2D_B0z0_039,       queue="iPIC3D_2D_B0z0_039")
+    workflow.RegisterHandler(handler=spaceweather_init,        queue="spaceweather_init")
+    workflow.RegisterHandler(handler=spaceweather_postprocess, queue="spaceweather_postprocess")
+    workflow.RegisterHandler(handler=spaceweather_shutdown,    queue="spaceweather_shutdown")

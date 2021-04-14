@@ -2,7 +2,7 @@ Flask
 pony
 pika
 aio-pika
-aiormq
+#aiormq
 requests
 pyyaml
 pymysql

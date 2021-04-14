@@ -8,9 +8,9 @@ services:
       dockerfile: Dockerfile
     ports:
       - 80:80
-      - 443:443
+      #- 443:443
     volumes:
-      - /var/vestec/certs:/var/vestec/certs
+      #- /var/vestec/certs:/var/vestec/certs
       - ../Nginx/static/:/var/www/
     links:
       - externalservices:externalservices
@@ -125,9 +125,11 @@ services:
     container_name: mariadb
     image: mariadb
     environment:
-      MYSQL_ROOT_PASSWORD: "changeme"
+      MYSQL_DATABASE: "vestec"
+      MYSQL_ROOT_PASSWORD: "root"
     volumes:
-      - "/var/vestec/db:/var/lib/mysql"
+      - "../Database/mariadb:/var/lib/mysql"
+      #- "/var/vestec/db:/var/lib/mysql"
     networks:
       - vestec
     
