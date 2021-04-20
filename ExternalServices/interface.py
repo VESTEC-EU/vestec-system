@@ -70,6 +70,12 @@ def getMyWorkflows():
     username = get_jwt_identity()
     return managementAPI.getMyWorkflows(username)
 
+@app.route('/flask/incidentlogs/<incident_uuid>', methods=['GET'])
+@pny.db_session
+@fresh_jwt_required
+def getIncidentLogs(incident_uuid):
+    username = get_jwt_identity()
+    return managementAPI.getIncidentLogs(incident_uuid, username)    
 
 @app.route('/flask/createincident', methods=['POST'])
 @jwt_required
@@ -235,6 +241,13 @@ def editUserDetails():
 @logins.admin_required
 def deleteUser():    
     return managementAPI.deleteUser(request.json)
+
+@app.route('/flask/updateworkflowhealth', methods=['POST'])
+@pny.db_session
+@fresh_jwt_required
+@logins.admin_required
+def updateWorkflowHealthStatus():
+    return managementAPI.updateWorkflowHealthStatus()
 
 @app.route('/flask/addusertoworkflow', methods=['POST'])
 @pny.db_session

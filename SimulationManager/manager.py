@@ -88,6 +88,7 @@ def cancel_simulation(simulation_id):
         sim.status="CANCELLED"
         sim.status_updated=datetime.datetime.now()
         pny.commit()
+        logger.Log("Cancelled simulation '"+simulation_id+"'", "system", sim.incident.uuid)
         return "Simulation deleted", 200
     else:
         return "Simulation not found with that identifier", 404
@@ -109,11 +110,13 @@ def submit_job():
             simulation.jobID=submission_data[1]
             simulation.status="QUEUED"
             simulation.status_updated=datetime.datetime.now()
+            logger.Log("Submitted simulation '"+simulation_uuid+"'", "system", simulation.incident.uuid)
             return "Job submitted", 200
         else:
             simulation.status="ERROR"
             simulation.status_message=submission_data[1]
             simulation.status_updated=datetime.datetime.now()
+            logger.Log("Error submitting simulation '"+simulation_uuid+"' message is "+simulation.status_message, "system", simulation.incident.uuid, type=log.LogType.Error)
             return submission_data[1], 400
     else:
         return "Simulation can only be submitted when in created state", 400
@@ -153,11 +156,12 @@ def create_job():
         stored_machine=Machine.get(machine_id=matched_machine_id)        
         asyncio.run(create_job_on_machine(stored_machine.machine_name, directory, template_dir))        
         job_status="CREATED"
-        
+        logger.Log("Created simulation '"+uuid+"'", "system", incident_id)
     except MachineStatusManagerException as err:        
         job_status="ERROR"
         status_message="Error allocating machine to job, "+err.message
         stored_machine=None
+        logger.Log("Error creating simulation, message is "+err.message, "system", incident_id, type=log.LogType.Error)
         return "Error allocating job to machine", 400
     except asyncio.exceptions.TimeoutError:
         return "Timeout contacting remote machine", 504
@@ -207,6 +211,7 @@ def handleRefreshOfSimulations(simulations):
         for jkey, jvalue in job_statuses.items():
             queueid_to_sim[jkey].status_updated=datetime.datetime.now() 
             if (jvalue[0] != queueid_to_sim[jkey].status):
+                logger.Log("Simulation '"+queueid_to_sim[jkey].uuid+"' changed state from '"+jvalue[0]+"' to '"+queueid_to_sim[jkey].status+"'", "system", queueid_to_sim[jkey].incident.uuid)
                 queueid_to_sim[jkey].status=jvalue[0]
                 if (len(jvalue[1]) > 0):
                     queueid_to_sim[jkey].walltime=jvalue[1]

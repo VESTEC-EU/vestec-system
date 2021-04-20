@@ -7,5 +7,8 @@ class VestecLogger():
         self.originator = originator
 
     @pny.db_session
-    def Log(self,type,comment,user="system",incidentId=None):
-        DBLog(timestamp=datetime.datetime.now(),type=type,comment=comment,originator=self.originator,user=user)
+    def Log(self,comment,user="system",incidentId=None, type=LogType.Info):
+        if (incidentId is None):
+            DBLog(timestamp=datetime.datetime.now(),type=type,comment=comment,originator=self.originator,user=user)
+        else:
+            DBLog(timestamp=datetime.datetime.now(),type=type,comment=comment,originator=self.originator,user=user, incidentId=incidentId)

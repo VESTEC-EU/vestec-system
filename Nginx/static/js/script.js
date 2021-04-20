@@ -54,6 +54,18 @@ $( function() {
             
         }
         });
+
+    incident_log_dialog = $("#incident-log-dialog-form").dialog({
+        autoOpen: false,
+        height: "auto",
+        width: "90%",
+        modal: true,
+        buttons: {
+            "Close": function() {
+              $( this ).dialog( "close" );
+            }
+        } 
+        });
    
         $( "#dialog-confirm" ).dialog({
           resizable: false,
@@ -601,6 +613,7 @@ function loadIncidentDetails(incident) {
             incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button id=\"test_workflow\" class=\"button blue self-center\" onClick=\"testIncident('"+incident.uuid+"')\">Initiate test stage</button>";
         }
 
+        incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue\" style=\"float: right; margin-left:5px important!\" onClick=\"getIncidentLogs(\'"+incident.uuid+"\')\">View Logs</button>";
         incident_html += "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<button class=\"button blue self-center\" style=\"float: right;\" onClick=\"getIncidentDetails(\'"+incident.uuid+"\')\">Refresh Status</button></div>";
     }
 
@@ -737,6 +750,39 @@ function performSimulationCancel() {
             $("#confirmation").html("<span>&#10007</span> Simulation cancel failed");
         }
     });   
+}
+
+function getIncidentLogs(incident_uuid) {
+    $.ajax({        
+        url: "/flask/incidentlogs/" + incident_uuid,
+        type: "GET",
+        contentType: "application/json",
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        success: function (response) {    
+            logs = JSON.parse(response.logs);
+            $('#incident-log-dialog-contents').load('templates/incidentlog.html #incidentLogScreen', function() {
+                for (log in logs) {
+                    var log_entry = "<tr";
+                    if (log.type == "Error") {
+                        log_entry += "style=\"background-color:#FFB5B5;\"";
+                    } else if (log.type == "Warn") {
+                        log_entry += "style=\"background-color:#F7F77D;\"";
+                    }
+                    log_entry += ">";                    
+                    log = logs[log];
+                    log_entry += "<td>" + log.timestamp + "</td>";
+                    log_entry += "<td>" + log.type + "</td>";
+                    log_entry += "<td>" + log.originator + "</td>";
+                    log_entry += "<td>" + log.user + "</td>";                    
+                    log_entry += "<td>" + log.comment + "</td>";
+                    log_entry += "</tr>";
+    
+                    $("#logsTable").append(log_entry);
+                }
+                incident_log_dialog.dialog( "open" );
+            });  
+        }
+    });  
 }
 
 function editDataItem(data_uuid, incident_uuid) {
@@ -1405,10 +1451,14 @@ function getSystemHealth() {
                 var health_entry = "<tr>";
                 item = health[item];
                 health_entry += "<td>" + item.name + "</td>";
-                if (item.status == true) {
-                    health_entry += "<td><img src='../img/tick.png' width=32 height=32></td>";
+                if (typeof item.status === "boolean"){
+                    if (item.status == true) {
+                        health_entry += "<td><img src='../img/tick.png' width=32 height=32></td>";
+                    } else {
+                        health_entry += "<td><img src='../img/cross.png' width=32 height=32></td>";
+                    }
                 } else {
-                    health_entry += "<td><img src='../img/cross.png' width=32 height=32></td>";
+                    health_entry += "<td>Last successfully checked: "+item.status+"</td>"
                 }
                 health_entry += "</tr>";
 
@@ -1422,6 +1472,22 @@ function getSystemHealth() {
         }
     });
     });
+}
+
+function updateWorkflowHealth() {
+    checkAuthStillValid();
+    $.ajax({
+        url: "/flask/updateworkflowhealth",
+        type: "POST",        
+        headers: {'Authorization': 'Bearer ' + sessionStorage.getItem("access_token")},
+        success: function(response) {    
+            getSystemHealth();
+        },
+        error: function(xhr) {
+            $("#confirmation").removeClass().addClass("button red self-center");
+            $("#confirmation").html("<span>&#10007</span> Update workflow health status failed");
+        }
+    });    
 }
 
 function getLogs() {

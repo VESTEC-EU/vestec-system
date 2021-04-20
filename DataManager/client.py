@@ -2,7 +2,10 @@ import os
 import requests
 import pony.orm as pny
 from Database import Incident, StoredDataset
+import Utils.log as log
 import datetime
+
+logger = log.VestecLogger("Data Manager")
 
 class DataManagerException(Exception):
     def __init__(self, status_code, message):
@@ -32,8 +35,10 @@ def registerDataWithDM(filename, machine, description, type, size, originator, g
         if associate_with_incident:
             if comment is None: comment=description
             _associateDataWithIncident(incidentId, returnUUID.text, filename, kind, comment)
+        if incidentId is not None: logger.Log("Registered file '"+filename+"' on machine '"+machine+"'", "system", incidentId)
         return returnUUID.text
     else:
+        if incidentId is not None: logger.Log("Error registering file '"+filename+"' on machine '"+machine+"' message '"+returnUUID.text+";", "system", incidentId, type=log.LogType.Error)
         raise DataManagerException(returnUUID.status_code, returnUUID.text)
 
 def searchForDataInDM(filename, machine, path=None):
@@ -90,8 +95,10 @@ def putByteDataViaDM(filename, machine, description, type, originator, payload, 
         if associate_with_incident:
             if comment is None: comment=description
             _associateDataWithIncident(incidentId, response.text, filename, kind, comment)
+        if incidentId is not None: logger.Log("Put data with name '"+filename+"' onto machine '"+machine+"'", "system", incidentId)
         return response.text
     else:
+        if incidentId is not None: logger.Log("Error putting data with name '"+filename+"' on machine '"+machine+"' message '"+response.text+"'", "system", incidentId, type=log.LogType.Error)
         raise DataManagerException(response.status_code, response.text)
 
 def downloadDataToTargetViaDM(filename, machine, description, type, originator, url, protocol, group = "none", storage_technology=None, path=None, options=None,
@@ -120,8 +127,10 @@ def downloadDataToTargetViaDM(filename, machine, description, type, originator, 
         if associate_with_incident:
             if comment is None: comment=description
             _associateDataWithIncident(incidentId, returnUUID.text, filename, kind, comment)
+        if incidentId is not None: logger.Log("Downloaded data from '"+url+"' data with name '"+filename+"' onto machine '"+machine+"'", "system", incidentId)
         return returnUUID.text
     else:
+        if incidentId is not None: logger.Log("Error downloading data from '"+url+"' data message '"+returnUUID.text+"'", "system", incidentId, type=log.LogType.Error)
         raise DataManagerException(returnUUID.status_code, returnUUID.text)
 
 def moveDataViaDM(data_uuid, dest_name, dest_machine, dest_storage_technology=None, gather_metrics=True):
@@ -158,7 +167,7 @@ def copyDataViaDM(data_uuid, dest_name, dest_machine, dest_storage_technology=No
             data = getInfoForDataInDM(id)
             name = data["filename"]
             comment = "Copy of %s"%(data_uuid)
-            _associateDataWithIncident(incident, id, name, kind, comment)
+            _associateDataWithIncident(incident, id, name, kind, comment)        
         return id
     else:
         raise DataManagerException(response.status_code, response.text)
