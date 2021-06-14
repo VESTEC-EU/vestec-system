@@ -142,8 +142,7 @@ def complete_tests(msg):
     except client.DataManagerException:
         workflow.logger.warn("Unable to register test results with DM")
         logger.Log(type=LogType.Error,comment="Unable to register test results with DM",incidentId=incident)
-    
-    
+
     workflow.Complete(incident)
 
 

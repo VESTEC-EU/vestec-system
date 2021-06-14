@@ -13,6 +13,7 @@ from DataManager.client import registerDataWithDM, putByteDataViaDM, DataManager
 from SimulationManager.client import createSimulation, submitSimulation, SimulationManagerException
 from ExternalDataInterface.client import registerEndpoint, ExternalDataInterfaceException, removeEndpoint
 
+
 # we now want to define some handlers
 @workflow.handler
 def external_data_arrival_handler(message):

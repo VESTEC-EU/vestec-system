@@ -142,6 +142,7 @@ def packageDataset(stored_ds):
         stored_ds_dict["machine"]=""
     return stored_ds_dict
 
+
 def packageDataTransfer(data_transfer):
     if data_transfer.date_completed is not None and data_transfer.completion_time is not None:
         dt_dict = {}
@@ -159,6 +160,7 @@ def packageDataTransfer(data_transfer):
                 (data_transfer.src.size/1048576.0)/data_transfer.completion_time.total_seconds()
                 )
         dt_dict["status"] = data_transfer.status
+        dt_dict["estimated_time"] = str(data_transfer.estimated_time)
         return dt_dict
     else:
         return None
@@ -166,11 +168,9 @@ def packageDataTransfer(data_transfer):
 @pny.db_session
 def packageAllDataTransfersForDatasets(associated_datasets):
     ds_ids = list(ds.uuid for ds in associated_datasets)
-
     data_transfers = pny.select(dt for dt in DataTransfer
-                                if dt.src.id in ds_ids
+                               if dt.src.id in ds_ids
                                 or dt.dst.id in ds_ids)[:]
-
     return list(filter(None, (packageDataTransfer(dt) for dt in data_transfers)))
 
 def packageIncident(stored_incident, include_sort_key, include_digraph, include_manual_data_queuename, include_associated_data, include_associated_simulations, include_associated_data_transfers):

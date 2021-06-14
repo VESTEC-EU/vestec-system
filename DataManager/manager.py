@@ -283,7 +283,6 @@ def _handle_copy_or_move(id, move):
     dest = flask.request.form["dest"]
 
     transfer_time = estimate_data_transfer_time(id, src_machine, dest_machine)
-    print("ESTIMATED TIME: " + str(transfer_time))
 
     if "gather_metrics" in flask.request.form:
         gather_metrics=flask.request.form["gather_metrics"].lower() == "true"
@@ -304,6 +303,7 @@ def _handle_copy_or_move(id, move):
                                         dst_machine=dest_machine,
                                         date_started=datetime.datetime.now(),
                                         status="STARTED")
+            data_transfer.estimated_time = transfer_time
 
     path,fname = os.path.split(dest)
     if _checkExists(dest_machine,fname,path):
@@ -481,13 +481,13 @@ def _get_data_from_location(registered_data, gather_metrics = True):
                                         date_started=datetime.datetime.now(),
                                         status="STARTED")
     transfer_time = estimate_data_transfer_time(registered_data.id, registered_data.machine, "external")
-    print("Get ESTIMATED TIME: " + str(transfer_time))
+    data_transfer.estimated_time = transfer_time
 
     if len(registered_data.path) > 0:
         target_src=registered_data.path+"/"+registered_data.filename
     else:
         target_src=registered_data.filename
-    if registered_data.machine == "localhost":   
+    if registered_data.machine == "localhost":
         if registered_data.storage_technology == "FILESYSTEM":
             readFile = open(_getLocalPathPrepend()+target_src, "rb")
             contents=readFile.read()
@@ -505,6 +505,7 @@ def _get_data_from_location(registered_data, gather_metrics = True):
         data_transfer.date_completed = datetime.datetime.now()
         data_transfer.completion_time = (data_transfer.date_completed - data_transfer.date_started)
         data_transfer.transfer_rate = float(registered_data.size)/data_transfer.completion_time.total_seconds()
+
     return contents, 200
 
 async def submit_remote_get_data(target_machine_name, src_file):
@@ -525,7 +526,7 @@ def _put_data_to_location(data_payload, data_uuid, gather_metrics):
                                         status="STARTED")
         #Estimate transfer time and print it
         transfer_time = estimate_data_transfer_time(data_uuid,"external", registered_data.machine)
-        print("Put ESTIMATED TIME: " + str(transfer_time))
+        data_transfer.estimated_time = transfer_time
 
 
         # If we are provided with a string then perform an implicit conversion to bytes
@@ -647,7 +648,8 @@ def _getLocalPathPrepend():
     if "VESTEC_SHARED_FILE_LOCATION" in os.environ:
         shared_location= os.environ["VESTEC_SHARED_FILE_LOCATION"]
         if shared_location[-1] != "/": shared_location+="/"
-        return shared_location
+        #return "shared_location"
+        return ""
     else:
         return ""
 
@@ -661,8 +663,9 @@ Return: Maximal 10 entries of recent data transfer
 @pny.db_session
 def find_old_transfer(source, destination):
     #Check for T.transfer_rate != None, because transfer_rate is an optional field
-    entries = pny.select(T for T in DataTransfer if (T.src_machine == source and T.dst_machine == destination and T.transfer_rate != None )).order_by(DataTransfer.date_started)[:10]
-    return entries
+    entries = pny.select(T for T in DataTransfer if (T.src_machine == source and T.dst_machine == destination and T.transfer_rate != None )).order_by(DataTransfer.date_started)
+    last_N_entries = [entry for entry in list(reversed(list(entries)))]
+    return last_N_entries[0:10]
 
 """
 Estimate the time of the transfer of data id from machine source to machine destination
@@ -672,6 +675,7 @@ Input: id           the id of the Data
 Return: Either an estimation of the time of the Datatransfer, or -1, if we can not
         estimate the time, due to no records
 """
+@pny.db_session
 def estimate_data_transfer_time(id, source, destination):
     data = Data[id]
     #Get old records of transfers from source to destinatoin
@@ -681,14 +685,13 @@ def estimate_data_transfer_time(id, source, destination):
     if(len(old_transfers) != 0):
         for entry in old_transfers:
             mean = mean + entry.transfer_rate
+        #Unit: bytes / seconds
         mean = mean / len(old_transfers)
-        print("Data transfer needs " + str(data.size / mean))
-        return data.size / mean
+
+        return datetime.timedelta(seconds = data.size / mean)
     else:
-        #No recordrs of data-transfer from source to destination were found
-        print("No records of Data-transfers between " + source + " and " + destination)
-        return -1
-#TODO: Is -1 a good idea to return if len == 0?
+        #No records of data-transfer from source to destination were found
+        return datetime.timedelta(seconds = 0)
 
 if __name__ == "__main__":
     initialiseDatabase()
