@@ -56,8 +56,8 @@ machines["ARCHER"]  = {
 
 machines["CIRRUS"] = {
     "host": "cirrus.epcc.ed.ac.uk",
-    "username": "gpsgibb",
-    "SSHkey": "rsa_cirrus",
+    "username": "holk_jo",
+    "SSHkey": "if_rsa_cirrus",
     "basedir": "/lustre/home/z04/gpsgibb/vestec",
     "available_nodes": 280,
     "cores_per_node": 36,

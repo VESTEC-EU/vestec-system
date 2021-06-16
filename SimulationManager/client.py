@@ -22,6 +22,7 @@ def createSimulation(incident_id, num_nodes, requested_walltime, kind, executabl
         arguments["template_dir"]=template_dir
 
     createResponse = requests.post(_get_SM_URL()+'/create', json=arguments)
+    print ("create health, response = ", createResponse)
     if createResponse.status_code == 201:
         return createResponse.json()["simulation_id"]
     else:

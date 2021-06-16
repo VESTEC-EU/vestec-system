@@ -11,6 +11,7 @@ def workflow_running_test(msg):
 
 @workflow.handler
 def workflow_tests_init(msg):
+    print (msg)
     incident = msg["IncidentID"]
     logdir = msg["logdir"]
 

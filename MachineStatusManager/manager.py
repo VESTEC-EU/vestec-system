@@ -100,9 +100,12 @@ def add_machine():
 def get_appropriate_machine():
     requested_walltime = request.args.get("walltime", None)
     requested_num_nodes = request.args.get("num_nodes", None)
+    print ("Call matchmachine WT,NN: ", requested_walltime, requested_num_nodes)
     machines=pny.select(machine for machine in Machine)
     for machine in machines:
-        if machine.enabled:            
+        name = machine.machine_name
+        print ("machine name: ", name)
+        if machine.enabled:        
             return jsonify({"machine_id":machine.machine_id}), 200    
     return jsonify({"msg":"No matching machine"}), 404
 

@@ -1,16 +1,16 @@
 output_basename: CFIRE02KM
 clay:
   class: File
-  path: /lustre/home/shared/dc118/data/mesonh/PREP_PGD_FILES_WWW/CLAY_HWSD_MOY.dir
+  path: /hpc_data/VESTEC/wildfire/mesonh/prep_pgd_files/CLAY_HWSD_MOY.dir
 cover:
   class: File
-  path: /lustre/home/shared/dc118/data/mesonh/PREP_PGD_FILES_WWW/ECOCLIMAP_v2.0.dir
+  path: /hpc_data/VESTEC/wildfire/mesonh/prep_pgd_files/ECOCLIMAP_v2.0.dir
 zs:
   class: File
-  path: /lustre/home/shared/dc118/data/mesonh/PREP_PGD_FILES_WWW/gtopo30.dir
+  path: /hpc_data/VESTEC/wildfire/mesonh/prep_pgd_files/gtopo30.dir
 sand:
   class: File
-  path: /lustre/home/shared/dc118/data/mesonh/PREP_PGD_FILES_WWW/SAND_HWSD_MOY.dir
+  path: /hpc_data/VESTEC/wildfire/mesonh/prep_pgd_files/SAND_HWSD_MOY.dir
 upperleft:
   lat: 34.05
   lon: -118.05

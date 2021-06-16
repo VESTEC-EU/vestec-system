@@ -121,6 +121,7 @@ class Client:
             content_type="application/json",
             content_encoding="utf-8",
         )
+        # print ("Sending message ") + msg
         await self.exchange.publish(msg, routing_key=topic)
         # Return the response when it arrives
         return await future

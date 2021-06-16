@@ -20,7 +20,7 @@ from time import sleep
 def remote_hello (message):
   print ("Starting remote hello  (" + message["IncidentID"] + ")")
   # What to call when the execution is completed
-  callbacks = {'COMPLETED': 'hworld_workflow_execution_completed'}
+  callbacks = {'COMPLETED': 'hworld_workflow_execution_completed'}    
 
   print("Create Sim")
   try:
