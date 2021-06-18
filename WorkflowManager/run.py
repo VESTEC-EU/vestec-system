@@ -13,6 +13,7 @@ from workflows.performance_data import performance_data
 from workflows.wildfire import main as wildfire
 from workflows.tests import tests
 from workflows.helloworld_remote import helloworld
+from workflows.data_transfer import data_transfer
 
 # set the logging level of the workflow logger
 workflow.SetLoggingLevel(logging.WARNING)
@@ -27,6 +28,7 @@ performance_data.RegisterHandlers()
 wildfire.RegisterHandlers()
 tests.RegisterHandlers()
 helloworld.RegisterHandlers()
+data_transfer.RegisterHandlers()
 
 workflow.execute()
 

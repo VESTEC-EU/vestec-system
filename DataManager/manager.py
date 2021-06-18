@@ -189,6 +189,7 @@ def GetExternal():
                                      date_completed = date_completed,
                                      completion_time = (date_completed - date_started),
                                      transfer_rate = float(size) / (date_completed - date_started).total_seconds())
+            data_transfer.estimated_time = estimate_data_transfer_time(id, protocol, machine)
         return id, 201
     elif status == NOT_IMPLEMENTED:
         return message, 501
@@ -648,8 +649,7 @@ def _getLocalPathPrepend():
     if "VESTEC_SHARED_FILE_LOCATION" in os.environ:
         shared_location= os.environ["VESTEC_SHARED_FILE_LOCATION"]
         if shared_location[-1] != "/": shared_location+="/"
-        #return "shared_location"
-        return ""
+        return shared_location
     else:
         return ""
 
