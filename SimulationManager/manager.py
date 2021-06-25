@@ -211,7 +211,7 @@ def handleRefreshOfSimulations(simulations):
         for jkey, jvalue in job_statuses.items():
             queueid_to_sim[jkey].status_updated=datetime.datetime.now() 
             if (jvalue[0] != queueid_to_sim[jkey].status):
-                logger.Log("Simulation '"+queueid_to_sim[jkey].uuid+"' changed state from '"+jvalue[0]+"' to '"+queueid_to_sim[jkey].status+"'", "system", queueid_to_sim[jkey].incident.uuid)
+                logger.Log("Simulation '"+queueid_to_sim[jkey].uuid+"' changed state from '"+queueid_to_sim[jkey].status+"' to '"+jvalue[0]+"'", "system", queueid_to_sim[jkey].incident.uuid)
                 queueid_to_sim[jkey].status=jvalue[0]
                 if (len(jvalue[1]) > 0):
                     queueid_to_sim[jkey].walltime=jvalue[1]
