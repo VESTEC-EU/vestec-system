@@ -1,0 +1,10 @@
+C_OUT:
+  class: File
+  path: /lustre/home/dc118/dc118sys/incidents/incident-08e390d28ae4/simulation-2aedc3fb9e34/R0_zika.txt
+IDS:
+  class: File
+  path: /lustre/home/dc118/shared/data/moz/rome/IDS_rome.pkl
+MASCHERA:
+  class: File
+  path: /lustre/home/dc118/shared/data/moz/rome/MASCHERA_rome.pkl
+outbase: R0_zika

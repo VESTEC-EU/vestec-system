@@ -15,32 +15,33 @@ from DataManager.client import moveDataViaDM, DataManagerException, getInfoForDa
 from SimulationManager.client import createSimulation, submitSimulation, SimulationManagerException
 from ExternalDataInterface.client import registerEndpoint, ExternalDataInterfaceException, removeEndpoint
 
+static_directory="/lustre/home/dc118/shared/data/moz"
+
 # create and submit jobs
-def _launch_simulation(IncidentID, species, disease, region, count, callback='mosquito_postprocess'):
+def _launch_simulation(IncidentID, simulation_description, template_directory, yaml_filename, yaml_configuration, callback):
     try:
         callbacks = { 'COMPLETED': callback }
         # ./R0 -a trento -s albopictus -d deng -ns 200 -rt n
-        sim_id = createSimulation(IncidentID, 1, "00:15:00", "Mosquito simulation", "submit.sh", callbacks, template_dir="templates/mosquito_template")
+        sim_id = createSimulation(IncidentID, 1, "00:15:00", simulation_description, "submit.sh", callbacks, template_dir="templates/"+template_directory)
         with pny.db_session:
             simulation=Simulation[sim_id]    
             machine_name=simulation.machine.machine_name            
 
         try:                
-            putByteDataViaDM("mosquito.yml", machine_name, "Mosquito simulation configuration", "text/plain", "Mosquito workflow", _buildMosquitoYaml(species, disease, region, count), path=simulation.directory)                 
+            putByteDataViaDM(yaml_filename, machine_name, simulation_description+" configuration", "text/plain", "Mosquito workflow", yaml_configuration, path=simulation.directory)                 
         except DataManagerException as err:
-            print("Can not write mosquito configuration to simulation location"+err.message)        
+            print("Can not write "+simulation_description+" configuration to simulation location"+err.message)        
 
         submitSimulation(sim_id)
+        return sim_id
     except SimulationManagerException as err:
         print("Error creating or submitting simulation "+err.message)
         return
 
 @pny.db_session
-def _buildMosquitoYaml(species, disease, region, count):
+def _build_simulation_yaml(species, disease, region, count):
     sample_configuration_file = open("workflows/mosquito/templates/mosquito.yml")
-    yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)        
-
-    static_directory="/lustre/home/dc118/shared/data/moz"
+    yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)    
     
     yaml_template["region"]=region
     yaml_template["species"]=species
@@ -56,18 +57,36 @@ def _buildMosquitoYaml(species, disease, region, count):
         
     return yaml.dump(yaml_template)
 
-def trento(IncidentId):    
-    _launch_simulation(IncidentId, 'albopictus', 'deng', 'trento', 200)    
+def trento(IncidentId):
+    simulation_yaml=_build_simulation_yaml('albopictus', 'deng', 'trento', 200)
+    sim_id=_launch_simulation(IncidentId, "Mosquito simulation", "mosquito_template", "mosquito.yml", simulation_yaml, "mosquito_simulation_postprocess")
+    sim_meta = {
+        "simulation": sim_id,
+        "species": "albopictus",
+        "disease": "deng",
+        "region": "trento",
+        "count": "200"
+    }
+    workflow.Persist.Put(IncidentId, sim_meta)    
 
-def rome(IncidentId):    
-    _launch_simulation(IncidentId, 'aegypti', 'zika', 'rome', 200)
+def rome(IncidentId):
+    simulation_yaml=_build_simulation_yaml('albopictus', 'deng', 'trento', 200)
+    sim_id=_launch_simulation(IncidentId, "Mosquito simulation", "mosquito_template", "mosquito.yml", simulation_yaml, "mosquito_simulation_postprocess")
+    sim_meta = {
+        "simulation": sim_id,
+        "species": "aegypti",
+        "disease": "zika",
+        "region": "rome",
+        "count": "200"
+    }
+    workflow.Persist.Put(IncidentId, sim_meta)    
 
 @workflow.handler
 def mosquito_test(msg):
-    print("\nMosquito test handler called to start rome and trento simulations")
+    print("\nMosquito test handler called to start trento simulation")
     IncidentID = msg["IncidentID"]
     trento(IncidentID)
-    rome(IncidentID)
+    #rome(IncidentID)
  
 # mosquito weather init
 @workflow.handler
@@ -78,71 +97,202 @@ def mosquito_init(msg):
         print("Error from EDI on registration "+err.message)
 
     workflow.setIncidentActive(msg["IncidentID"])
+
+def _retrieve_simulation_metadata(meta_infos, simulationId):    
+    for meta in meta_infos:        
+        if meta["simulation"] == simulationId:
+            return meta
+    raise Exception
+
+def _check_directory_contains_file(directoryListing, filename):
+    for entry in directoryListing:
+        tokens=entry.split()
+        if filename == tokens[-1]:
+            return True
+    return False
     
-
-# mosquito weather shutdown
+# mosquito simulation postprocessing
 @workflow.handler
-def mosquito_postprocess(msg):
-
+def mosquito_simulation_postprocess(msg):
     IncidentID = msg["IncidentID"]
     originator = msg['originator']
-    logs = workflow.Persist.Get(IncidentID)
+    logs = workflow.Persist.Get(IncidentID, True)    
     print("\nMosquito simulation postprocess handler", IncidentID)
 
     if originator == 'Simulation Completed':
         simulationId = msg["simulationId"]
-        simulationIdPostfix=simulationId.split("-")[-1]
-        directoryListing=msg["directoryListing"]
-
-        print("\nResults available for mosquito simulation!") 
+        try:
+            simulation_metadata=_retrieve_simulation_metadata(workflow.Persist.Get(IncidentID, True), simulationId)
+        except Exception:
+            print("No metadata for simulation "+simulationId)
+            return
 
         with pny.db_session:
             myincident = Incident[IncidentID]
             simulation=Simulation[simulationId]
-            machine_name=simulation.machine.machine_name
             machine_basedir=simulation.machine.base_work_dir
-            if machine_basedir[-1] != "/": machine_basedir+="/"
+            if machine_basedir[-1] != "/": machine_basedir+="/"         
+        
+        if simulation is not None:
+            R0_file="R0_"+simulation_metadata["disease"]+".txt"
+            if not _check_directory_contains_file(msg["directoryListing"], R0_file):
+                print("Result file '"+R0_file+"' not found, exitting")
+                return
+            convert_yaml=_build_convert_yaml(simulation_metadata["disease"], simulation_metadata["region"], machine_basedir+simulation.directory+"/"+R0_file)
+            sim_id=_launch_simulation(IncidentID, "Mosquito conversion", "mosquito_convert_template", "convert.yml", convert_yaml, "mosquito_convert_postprocess")            
+            simulation_metadata["simulation"]=sim_id
+            workflow.Persist.Put(IncidentID, simulation_metadata)
+        else:
+            print("No matching simulation record, exitting")
+            return
+
+    else:
+        print("Ignoring originator with "+originator)
+        return
+
+def _build_convert_yaml(disease, region, R0_file):
+    sample_configuration_file = open("workflows/mosquito/templates/convert.yml")
+    yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)    
+    
+    yaml_template["outbase"]="R0_"+disease
+    yaml_template["IDS"]["path"]=static_directory+"/"+region+"/IDS_"+region+".pkl"
+    yaml_template["MASCHERA"]["path"]=static_directory+"/"+region+"/MASCHERA_"+region+".pkl"
+    yaml_template["C_OUT"]["path"]=R0_file
+    return yaml.dump(yaml_template)
+
+# mosquito convert postprocessing
+@workflow.handler
+def mosquito_convert_postprocess(msg):
+    IncidentID = msg["IncidentID"]
+    originator = msg['originator']
+    logs = workflow.Persist.Get(IncidentID, True)    
+    print("\nMosquito convert postprocess handler", IncidentID)
+    
+    if originator == 'Simulation Completed':
+        simulationId = msg["simulationId"]
+        try:
+            simulation_metadata=_retrieve_simulation_metadata(workflow.Persist.Get(IncidentID, True), simulationId)
+        except Exception:
+            print("No metadata for simulation "+simulationId)
+            return
+
+        with pny.db_session:
+            myincident = Incident[IncidentID]
+            simulation=Simulation[simulationId]
+            machine_basedir=simulation.machine.base_work_dir
+            if machine_basedir[-1] != "/": machine_basedir+="/"         
+        
+        if simulation is not None:
+            R0_file="R0_"+simulation_metadata["disease"]+".tif"
+            if not _check_directory_contains_file(msg["directoryListing"], R0_file):
+                print("Convert result file '"+R0_file+"' not found, exitting")
+                return
+            mosaic_yaml=_build_mosaic_yaml(machine_basedir+simulation.directory+"/"+R0_file)
+            sim_id=_launch_simulation(IncidentID, "Mosquito mosaic", "mosquito_mosaic_template", "mosaic.yml", mosaic_yaml, "mosquito_mosaic_postprocess")            
+            simulation_metadata["simulation"]=sim_id
+            workflow.Persist.Put(IncidentID, simulation_metadata)
+        else:
+            print("No matching simulation record, exitting")
+            return
+
+    else:
+        print("Ignoring originator with "+originator)
+        return
+
+def _build_mosaic_yaml(R0_file):
+    sample_configuration_file = open("workflows/mosquito/templates/mosaic.yml")
+    yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)            
+    
+    yaml_template["tiffs"][0]["path"]=R0_file
+    return yaml.dump(yaml_template)
+
+@workflow.handler
+def mosquito_mosaic_postprocess(msg):
+    IncidentID = msg["IncidentID"]
+    originator = msg['originator']
+    logs = workflow.Persist.Get(IncidentID, True)    
+    print("\nMosquito mosaic postprocess handler", IncidentID)
+    
+    if originator == 'Simulation Completed':
+        simulationId = msg["simulationId"]
+        try:
+            simulation_metadata=_retrieve_simulation_metadata(workflow.Persist.Get(IncidentID, True), simulationId)
+        except Exception:
+            print("No metadata for simulation "+simulationId)
+            return
+
+        with pny.db_session:
+            myincident = Incident[IncidentID]
+            simulation=Simulation[simulationId]
+            machine_basedir=simulation.machine.base_work_dir
+            if machine_basedir[-1] != "/": machine_basedir+="/"         
+        
+        if simulation is not None:
+            for i in range(0,12):
+                num="0"+str(i) if i<10 else str(i)
+                if not _check_directory_contains_file(msg["directoryListing"], "output_band_"+num+".tif"):
+                    print("Convert result file 'output_band_"+num+".tif' not found, exitting")
+                    return
+            build_topo_yaml=_build_topo_yaml(simulation_metadata["disease"], simulation_metadata["species"], simulation_metadata["region"], machine_basedir+simulation.directory)
+            sim_id=_launch_simulation(IncidentID, "Mosquito topological", "mosquito_topo_template", "topo.yml", build_topo_yaml, "mosquito_topo_postprocess")            
+            simulation_metadata["simulation"]=sim_id
+            workflow.Persist.Put(IncidentID, simulation_metadata)
+        else:
+            print("No matching simulation record, exitting")
+            return
+
+    else:
+        print("Ignoring originator with "+originator)
+        return
+
+def _build_topo_yaml(disease, species, region, result_dir):
+    sample_configuration_file = open("workflows/mosquito/templates/topo.yml")
+    yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)            
+    
+    yaml_template["region"]=region
+    yaml_template["species"]=species
+    yaml_template["disease"]=disease
+    for i in range(0,12):
+        num="0"+str(i) if i<10 else str(i)        
+        yaml_template["tiffs"][i]["path"]=result_dir+"/output_band_"+num+".tif"
+    return yaml.dump(yaml_template)        
+
+@workflow.handler
+def mosquito_topo_postprocess(msg):
+    IncidentID = msg["IncidentID"]
+    originator = msg['originator']
+    logs = workflow.Persist.Get(IncidentID)
+    print("\nMosquito topo postprocess handler", IncidentID)
+
+    if originator == 'Simulation Completed':
+        simulationId = msg["simulationId"]
+        simulationIdPostfix=simulationId.split("-")[-1]
+        directoryListing=msg["directoryListing"]        
+
+        with pny.db_session:
+            myincident = Incident[IncidentID]
+            simulation=Simulation[simulationId]
+            machine_name=simulation.machine.machine_name                     
 
         if simulation is not None:
-            result_files={}            
+            result_files={}
             for entry in directoryListing:
                 tokens=entry.split()
-                if len(tokens) == 9 and ".txt" in tokens[-1]:
+                if len(tokens) == 9 and ".zip" in tokens[-1]:
                     if tokens[4].isnumeric():
                         file_size=int(tokens[4])
                     else:
                         file_size=0
-                    registerDataWithDM(tokens[-1], machine_name, "Mosquito simulation", "text/plain", file_size, "Mosquito output txt", 
-                        path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="Mosquito simulation output", 
-                        comment="Created by mosquito on "+machine_name+" with simulation ID "+simulationId)
+                    try:
+                        registerDataWithDM(tokens[-1], machine_name, "Mosquito simulation", "application/zip", file_size, "Mosquito topological output", 
+                            path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="Mosquito topological output", 
+                            comment="Created by ttk for mosquito on "+machine_name+" with simulation ID "+simulationId)
+                    except DataManagerException as err:
+                        print("Error registering mosquito topological output with data manager, aborting "+err.message)
+                        return
                     print("Register "+tokens[-1])
-
-            data_uuids = []
-            for filepath, filesize in result_files.items():
-                filename  = os.path.basename(filepath)
-                directory = os.path.dirname(filepath)
-                print(filename, directory, filesize)
-
-                # register output data with data manager
-                try:
-                    if ".txt" in filename:
-                        description = directory.split('/')
-                        data_uuid=registerDataWithDM(filename.replace('(', r'\(').replace(')', r'\)'), machine_name, "mosquito simulation ("+simulation.kind+","+description[-2]+","+description[-1]+")",
-                                                     "application/octet-stream", filesize, "txt", path=directory, associate_with_incident=True, incidentId=IncidentID,
-                                                     kind=description[-1], comment=description[-2]+" "+description[-1]+" created by R0 on "+machine_name)
-                        data_uuids.append(data_uuid)
-                    elif '.png' in filename:
-                        description = directory.split('/')
-                        data_uuid=registerDataWithDM(filename.replace('(', r'\(').replace(')', r'\)'), machine_name, "mosquito simulation ("+simulation.kind+","+description[-2]+","+description[-1]+")",
-                                                     "application/octet-stream", filesize, "png", path=directory, associate_with_incident=True, incidentId=IncidentID,
-                                                     kind=description[-1], comment=description[-2]+" "+description[-1]+" created by R0 on "+machine_name)
-                        data_uuids.append(data_uuid)
-
-                except DataManagerException as err:
-                    print("Error registering mosquito result data with data manager, aborting "+err.message)
-
     else:
-        print("Ignore originator with "+originator)
+        print("Ignoring originator with "+originator)
         return
 
 @workflow.handler
@@ -154,6 +304,9 @@ def mosquito_shutdown(msg):
 # we have to register them with the workflow system
 def RegisterHandlers():    
     workflow.RegisterHandler(handler=mosquito_init,        queue="mosquito_init")
-    workflow.RegisterHandler(handler=mosquito_postprocess, queue="mosquito_postprocess")
+    workflow.RegisterHandler(handler=mosquito_simulation_postprocess, queue="mosquito_simulation_postprocess")
+    workflow.RegisterHandler(handler=mosquito_convert_postprocess, queue="mosquito_convert_postprocess")
+    workflow.RegisterHandler(handler=mosquito_mosaic_postprocess, queue="mosquito_mosaic_postprocess")
+    workflow.RegisterHandler(handler=mosquito_topo_postprocess, queue="mosquito_topo_postprocess")    
     workflow.RegisterHandler(handler=mosquito_shutdown,    queue="mosquito_shutdown")
-    workflow.RegisterHandler(handler=mosquito_test,        queue="mosquito_test")    
+    workflow.RegisterHandler(handler=mosquito_test,        queue="mosquito_test")
