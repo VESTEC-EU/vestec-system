@@ -179,6 +179,7 @@ def mosquito_convert_postprocess(msg):
         with pny.db_session:
             myincident = Incident[IncidentID]
             simulation=Simulation[simulationId]
+            machine_name=simulation.machine.machine_name
             machine_basedir=simulation.machine.base_work_dir
             if machine_basedir[-1] != "/": machine_basedir+="/"         
         
@@ -187,6 +188,8 @@ def mosquito_convert_postprocess(msg):
             if not _check_directory_contains_file(msg["directoryListing"], R0_file):
                 print("Convert result file '"+R0_file+"' not found, exitting")
                 return
+            registerMatchingFiles(msg["directoryListing"], ".tif", machine_name, "Mosquito simulation", "application/octet-stream", "Mosquito convert output", 
+                simulation.directory, IncidentID, "Mosquito convert output", "Created by convert for mosquito on "+machine_name+" with simulation ID "+simulationId)
             mosaic_yaml=_build_mosaic_yaml(machine_basedir+simulation.directory+"/"+R0_file)
             sim_id=_launch_simulation(IncidentID, "Mosquito mosaic", "mosquito_mosaic_template", "mosaic.yml", mosaic_yaml, "mosquito_mosaic_postprocess")            
             simulation_metadata["simulation"]=sim_id
@@ -224,6 +227,7 @@ def mosquito_mosaic_postprocess(msg):
         with pny.db_session:
             myincident = Incident[IncidentID]
             simulation=Simulation[simulationId]
+            machine_name=simulation.machine.machine_name
             machine_basedir=simulation.machine.base_work_dir
             if machine_basedir[-1] != "/": machine_basedir+="/"         
         
@@ -233,6 +237,8 @@ def mosquito_mosaic_postprocess(msg):
                 if not _check_directory_contains_file(msg["directoryListing"], "output_band_"+num+".tif"):
                     print("Convert result file 'output_band_"+num+".tif' not found, exitting")
                     return
+            registerMatchingFiles(msg["directoryListing"], ".tif", machine_name, "Mosquito simulation", "application/octet-stream", "Mosquito mosaic output", 
+                simulation.directory, IncidentID, "Mosquito mosaic output", "Created by mosaic for mosquito on "+machine_name+" with simulation ID "+simulationId)
             build_topo_yaml=_build_topo_yaml(simulation_metadata["disease"], simulation_metadata["species"], simulation_metadata["region"], machine_basedir+simulation.directory)
             sim_id=_launch_simulation(IncidentID, "Mosquito topological", "mosquito_topo_template", "topo.yml", build_topo_yaml, "mosquito_topo_postprocess")            
             simulation_metadata["simulation"]=sim_id
@@ -266,8 +272,7 @@ def mosquito_topo_postprocess(msg):
 
     if originator == 'Simulation Completed':
         simulationId = msg["simulationId"]
-        simulationIdPostfix=simulationId.split("-")[-1]
-        directoryListing=msg["directoryListing"]        
+        simulationIdPostfix=simulationId.split("-")[-1]              
 
         with pny.db_session:
             myincident = Incident[IncidentID]
@@ -275,25 +280,27 @@ def mosquito_topo_postprocess(msg):
             machine_name=simulation.machine.machine_name                     
 
         if simulation is not None:
-            result_files={}
-            for entry in directoryListing:
-                tokens=entry.split()
-                if len(tokens) == 9 and ".zip" in tokens[-1]:
-                    if tokens[4].isnumeric():
-                        file_size=int(tokens[4])
-                    else:
-                        file_size=0
-                    try:
-                        registerDataWithDM(tokens[-1], machine_name, "Mosquito simulation", "application/zip", file_size, "Mosquito topological output", 
-                            path=simulation.directory, associate_with_incident=True, incidentId=IncidentID, kind="Mosquito topological output", 
-                            comment="Created by ttk for mosquito on "+machine_name+" with simulation ID "+simulationId)
-                    except DataManagerException as err:
-                        print("Error registering mosquito topological output with data manager, aborting "+err.message)
-                        return
-                    print("Register "+tokens[-1])
+            registerMatchingFiles(msg["directoryListing"], ".zip", machine_name, "Mosquito simulation", "application/zip", "Mosquito topological output", 
+                simulation.directory, IncidentID, "Mosquito topological output", "Created by ttk for mosquito on "+machine_name+" with simulation ID "+simulationId)            
     else:
         print("Ignoring originator with "+originator)
         return
+
+def registerMatchingFiles(directoryListing, matching_ending, machine_name, source, meta_file_description, description, directory, IncidentID, kind_description, commentStr):
+    for entry in directoryListing:
+        tokens=entry.split()
+        if len(tokens) == 9 and matching_ending in tokens[-1]:
+            if tokens[4].isnumeric():
+                file_size=int(tokens[4])
+            else:
+                file_size=0
+            try:
+                registerDataWithDM(tokens[-1], machine_name, source, meta_file_description, file_size, description, 
+                    path=directory, associate_with_incident=True, incidentId=IncidentID, kind=kind_description, 
+                    comment=commentStr)
+            except DataManagerException as err:
+                print("Error registering "+description+" with data manager, aborting "+err.message)
+                return            
 
 @workflow.handler
 def mosquito_shutdown(msg):
