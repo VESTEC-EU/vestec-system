@@ -81,12 +81,29 @@ def rome(IncidentId):
     }
     workflow.Persist.Put(IncidentId, sim_meta)    
 
+def run_simulation_from_payload(IncidentId, config):
+    simulation_yaml=_build_simulation_yaml(config["species"], config["disease"], config["region"], int(config["count"]))
+    sim_id=_launch_simulation(IncidentId, "Mosquito simulation", "mosquito_template", "mosquito.yml", simulation_yaml, "mosquito_simulation_postprocess")
+    sim_meta = {
+        "simulation": sim_id,
+        "species": config["species"],
+        "disease": config["disease"],
+        "region": config["region"],
+        "count": config["count"]
+    }
+    workflow.Persist.Put(IncidentId, sim_meta)
+
 @workflow.handler
 def mosquito_test(msg):
-    print("\nMosquito test handler called to start trento simulation")
+    print("\nMosquito test handler called to start mosquito simulation")
     IncidentID = msg["IncidentID"]
-    trento(IncidentID)
-    #rome(IncidentID)
+
+    try:
+        payload = json.loads(msg["data"]["payload"])
+        run_simulation_from_payload(IncidentID, payload)
+    except KeyError:
+        # Run Trento for now
+        trento(IncidentID)
  
 # mosquito weather init
 @workflow.handler
