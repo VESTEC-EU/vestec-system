@@ -254,10 +254,10 @@ def mosquito_mosaic_postprocess(msg):
                 if not _check_directory_contains_file(msg["directoryListing"], "output_band_"+num+".tif"):
                     print("Convert result file 'output_band_"+num+".tif' not found, exitting")
                     return
-            registerMatchingFiles(msg["directoryListing"], ".tif", machine_name, "Mosquito simulation", "application/octet-stream", "Mosquito mosaic output", 
-                simulation.directory, IncidentID, "Mosquito mosaic output", "Created by mosaic for mosquito on "+machine_name+" with simulation ID "+simulationId)
+            # registerMatchingFiles(msg["directoryListing"], ".tif", machine_name, "Mosquito simulation", "application/octet-stream", "Mosquito mosaic output",
+            #     simulation.directory, IncidentID, "Mosquito mosaic output", "Created by mosaic for mosquito on "+machine_name+" with simulation ID "+simulationId)
             build_topo_yaml=_build_topo_yaml(simulation_metadata["disease"], simulation_metadata["species"], simulation_metadata["region"], machine_basedir+simulation.directory)
-            sim_id=_launch_simulation(IncidentID, "Mosquito topological", "mosquito_topo_template", "topo.yml", build_topo_yaml, "mosquito_topo_postprocess")            
+            sim_id=_launch_simulation(IncidentID, "Mosquito topological", "mosquito_topo_template", "topo.yml", build_topo_yaml, "mosquito_topo_postprocess")
             simulation_metadata["simulation"]=sim_id
             workflow.Persist.Put(IncidentID, simulation_metadata)
         else:
