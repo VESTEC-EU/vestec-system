@@ -126,8 +126,8 @@ def wildfire_mesonh_physiographic(msg):
     upperLeft = i.upper_left_latlong
     lowerRight = i.lower_right_latlong
             
-    upperLeftLon, upperLeftLat = upperLeft.split("/")
-    lowerRightLon, lowerRightLat = lowerRight.split("/")
+    upperLeftLat, upperLeftLon = upperLeft.split("/")
+    lowerRightLat, lowerRightLon = lowerRight.split("/")
 
     sample_configuration_file = open("workflows/wildfire/templates/prep_pgd.yml")
     yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)
@@ -280,8 +280,8 @@ def _buildMesoNHYaml(incidentId, machine_basedir, simulation_location, gfs_file1
     upperLeft = myincident.upper_left_latlong
     lowerRight = myincident.lower_right_latlong
             
-    upperLeftLon, upperLeftLat = upperLeft.split("/")
-    lowerRightLon, lowerRightLat = lowerRight.split("/")
+    upperLeftLat, upperLeftLon = upperLeft.split("/")
+    lowerRightLat, lowerRightLon = lowerRight.split("/")
 
     sample_configuration_file = open("workflows/wildfire/templates/mesonh.yml")
     yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)    
