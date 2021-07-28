@@ -244,6 +244,7 @@ function userLogin() {
             success: function(response) {
                 if (typeof response.access_token !== 'undefined' && response.access_token !== '') {
                     sessionStorage.setItem("access_token", response.access_token);
+                    sessionStorage.setItem("username", $("#username").val());
                     window.location.href = "/home";
                 } else {
                     $("#login-message").html(response.msg);
@@ -340,8 +341,11 @@ function setVersionNumber() {
 }
 
 function generateNavigationBar() {
-  var html_code="<div id=\"nav-home\" class=\"blue menu_item\" onClick=\"getJobsDashboard()\">Home</div>\<div id=\"nav-dash\" class=\"menu_item\" onClick=\"getJobWizard()\">New incident</div>"
-  html_code+="<div id=\"nav-logout\" class=\"self-right menu_item\" onClick=\"logOut()\">Log Out</div>"
+  var html_code="<div id=\"nav-home\" class=\"blue menu_item\" onClick=\"getJobsDashboard()\">Home</div>\<div id=\"nav-dash\" class=\"menu_item\" onClick=\"getJobWizard()\">New incident</div>";
+  html_code+="<div class=\"admin_dropdown\"><button class=\"dropbtn\">"+sessionStorage.getItem("username")+"<i class=\"fa fa-caret-down\"></i></button>";
+  html_code+="<div class=\"admin_dropdown_content\">";
+  html_code+="<div class=\"admin_item\" onClick=\"logOut()\">Log Out</div>";  
+  html_code+="</div></div>";
   // We store the user type to avoid hitting the server, as the activities are also protected on the server then at worst a user could
   // force the menu to display but couldn't action any of the activities under it
   if (user_type == -1) {

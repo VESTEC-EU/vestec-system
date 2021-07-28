@@ -1,0 +1,25 @@
+region: ${region}
+region_covariates:
+  class: File
+  path: ${MOSQUITO_DATA_DIR}/${region}/lm_covariates_${region}_not_filtered.csv
+temperature_data:
+  class: File
+  path: ${MOSQUITO_DATA_DIR}/${region}/wc_temp_${region}.csv
+species: ${species}
+species_user_parameters:
+  class: File
+  path: ${MOSQUITO_DATA_DIR}/${species}_parameter.txt
+species_fixed_parameters:
+  class: File
+  path: ${MOSQUITO_DATA_DIR}/${species}_parameter_fixed.txt
+species_alpha_distribution:
+  class: File
+  path: ${MOSQUITO_DATA_DIR}/${species}_alpha_w_k_m_wc_lm_within_fit_cumulato_best_dic.txt
+species_covariate_distribution:
+  class: File
+  path: ${MOSQUITO_DATA_DIR}/${species}_coeff_covariate_wc_lm_within_fit_cumulato_best_dic.txt
+disease: ${disease}
+disease_species_user_parameters:
+  class: File
+  path: ${MOSQUITO_DATA_DIR}/${disease}_${species}_parameter_user.txt
+count: 10

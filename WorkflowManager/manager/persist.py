@@ -36,15 +36,20 @@ class _Persist:
         )
 
     # called by handler - retrieives all the logs belonging to this incident and handler
-    def Get(self, incident):
+    def Get(self, incident, ignoreOriginator=False):
         originator = sys._getframe(1).f_code.co_name
         logger.debug(
             "Handler %s requesting data from incident %s" % (originator, incident)
         )
         with pny.db_session:
-            logs = HandlerLog.select(
-                lambda p: p.incident == incident and p.originator == originator
-            )
+            if (ignoreOriginator):
+                logs = HandlerLog.select(
+                    lambda p: p.incident == incident
+                )
+            else:
+                logs = HandlerLog.select(
+                    lambda p: p.incident == incident and p.originator == originator
+                )
             l = []
             for log in logs:
                 dict = json.loads(log.data)

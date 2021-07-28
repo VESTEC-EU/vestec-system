@@ -11,6 +11,7 @@ workflow.SetLoggingLevel(logging.DEBUG)
 from workflows.simple import simple
 from workflows.performance_data import performance_data
 from workflows.wildfire import main as wildfire
+from workflows.mosquito import mosquito
 from workflows.tests import tests
 from workflows.helloworld_remote import helloworld
 
@@ -25,6 +26,7 @@ workflow.OpenConnection()
 simple.RegisterHandlers()
 performance_data.RegisterHandlers()
 wildfire.RegisterHandlers()
+mosquito.RegisterHandlers()
 tests.RegisterHandlers()
 helloworld.RegisterHandlers()
 
