@@ -23,13 +23,17 @@ def wildfire_init(msg):
             raise Exception("Location extents must be of the form longitude/latitude")
 
         try:
-            upperLeftLon, upperLeftLat = upperLeft.split("/")
-            lowerRightLon, lowerRightLat = lowerRight.split("/")
+            upperLeftLat, upperLeftLon = upperLeft.split("/")
+            lowerRightLat, lowerRightLon = lowerRight.split("/")
     
             float(upperLeftLat)
             float(upperLeftLon)
             float(lowerRightLat)
             float(lowerRightLon)
+            print ("Upper Left lat " + str(upperLeftLat))
+            print ("Upper Left lon " + str(upperLeftLon))
+            print ("Lower right lat " + str(lowerRightLat))
+            print ("Lower right lon " + str(lowerRightLon))
         except ValueError:
             raise Exception("Longitudes and latitudes must be floating point numbers")    
 

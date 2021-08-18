@@ -52,6 +52,10 @@ def wildfire_fire_simulation(msg):
             hotspotDataUUID = log["hotspot_data_uuid"]
         elif log["originator"] == "wildfire_mesonh_results":
             weatherDataUUID = log["weather_data_uuid"]
+          
+    print ("Starting wildfire simulation")
+    print ("hotspot file: " + str(hotspotDataUUID))
+    print ("weather file: " + str(weatherDataUUID))
 
     #if staticFile is not None and hotspotFile is not None and weatherFile is not None:
     if hotspotDataUUID and weatherDataUUID is not None:
@@ -92,8 +96,8 @@ def _buildWFAYaml(incidentId, weather_datainfo):
     lowerRight = myincident.lower_right_latlong
     duration = myincident.duration
             
-    upperLeftLon, upperLeftLat = upperLeft.split("/")
-    lowerRightLon, lowerRightLat = lowerRight.split("/")
+    upperLeftLat, upperLeftLon = upperLeft.split("/")
+    lowerRightLat, lowerRightLon = lowerRight.split("/")
 
     sample_configuration_file = open("workflows/wildfire/templates/wfa.yml")
     yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)    
@@ -106,6 +110,11 @@ def _buildWFAYaml(incidentId, weather_datainfo):
     yaml_template["dynamic_config"]["path"]="WFA_hotspots.json"
     yaml_template["sim_duration"]=duration
         
+    print ("Upper Left lat " + str(upperLeftLat))
+    print ("Upper Left lon " + str(upperLeftLon))
+    print ("Lower right lat " + str(lowerRightLat))
+    print ("Lower right lon " + str(lowerRightLon))
+
     return yaml.dump(yaml_template)
         
 @workflow.handler

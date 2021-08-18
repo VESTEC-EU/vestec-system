@@ -126,8 +126,8 @@ def wildfire_mesonh_physiographic(msg):
     upperLeft = i.upper_left_latlong
     lowerRight = i.lower_right_latlong
             
-    upperLeftLon, upperLeftLat = upperLeft.split("/")
-    lowerRightLon, lowerRightLat = lowerRight.split("/")
+    upperLeftLat, upperLeftLon = upperLeft.split("/")
+    lowerRightLat, lowerRightLon = lowerRight.split("/")
 
     sample_configuration_file = open("workflows/wildfire/templates/prep_pgd.yml")
     yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)
@@ -280,8 +280,8 @@ def _buildMesoNHYaml(incidentId, machine_basedir, simulation_location, gfs_file1
     upperLeft = myincident.upper_left_latlong
     lowerRight = myincident.lower_right_latlong
             
-    upperLeftLon, upperLeftLat = upperLeft.split("/")
-    lowerRightLon, lowerRightLat = lowerRight.split("/")
+    upperLeftLat, upperLeftLon = upperLeft.split("/")
+    lowerRightLat, lowerRightLon = lowerRight.split("/")
 
     sample_configuration_file = open("workflows/wildfire/templates/mesonh.yml")
     yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)    
@@ -295,6 +295,11 @@ def _buildMesoNHYaml(incidentId, machine_basedir, simulation_location, gfs_file1
     yaml_template["ini_nameroots"][0]="GFS"+gfs_file1.split("_")[-3]+"."+gfs_file1.split("_")[-2][0:2]
     yaml_template["ini_nameroots"][1]="GFS"+gfs_file2.split("_")[-3]+"."+gfs_file2.split("_")[-2][0:2]
     yaml_template["pgd"]["path"]=pdg_file
+
+    print ("Upper Left lat " + str(upperLeftLat))
+    print ("Upper Left lon " + str(upperLeftLon))
+    print ("Lower right lat " + str(lowerRightLat))
+    print ("Lower right lon " + str(lowerRightLon))
     return yaml.dump(yaml_template)
     
 #handles simulation results from a mesoNH simulation (at)

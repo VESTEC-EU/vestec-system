@@ -268,13 +268,17 @@ def wildfire_process_hotspots(msg):
             upperLeft = i.upper_left_latlong
             lowerRight = i.lower_right_latlong
             
-            lonmin, latmax = upperLeft.split("/")
-            lonmax, latmin = lowerRight.split("/")
+            latmax, lonmin = upperLeft.split("/")
+            latmin, lonmax = lowerRight.split("/")
 
             lonmin = float(lonmin)
             latmax = float(latmax)
             lonmax = float(lonmax)
             latmin = float(latmin)
+
+            print ("lon min " + str(lonmin) + " lon max " + str(lonmax))
+            print ("lat min " + str(latmin) + " lat max " + str(latmax))
+
     except Exception as e:
         raise ValueError("Unable to parse region coordinates") from e
 
