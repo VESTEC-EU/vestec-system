@@ -30,7 +30,7 @@ output_name: fire_input.nc
 
 ncl_root:
   class: Directory
-  path: /lustre/sw/ncl/ncl-6.6.2
+  path: /home/holk_jo/VESTEC/modules/sw/ncl/6.6.2
 ncl_resfile:
   class: File
-  path: /lustre/sw/ncl/ncl-6.6.2/share/hluresfile
+  path: /home/holk_jo/VESTEC/modules/sw/ncl/6.6.2/share/hluresfile
