@@ -136,9 +136,16 @@ def wildfire_mesonh_physiographic(msg):
     yaml_template["lowerright"]["lat"]=float(lowerRightLat)
     yaml_template["lowerright"]["lon"]=float(lowerRightLon)
 
+    print ("Upper Left lat " + str(upperLeftLat))
+    print ("Upper Left lon " + str(upperLeftLon))
+    print ("Lower right lat " + str(lowerRightLat))
+    print ("Lower right lon " + str(lowerRightLon))
+
     try:
         callbacks = {'COMPLETED': 'wildfire_mesonh_simulation'}   
-        sim_id=createSimulation(IncidentID, 1, "0:05:00", "PGD pre-processing", "prep_pgd.sh", queuestate_callbacks=callbacks, template_dir="templates/prep_pdg_template")
+        sim_id=createSimulation(IncidentID, 1, "00:10", "PGD pre-processing", "prep_pgd.sh", queuestate_callbacks=callbacks, template_dir="templates/prep_pgd_template")
+ #       sim_id=createSimulation(IncidentID, 1, "00:10", "test run", "helloworld.srun", callbacks, template_dir="templates/prep_pgd_template")
+
         with pny.db_session:
             simulation=Simulation[sim_id]   
             machine_name=simulation.machine.machine_name   
