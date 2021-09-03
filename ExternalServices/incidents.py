@@ -163,7 +163,18 @@ def packageDataTransfer(data_transfer):
         dt_dict["estimated_time"] = str(data_transfer.estimated_time)
         return dt_dict
     else:
-        return None
+        dt_dict = {}
+        dt_dict["filename"] = data_transfer.src.filename
+        dt_dict["size"] = "{:.2f} MiB".format(data_transfer.src.size/1048576.0)
+        dt_dict["src_machine"] = data_transfer.src_machine
+        dt_dict["dst_machine"] = data_transfer.dst_machine
+        dt_dict["date_started"] = data_transfer.date_started.strftime("%d/%m/%Y, %H:%M:%S")
+        dt_dict["completion_time"] = ""
+        dt_dict["date_completed"] = ""
+        dt_dict["speed"] = ""
+        dt_dict["status"] = data_transfer.status
+        dt_dict["estimated_time"] = str(data_transfer.estimated_time)
+        return dt_dict
 
 @pny.db_session
 def packageAllDataTransfersForDatasets(associated_datasets):

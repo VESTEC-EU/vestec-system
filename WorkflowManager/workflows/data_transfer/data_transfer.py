@@ -119,7 +119,7 @@ def data_transfer(message):
             except DataManagerException as err:
                 print("Error downloading GFS weather data to target machine " + err.message)
                 return
-
+            message["weather_data"] = weather_data_uuids
     workflow.Complete(message["IncidentID"])
 
 # Initalise all handlers and the logger. Create a directory to store the
@@ -158,6 +158,7 @@ def shutdown_data_transfer(message):
     except ExternalDataInterfaceException as err:
         print("Error from EDI on enpoint removal " + err.message)
     workflow.Cancel(message["IncidentID"])
+
 
 
 def RegisterHandlers():

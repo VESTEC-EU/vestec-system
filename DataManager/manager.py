@@ -190,6 +190,11 @@ def GetExternal():
                                      completion_time = (date_completed - date_started),
                                      transfer_rate = float(size) / (date_completed - date_started).total_seconds())
             data_transfer.estimated_time = estimate_data_transfer_time(id, protocol, machine)
+            data_transfer = DataTransfer[transfer_id]
+            data_transfer.date_completed = date_completed
+            data_transfer.completion_time = (date_completed - date_started)
+            data_transfer.transfer_rate = float(size) / (date_completed - date_started).total_seconds()
+            data_transfer.status = "COMPLETED"
         return id, 201
     elif status == NOT_IMPLEMENTED:
         return message, 501
@@ -283,7 +288,7 @@ def _handle_copy_or_move(id, move):
     dest_machine = flask.request.form["machine"]
     dest = flask.request.form["dest"]
 
-    transfer_time = estimate_data_transfer_time(id, src_machine, dest_machine)
+    estimated_time = estimate_data_transfer_time(id, src_machine, dest_machine)
 
     if "gather_metrics" in flask.request.form:
         gather_metrics=flask.request.form["gather_metrics"].lower() == "true"
@@ -304,7 +309,7 @@ def _handle_copy_or_move(id, move):
                                         dst_machine=dest_machine,
                                         date_started=datetime.datetime.now(),
                                         status="STARTED")
-            data_transfer.estimated_time = transfer_time
+            data_transfer.estimated_time = estimated_time
 
     path,fname = os.path.split(dest)
     if _checkExists(dest_machine,fname,path):
@@ -507,7 +512,7 @@ def _get_data_from_location(registered_data, gather_metrics = True):
         data_transfer.completion_time = (data_transfer.date_completed - data_transfer.date_started)
         data_transfer.transfer_rate = float(registered_data.size)/data_transfer.completion_time.total_seconds()
 
-    return contents, 200
+        return contents, 200
 
 async def submit_remote_get_data(target_machine_name, src_file):
     client = await Client.create(target_machine_name)              
@@ -581,6 +586,8 @@ def _download(filename,  path, storage_technology, machine, url, protocol, optio
             cmd = "curl --insecure -f -sS -o %s %s"%(_getLocalPathPrepend()+dest, url)
         else:
             cmd = "curl -f -sS -o %s %s"%(dest, url)
+
+
     else:
         print("Do not know how to handle protocols that are not http")
         return NOT_IMPLEMENTED, "'%s' protocol not supported (yet?)"%protocol, 0, 0

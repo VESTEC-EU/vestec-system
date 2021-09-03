@@ -37,7 +37,6 @@ def init_tests(msg):
 
     os.makedirs(logdir)
 
-    print("logdir= %s"%logdir)
 
     if "testlist" in msg:
         testlist = msg["testlist"]

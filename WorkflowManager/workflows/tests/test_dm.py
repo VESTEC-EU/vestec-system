@@ -329,7 +329,7 @@ def dm_tests_download(msg):
 
     msg["file5"]=id
 
-    workflow.send(msg,"dm_tests_delete")
+    workflow.send(msg,"dm_tests_complete")
 
 
 

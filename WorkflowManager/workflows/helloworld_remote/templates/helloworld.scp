@@ -1,6 +1,6 @@
 #!/bin/bash
 
-outfile=/home/knap_da/VESTEC/VESTEC-install/hwelt.out
+outfile=/scratch_VESTEC_INSTALL/VESTEC/VESTEC-install/hwelt.out
 
 echo "Hello, this is the DLR-HPDA cluster :)"
 echo >> $outfile
