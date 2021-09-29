@@ -1,8 +1,9 @@
 import sys
+import json
 import pony.orm as pny
 from Database.workflow import Simulation, Incident
 from SimulationManager.client import createSimulation, submitSimulation, SimulationManagerException, cancelSimulation
-from DataManager.client import moveDataViaDM, DataManagerException, getInfoForDataInDM, putByteDataViaDM, registerDataWithDM, copyDataViaDM
+from DataManager.client import moveDataViaDM, DataManagerException, getInfoForDataInDM, putByteDataViaDM, registerDataWithDM, copyDataViaDM, getByteDataViaDM
 from manager import workflow
 import yaml
 import datetime
@@ -72,10 +73,19 @@ def wildfire_fire_simulation(msg):
                 machine_basedir=simulation.machine.base_work_dir
                 if machine_basedir[-1] != "/": machine_basedir+="/"
 
+            hotspotData=getByteDataViaDM(hotspotDataUUID).decode('ascii')
+            hotspot_dict = json.loads(hotspotData)
+
+            if "simDuration" in hotspot_dict:
+                simDuration=hotspot_dict['simDuration']
+            else:
+                print("Simulation duration (key simDuration) not in hotspot JSON data. This is required")
+                return
+
             moveDataViaDM(hotspotDataUUID, machine_basedir+simulation.directory+"/WFA_hotspots.json", machine_name)
 
             try:                
-                putByteDataViaDM("wfa.yml", machine_name, "Wildfire configuration", "text/plain", "Wildfire workflow", _buildWFAYaml(IncidentID, weather_data_info), path=simulation.directory)                 
+                putByteDataViaDM("wfa.yml", machine_name, "Wildfire configuration", "text/plain", "Wildfire workflow", _buildWFAYaml(IncidentID, weather_data_info, simDuration), path=simulation.directory)                 
             except DataManagerException as err:
                 print("Can not write wildfire configuration to simulation location"+err.message)
                 return
@@ -86,11 +96,10 @@ def wildfire_fire_simulation(msg):
             return
 
 @pny.db_session
-def _buildWFAYaml(incidentId, weather_datainfo):
+def _buildWFAYaml(incidentId, weather_datainfo, simDuration):
     myincident = Incident[incidentId]
     upperLeft = myincident.upper_left_latlong
-    lowerRight = myincident.lower_right_latlong
-    duration = myincident.duration
+    lowerRight = myincident.lower_right_latlong    
             
     upperLeftLon, upperLeftLat = upperLeft.split("/")
     lowerRightLon, lowerRightLat = lowerRight.split("/")
@@ -104,7 +113,7 @@ def _buildWFAYaml(incidentId, weather_datainfo):
 
     yaml_template["weather_data"]["path"]=weather_datainfo["absolute_path"]
     yaml_template["dynamic_config"]["path"]="WFA_hotspots.json"
-    yaml_template["sim_duration"]=duration
+    yaml_template["sim_duration"]=simDuration
         
     return yaml.dump(yaml_template)
         
