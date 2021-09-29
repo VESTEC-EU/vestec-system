@@ -15,9 +15,8 @@ def wildfire_init(msg):
         myincident = Incident[IncidentID]
         upperLeft = myincident.upper_left_latlong
         lowerRight = myincident.lower_right_latlong
-        duration = myincident.duration
-        if upperLeft is None or lowerRight is None or duration is None:            
-            raise Exception("Must include location extents and duration for wildfire simulation")
+        if upperLeft is None or lowerRight is None:
+            raise Exception("Must include location extents for wildfire simulation")
 
         if len(upperLeft.split("/")) != 2 or len(lowerRight.split("/")) != 2:
             raise Exception("Location extents must be of the form longitude/latitude")
