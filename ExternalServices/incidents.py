@@ -108,6 +108,7 @@ def packageSimulation(sim):
     simulation_dict["kind"]=sim.kind
     simulation_dict["num_nodes"]=sim.num_nodes
     simulation_dict["requested_walltime"]=sim.requested_walltime
+    simulation_dict["comment"]=sim.comment
     if sim.machine is not None:
         simulation_dict["machine"]=sim.machine.machine_name
 

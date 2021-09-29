@@ -60,6 +60,7 @@ class Simulation(db.Entity):
     status = pny.Required(str,default="PENDING")
     status_updated = pny.Required(datetime.datetime)
     directory = pny.Required(str)
+    comment = pny.Optional(str)
     status_message = pny.Optional(str)
     machine = pny.Optional("Machine")
     queue = pny.Optional(str)

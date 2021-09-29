@@ -151,6 +151,11 @@ def create_job():
     else:
         template_dir = ""
 
+    if "comment" in data:
+        comment = data["comment"]
+    else:
+        comment = ""
+
     try:                
         matched_machine_id=matchBestMachine(requested_walltime, num_nodes)   
         stored_machine=Machine.get(machine_id=matched_machine_id)        
@@ -174,7 +179,7 @@ def create_job():
     
     #create simulation in the DB
     simulation = Simulation(uuid=uuid, incident=incident, kind=kind, date_created=datetime.datetime.now(), num_nodes=num_nodes, 
-                    requested_walltime=requested_walltime, executable=executable, status=job_status, status_updated=datetime.datetime.now(), directory=directory)
+                    requested_walltime=requested_walltime, executable=executable, status=job_status, status_updated=datetime.datetime.now(), directory=directory, comment=comment)
     if (job_status=="ERROR"):
         simulation.status_message=status_message
     if (stored_machine is not None):
