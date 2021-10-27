@@ -9,3 +9,6 @@ Ensure you are in the _DockerFiles_ directory and issue `sudo docker-compose bui
 >**NOTE:**  
 > Every time you make a change to the VESTEC source or configuration files you will need to issue this command to rebuild the containers in order to make those changes visible
 
+### Pruning cached containers
+
+Docker will cache containers and these are not automatically cleaned which will take up disk space. If you are rebuilding the docker containers frequently then to reclain disk space issue `sudo docker system prune -a` and `sudo docker volume prune`
