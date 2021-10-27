@@ -37,3 +37,10 @@ All components apart from the workflow manager will be checked on-demand when yo
 
 ## Managing HPC machines
 
+Under the _Machines_ page which is accessible via the _Admin_ drop down menu you can view a list of HPC machines that the system is configured to connect to as well as their status (i.e. whether the system can connect to them or not and how busy they are). This list will be empty initially and by clicking _Add Machine_ you can configure new HPC machines.
+
+Once added you will need to enable the machine by toggling it using the list on that page. Each machine also has an optional test mode, this is off by default and when switched on will not connect to the actual machine but instead the Machine Interface will send back mock data and information. This can be useful for development and debugging, where the entirety of the VESTEC system stack can be exercised but there is no need to have a physical connection to an HPC machine. It should be left in the off position for production VESTEC instances.
+
+## Managing workflows
+
+Under the _Workflows_ page which is accessible via the _Admin_ drop down menu you can view a list of available workflows that have been configured for the system. You can add new workflows via this page, with the names corresponding to the workflow functions that have registered with the workflow manager. Importantly, when a workflow has been added you must explicitly make it visible to each user who is to be able to submit to it. You can do this via the _Users_ page and editing the users in question, then adding the workflow which will appear in the dropdown list.
