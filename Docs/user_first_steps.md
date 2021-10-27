@@ -29,3 +29,11 @@ Once done you can now exit out of the container's bash session and back on the V
 
 Incidently there is also a `dump_users.py` script in the same `CommandLine` directory, running this without arguments will list out the options and this enables you to dump out a CSV file of all user accounts and then load it in at some later date. It is especially useful when you need to completely rebuild the database but don't want to loose the authenticated user list.
 
+## Checking system health
+
+An important initial test is to ensure that all the VESTEC components that make up the system are up and available. Each component provides health reporting functionality and-so it is possible to view if there are any issues which mean that either a specific component is not connectable internal to the system or whether there is some alternative problem. You can view this via the _Admin_ drop down menu and _System health_.
+
+All components apart from the workflow manager will be checked on-demand when you visit this page, and there is a refresh button at the bottom that enables you to refresh these statuses. The workflow manager is different because in order for that to be healthy we need to ensure that it can execute workflow stages. There is a test workflow stage that will be run periodically and the result of this, as well as when the test was issued, is reported on that page. You can manually retest the workflow stage by using the button on the page.
+
+## Managing HPC machines
+
