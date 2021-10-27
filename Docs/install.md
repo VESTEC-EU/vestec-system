@@ -88,5 +88,10 @@ server {
     }
 }
 ```
-## Setting up SSH configuration
+
+## Setting up HPC machine specific SSH configuration
 SSH to different machines can require specific configurations, such as the appropriate keys, to be provided. The MachineInterface will set up the SSH configuration file, that will be used for OpenSSH connections to machines, when the container is built. You should specify this and the configuration can be found in `MachineInterface/Dockerfile` . By default it expects that you will create a _misc_ directory in _MachineInterface_ and _ssh_config_ file although this can be changed to suit what is required. Any SSH keys can be placed in the _misc_ directory as this will be visible to the Docker container.
+
+## Running containers in debug mode
+
+By default Docker does not flush stdio, but you can force this to display messages which can be very helpful for debugging as then print statement and other logging information will be sent out and can be viewed. Either in the Dockerfile of each service add `-u` as an argument or add _PYTHONUNBUFFERED: 1_ under the environment in _DockerFiles/docker-compose.xml_
