@@ -101,8 +101,8 @@ def _buildWFAYaml(incidentId, weather_datainfo, simDuration):
     upperLeft = myincident.upper_left_latlong
     lowerRight = myincident.lower_right_latlong    
             
-    upperLeftLon, upperLeftLat = upperLeft.split("/")
-    lowerRightLon, lowerRightLat = lowerRight.split("/")
+    upperLeftLat, upperLeftLon = upperLeft.split("/")
+    lowerRightLat, lowerRightLon = lowerRight.split("/")
 
     sample_configuration_file = open("workflows/wildfire/templates/wfa.yml")
     yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)    
