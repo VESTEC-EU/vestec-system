@@ -11,6 +11,7 @@ In this documents folder there are a number of files which discuss different asp
 
 ## Client developer 
 
+* <a href="https://github.com/VESTEC-EU/vestec-system/blob/main/Docs/client_developer.md">Client developer overview</a> provides a high level description of this section.
 * <a href="https://github.com/VESTEC-EU/vestec-system/blob/main/Docs/incident_management_api.md">Incident management API</a> which describes API calls for managing and creating incidents.
 * <a href="https://github.com/VESTEC-EU/vestec-system/blob/main/Docs/user_management_api.md">User management API</a> documenting calls for managing user accounts on the system.
 * <a href="https://github.com/VESTEC-EU/vestec-system/blob/main/Docs/administration_api.md">Administration API</a> enabling clients to administer and configure the VESTEC system.
