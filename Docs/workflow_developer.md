@@ -4,7 +4,7 @@ Adding support for a specific disaster use-case will likely involve the creation
 
 Workflows should be created in the _WorkflowManager/workflows_ directory where it can be seen there are numerous existing example and use-case specific workflows already. Underneath the hood the workflow engine uses AMQP via RabbitMQ, however the specifics of these details are absracted from the developer. This is illustrated below, where messages are pushed into different named AMQP queues and each of these is registered with a specific consumer. The workflow system builds atop of this, adding structure to the message and representing these consumers as Python functions as well as providing a set of API calls to undertake the sending and management of messages.
 
-![AMQP message](https://raw.githubusercontent.com/VESTEC-EU/vestec-system/main/Docs/amqp_message.png)
+![AMQP message](https://raw.githubusercontent.com/VESTEC-EU/vestec-system/main/Docs/images/amqp_message.png)
 
 Code for a simple workflow is illustrated below, where two handlers are registered and when a message is sent to the _A_queue_ the _A_handler_ function is activated in a thread which will process the message as appropriate and then send this onto the _B_queue_ stage which will activate the _B_handler_ function. The RegisterHandlers call should be issued by the workflow manager on start to load in the appropriate stages.
 
