@@ -22,3 +22,7 @@ In this documents folder there are a number of files which discuss different asp
 * <a href="https://github.com/VESTEC-EU/vestec-system/blob/main/Docs/simulation_manager.md">Simulation manager API</a> describes API calls for submitting and managing simulations.
 * <a href="https://github.com/VESTEC-EU/vestec-system/blob/main/Docs/data_manager.md">Data manager API</a> describes API calls for tracking and controlling datasets.
 * <a href="https://github.com/VESTEC-EU/vestec-system/blob/main/Docs/external_data_interface.md">External Data Interface API</a> that workflow stages might call to interact with the EDI and receive external data.
+
+## Sensor developer
+
+* <a href="https://github.com/VESTEC-EU/vestec-system/blob/main/Docs/sensor_developer.md">Sensor developer overview</a> provides a description of how to integrate sensors (and other external data sources) into the VESTEC system.
