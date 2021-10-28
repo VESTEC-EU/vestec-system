@@ -40,3 +40,7 @@ A set of predefined web-services (via RESTful API) for managing incidents, users
 Interface that works in both push and pull mode enabling unstructured data to be pulled into the VESTEC system from some source. End points are registered in this interface via it's API and upon the arrival of data the corresponding workflow stage is activated to handle it. This can be used for listening to sensor data, but also enabling client GUIs to post data into the system (e.g. simulation specific parameters) and the flexibility provided here as it is backed by a bespoke workflow that will interpret the arrived data effectively means that this is an infintely flexible API that can be specialised on a use-case by use-case basis. 
 
 ## Stack of Functionality 
+
+The image below illustrates the stack of functionality provided by the VESTEC system, where it can be seen that not all services or interfaces will be directly called into by others. For instance workflows will call directly in to workflow manager, simulation manager, and data manager, but not the maching status manager or machine interface. 
+
+![Stack view](https://raw.githubusercontent.com/VESTEC-EU/vestec-system/main/Docs/stack.png)
