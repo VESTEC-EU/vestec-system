@@ -55,7 +55,7 @@ If this is in pull mode then it will periodically poll (based on _poll_period_ t
 * _type_: Pull as this was in pull mode
 * _incidentid_: Unique ID of the associated incident
 
-If this is in push mode then the EDI will register the endpoint _EDImanager/endpoint_ where endpoint is the name of the endpoint. Whenever a data payload is pushed to this then the workflow stage will be activated with the following dictionary of data:
+If this is in push mode then the EDI will register the endpoint _EDI/endpoint_ where endpoint is the name of the endpoint. Whenever a data payload is pushed to this then the workflow stage will be activated with the following dictionary of data:
 
 * _source_: The endpoint name that was pushed to
 * _timestamp_: Timestamp when the data push occurred
