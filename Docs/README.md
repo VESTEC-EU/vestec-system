@@ -20,4 +20,5 @@ In this documents folder there are a number of files which discuss different asp
 
 * <a href="https://github.com/VESTEC-EU/vestec-system/blob/main/Docs/workflow_developer.md">Workflow developer overview</a> provides a description of the workflow manager.
 * <a href="https://github.com/VESTEC-EU/vestec-system/blob/main/Docs/simulation_manager.md">Simulation manager API</a> describes API calls for submitting and managing simulations.
-* <a href="https://github.com/VESTEC-EU/vestec-system/blob/main/Docs/data_manager.md">Data manager API</a> describes API calls for tracking and controlling datasets
+* <a href="https://github.com/VESTEC-EU/vestec-system/blob/main/Docs/data_manager.md">Data manager API</a> describes API calls for tracking and controlling datasets.
+* <a href="https://github.com/VESTEC-EU/vestec-system/blob/main/Docs/external_data_interface.md">External Data Interface API</a> that workflow stages might call to interact with the EDI and receive external data.
