@@ -2,7 +2,7 @@
 
 The overall view of the VESTEC system is illustrated below, with the middle box representing the system itself. It can be seen that this is comprised of a set of _managers_, each of which accesses the shared database. Workflows are the underlying driver here, with use-cases represented inside the system as separate workflows which the _workflow manager_ marshals and controlls. The other managers can be thought of as providing a set of unified services that workflow stages can call into the undertake specific actions. Each of the managers and interfaces runs as a separate Docker container and provides it's services via webservices using a RESTful API.
 
-![Architecture view](https://raw.githubusercontent.com/VESTEC-EU/vestec-system/main/Docs/architecture_view.png)
+![Architecture view](https://raw.githubusercontent.com/VESTEC-EU/vestec-system/main/Docs/images/architecture_view.png)
 
 ## System components 
 
