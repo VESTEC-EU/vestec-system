@@ -19,3 +19,4 @@ In this documents folder there are a number of files which discuss different asp
 ## Workflow developer
 
 * <a href="https://github.com/VESTEC-EU/vestec-system/blob/main/Docs/workflow_developer.md">Workflow developer overview</a> provides a description of the workflow manager.
+* <a href="https://github.com/VESTEC-EU/vestec-system/blob/main/Docs/simulation_manager.md">Simulation manager API</a> describes API calls for submitting and managing simulations.
