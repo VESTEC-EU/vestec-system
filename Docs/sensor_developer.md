@@ -2,7 +2,7 @@
 
 If you are providing a sensor to the VESTEC system then this will need to interact via the EDI. The design of the EDI is for it to be a simple postbox layer as illustrated below where each EDI endpoint will run in push or pull mode, either periodically polling for new data or waiting until data is pushed into the interface. It is common to have a mixture of settings across numerous endpoints. Depending upon the context, this is then routed to the appropriate workflow stage and a dictionary of the data sent into the workflow manager and appropriate queue (see [EDI API](https://github.com/VESTEC-EU/vestec-system/blob/main/Docs/external_data_interface.md) for more details). Crucially, the EDI itself undertakes no data analysis or transformation as that is all workflow specific. It doesn't even retrieve the data in pull mode (just the metadata). Instead it is up to the workflow provided by the user to undertake these higher level operations as appropriate.
 
-![Sensor EDI](https://raw.githubusercontent.com/VESTEC-EU/vestec-system/main/Docs/sensor_data_edi.png)
+![Sensor EDI](https://raw.githubusercontent.com/VESTEC-EU/vestec-system/main/Docs/images/sensor_data_edi.png)
 
 ## Pushing data into the EDI
 
