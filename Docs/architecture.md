@@ -43,4 +43,4 @@ Interface that works in both push and pull mode enabling unstructured data to be
 
 The image below illustrates the stack of functionality provided by the VESTEC system, where it can be seen that not all services or interfaces will be directly called into by others. For instance workflows will call directly in to workflow manager, simulation manager, and data manager, but not the maching status manager or machine interface. 
 
-![Stack view](https://raw.githubusercontent.com/VESTEC-EU/vestec-system/main/Docs/stack.png)
+![Stack view](https://raw.githubusercontent.com/VESTEC-EU/vestec-system/main/Docs/images/stack.png)
