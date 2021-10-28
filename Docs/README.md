@@ -17,3 +17,5 @@ In this documents folder there are a number of files which discuss different asp
 * <a href="https://github.com/VESTEC-EU/vestec-system/blob/main/Docs/administration_api.md">Administration API</a> enabling clients to administer and configure the VESTEC system.
 
 ## Workflow developer
+
+* <a href="https://github.com/VESTEC-EU/vestec-system/blob/main/Docs/workflow_developer.md">Workflow developer overview</a> provides a description of the workflow manager.
