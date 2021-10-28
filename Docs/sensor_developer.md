@@ -34,3 +34,7 @@ print("Response: "+x.text)
 
 >**NOTE:**  
 > If you are looking in-depth at the EDI then might be surprised to see that the EDI endpoint is actually listening on `EDImanager/endpoint` rather than `EDI/endpoint` that we mention above. However the documentation above is correct because the EDI is not physically exposed for public access on the HTTPS port. Instead only one service can utilise a port (e.g. the HTTPS port) and this is the External Services component. It is this component that listens for `EDI/*` and then forwards all data received on `EDI/*` to the EDI via internal `EDImanager/*` path.
+
+## Pull mode
+
+In this mode the EDI will poll an HTTP(S) source periodically for data. The HTTP headers will be made available to the workflow stage which can then decide whether to retrieve the data or not. If you are developing your own sensor data then you might wish to add entries such as _last_modified_ into this header data to enable easy tracking by the workflow stage of whether there is new data or not. Other approaches include pointing the EDI to a catalogue of datasets, and then in the workflow stage retrieving this catalogue and parsing it to identify the newest entries and whether these have been seen previously or not.
