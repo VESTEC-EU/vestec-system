@@ -47,4 +47,21 @@ Registers an endpoint based on the arguments provided:
 * _queuename_: Workflow queue name that will be activated with new data
 * _pollperiod_: (Optional) Polling period, if provided will run in pull mode, otherwise runs in push mode.
 
-If this is in pull mode then it will periodically poll (based on _poll_period_ the endpoint). Whenever a poll occurs then the corresponding workflow stage will be activated based upon the metadata (the actual data payload is not downloaded). 
+If this is in pull mode then it will periodically poll (based on _poll_period_ the endpoint). Whenever a poll occurs then the corresponding workflow stage will be activated based upon the metadata (the actual data payload is not downloaded). The message passed to that workflow stage is a dictionary containing:
+
+* _source_: The endpoint name we were polling
+* _timestamp_: Timestamp that the poll occurred
+* _headers_: Metadata headers from the poll that the workflow stage can use to determine if this is a new dataset or not
+* _type_: Pull as this was in pull mode
+* _incidentid_: Unique ID of the associated incident
+
+If this is in push mode then the EDI will register the endpoint _EDImanager/endpoint_ where endpoint is the name of the endpoint. Whenever a data payload is pushed to this then the workflow stage will be activated with the following dictionary of data:
+
+* _source_: The endpoint name that was pushed to
+* _timestamp_: Timestamp when the data push occurred
+* _headers_: Data payload that was pushed to this endpoint
+* _type_: Push as this is in push mode
+* _incidentid_: Unique ID of the associated incident
+
+If registration can not occur then `ExternalDataInterfaceException` will be thrown
+
