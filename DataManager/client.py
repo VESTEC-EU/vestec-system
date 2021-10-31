@@ -177,6 +177,14 @@ def deleteDataViaDM(data_uuid):
     if response.status_code != 200:
         raise DataManagerException(response.status_code, response.text)
 
+def predictDataTransferPerformance(src_machine, dest_machine, data_size):
+    arguments={ 'src_machine' : src_machine, 'dest_machine' : dest_machine, 'data_size' : data_size }
+    response=requests.post(_get_DM_URL()+'/predict', data=arguments)
+    if response.status_code == 201:        
+        return response.json()["prediction_time"]
+    else:
+        raise DataManagerException(response.status_code, response.text)
+
 def getDMHealth():
     try:
         health_status = requests.get(_get_DM_URL() + '/health')        

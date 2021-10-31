@@ -231,6 +231,22 @@ def remove(id):
             Data[id].date_modified=datetime.datetime.now()
             return "%s deleted"%Data[id].filename, 200
 
+@app.route("/DM/predict",methods=["POST"])
+@pny.db_session
+def predict():    
+    src_machine=flask.request.form["src_machine"]
+    dest_machine=flask.request.form["dest_machine"]
+    data_size=float(flask.request.form["data_size"])
+
+    matching_transfers=pny.select(dt for dt in DataTransfer if dt.src_machine == src_machine and dt.dst_machine == dest_machine)[:]
+    if len(matching_transfers) == 0:
+        return "No matching data transfers between machines", 400
+    else:
+        avg_speed_per_sec=0.0
+        for transfer in matching_transfers:
+            avg_speed_per_sec += (float(transfer.src.size)/transfer.completion_time.total_seconds())
+        avg_speed_per_sec /= len(matching_transfers)
+        return flask.jsonify({"prediction_time": data_size / avg_speed_per_sec}), 201
 
 #moves the data entity to a long term file storage location and marks it as archived
 @app.route("/DM/archive/<id>",methods=["PUT"])
