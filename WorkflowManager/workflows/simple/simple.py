@@ -9,7 +9,7 @@ import json
 from base64 import b64decode
 from Database import LocalDataStorage
 from Database.workflow import Simulation
-from DataManager.client import registerDataWithDM, putByteDataViaDM, DataManagerException
+from DataManager.client import registerDataWithDM, putByteDataViaDM, DataManagerException, predictDataTransferPerformance
 from SimulationManager.client import createSimulation, submitSimulation, SimulationManagerException, groupSimulations
 from ExternalDataInterface.client import registerEndpoint, ExternalDataInterfaceException, removeEndpoint
 
@@ -50,10 +50,16 @@ def manually_add_data(message):
 @pny.db_session
 def test_workflow(message):
     print("Test called!")
-    callbacks = {'COMPLETED': 'simple_workflow_execution_completed'}    
+    callbacks = {'COMPLETED': 'simple_workflow_execution_completed'}
 
     try:
-        sim_id1=createSimulation(message["IncidentID"], 1, "00:10", "test run", "submit.srun", callbacks, template_dir="templates/simple")[0]                
+        predicted_perf=predictDataTransferPerformance("https", "cirrus", 1024*1024)        
+        print("Predicted transfer performance "+str(predicted_perf))
+    except DataManagerException as err:
+        print("Predict error: "+err.message)
+    
+    try:
+        sim_id1=createSimulation(message["IncidentID"], 1, "00:10", "test run", "submit.srun", callbacks, template_dir="templates/simple")[0]
         sim_id2=createSimulation(message["IncidentID"], 1, "00:10", "test run", "submit.srun", callbacks, template_dir="templates/simple")[0]                
     except SimulationManagerException as err:
         print("Error creating simulation "+err.message)

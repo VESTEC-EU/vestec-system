@@ -11,6 +11,7 @@ import requests
 from Database import initialiseDatabase
 from Database.machine import Machine
 from Database.workflow import Simulation
+from DataManager.client import predictDatasetTransferPerformance, DataManagerException
 import datetime
 from uuid import uuid4
 import Utils.log as log
@@ -127,12 +128,22 @@ def _getPredictedRuntime(executable, machine, requested_walltime):
         return avg_exec_time/tot_count
     else:
         pt=parse(requested_walltime)
-        return pt.second + pt.minute*60 + pt.hour*3600       
+        return pt.second + pt.minute*60 + pt.hour*3600
+
+def _getPredictedDataTransferTime(machine_name, associated_datasets):
+    data_transfer_time=0.0
+    for data_set in associated_datasets:
+        try:
+            data_transfer_time+=predictDatasetTransferPerformance(data_set, machine_name)
+        except DataManagerException as err:
+            pass
+    print(data_transfer_time)
+    return data_transfer_time
 
 @pny.db_session
-def _getPredictedTotalTime(requested_walltime, requested_num_nodes, executable, machine):
+def _getPredictedTotalTime(requested_walltime, requested_num_nodes, executable, machine, associated_datasets):
     queue_time=predictors[machine.machine_name].predict(requested_walltime, requested_num_nodes, detailed_machines_status[machine.machine_name])    
-    return queue_time + _getPredictedRuntime(executable, machine, requested_walltime)
+    return queue_time + _getPredictedRuntime(executable, machine, requested_walltime) + _getPredictedDataTransferTime(machine.machine_name, associated_datasets)
 
 @app.route("/MSM/matchmachine", methods=["POST"])
 @pny.db_session
@@ -143,13 +154,14 @@ def get_appropriate_machine():
     requested_num_nodes = data["num_nodes"]
     executable=data["executable"]
     number_retrieve=data["number_retrieve"]
+    associated_datasets=data["associated_datasets"]
     machines=pny.select(machine for machine in Machine)
     predicted_total_times={}
     for machine in machines:
         if machine.enabled:
             if machine.machine_name not in detailed_machines_status:
                 poll_machine_statuses()
-            predicted_total_times[machine]=_getPredictedTotalTime(requested_walltime, requested_num_nodes, executable, machine)            
+            predicted_total_times[machine]=_getPredictedTotalTime(requested_walltime, requested_num_nodes, executable, machine, associated_datasets)            
     if predicted_total_times:
         sorted_times={k: v for k, v in sorted(predicted_total_times.items(), key=lambda item: item[1])}
         sorted_machines=list(sorted_times.keys())

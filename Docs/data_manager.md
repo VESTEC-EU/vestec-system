@@ -146,3 +146,24 @@ Will delete a dataset by removing it at the source and eliminating the entry in 
 * _data_uuid_: Unique identifier of the dataset we are removing
 
 If unsuccessful then the _DataManagerException_ will be thrown with associated message describing the source of the error.
+
+## predictDataTransferPerformance
+
+`predictDataTransferPerformance(src_machine, dest_machine, data_size)`
+
+Will predict (in seconds) the transfer performance of data from a source to destination machine based on data transfer metrics routinely collected
+* _src_machine_: The machine to transfer the data from
+* _dest_machine_: The machine to transfer the data to
+* _data_size_: Size in bytes of the data
+
+Will throw the _DataManagerException_ is unsuccessful, including if no prediction can be made due to a lack of performance data
+
+## predictDataTransferPerformance
+
+`predictDatasetTransferPerformance(data_uuid, dest_machine)`
+
+Will predict (in seconds) the transfer performance of a dataset from its current location to destination machine based on data transfer metrics routinely collected
+* _data_uuid_: The unique identifier of data that considering for transfer
+* _dest_machine_: The machine to transfer the data to
+
+Will throw the _DataManagerException_ is unsuccessful, including if no prediction can be made due to a lack of performance data

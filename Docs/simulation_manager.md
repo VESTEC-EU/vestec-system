@@ -4,7 +4,7 @@ The Simulation Manager provides functionality to submit and control jobs on the 
 
 ## CreateSimulation
 
-`createSimulation(incident_id, num_nodes, requested_walltime, kind, executable, queuestate_callbacks={}, directory=None, template_dir=None, comment=None)`
+`createSimulation(incident_id, num_nodes, requested_walltime, kind, executable, queuestate_callbacks={}, directory=None, template_dir=None, comment=None, associated_datasets=[])`
 
 Will create a simulation on a target HPC machine ready for it to be submitted. The arguments are as follows:
 
@@ -18,6 +18,7 @@ Will create a simulation on a target HPC machine ready for it to be submitted. T
 * _template_dir_: Template directory to copy from when setting up the submission environment
 * _comment_: Free text comments that are logged
 * _number_instances_: (Optional) defaults to 1, the number of instances on separate machines that should be created
+* _associated_datasets_: (Optional) associated datasets that must be considered in the placement of this simulation job on an HPC machine as will need to be transfered
 
 Returns a list of unique simulation identifiers, one per instance, that can be used to identify the created simulation(s).
 

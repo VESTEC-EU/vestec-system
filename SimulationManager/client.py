@@ -7,7 +7,7 @@ class SimulationManagerException(Exception):
         self.status_code = status_code
         self.message = message
 
-def createSimulation(incident_id, num_nodes, requested_walltime, kind, executable, queuestate_callbacks={}, directory=None, template_dir=None, comment=None, number_instances=1):
+def createSimulation(incident_id, num_nodes, requested_walltime, kind, executable, queuestate_callbacks={}, directory=None, template_dir=None, comment=None, number_instances=1, associated_datasets=[]):
 
     arguments = {   'incident_id': incident_id, 
                     'num_nodes':num_nodes,
@@ -15,7 +15,8 @@ def createSimulation(incident_id, num_nodes, requested_walltime, kind, executabl
                     'kind':kind, 
                     'executable':executable, 
                     'number_instances':number_instances,
-                    'queuestate_calls':queuestate_callbacks }
+                    'queuestate_calls':queuestate_callbacks,
+                    'associated_datasets':associated_datasets }
     
     if directory is not None:
         arguments["directory"]=directory

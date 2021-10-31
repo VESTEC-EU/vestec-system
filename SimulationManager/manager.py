@@ -181,6 +181,7 @@ def create_job():
     kind = data["kind"]
     requested_walltime = data["requested_walltime"]
     executable = data["executable"]
+    associated_datasets = data["associated_datasets"]
 
     if "template_dir" in data:
         template_dir = data["template_dir"]
@@ -199,7 +200,7 @@ def create_job():
         return "Invalid IncidentID", 500
 
     try:                
-        matched_machine_ids=matchBestMachine(requested_walltime, num_nodes, executable, number_retrieve=number_instances)                
+        matched_machine_ids=matchBestMachine(requested_walltime, num_nodes, executable, number_retrieve=number_instances, associated_datasets=associated_datasets)                
     except MachineStatusManagerException as err:        
         job_status="ERROR"
         status_message="Error allocating machine to job, "+err.message

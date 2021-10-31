@@ -23,11 +23,12 @@ def addNewMachine(machine_name, host_name, scheduler, connection_type, num_nodes
     if status.status_code != 201:
         raise MachineStatusManagerException(status.status_code, status.json()["msg"])
 
-def matchBestMachine(walltime, num_nodes, executable, number_retrieve=1):
+def matchBestMachine(walltime, num_nodes, executable, number_retrieve=1, associated_datasets=[]):
     arguments = {   'walltime': walltime, 
                     'num_nodes':num_nodes,
                     'executable' : executable,
-                    'number_retrieve': number_retrieve }
+                    'number_retrieve': number_retrieve,
+                    'associated_datasets': associated_datasets }
     
     status=requests.post(_get_MSM_URL() + '/matchmachine', json=arguments)
     if status.status_code == 200:
