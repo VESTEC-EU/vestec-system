@@ -23,12 +23,17 @@ def addNewMachine(machine_name, host_name, scheduler, connection_type, num_nodes
     if status.status_code != 201:
         raise MachineStatusManagerException(status.status_code, status.json()["msg"])
 
-def matchBestMachine(walltime, num_nodes, executable):
-    matched_machine=requests.get(_get_MSM_URL() + '/matchmachine?walltime='+str(walltime)+'&num_nodes='+str(num_nodes)+'&executable='+str(executable))
-    if matched_machine.status_code == 200:
-        return matched_machine.json()["machine_id"]             
+def matchBestMachine(walltime, num_nodes, executable, number_retrieve=1):
+    arguments = {   'walltime': walltime, 
+                    'num_nodes':num_nodes,
+                    'executable' : executable,
+                    'number_retrieve': number_retrieve }
+    
+    status=requests.post(_get_MSM_URL() + '/matchmachine', json=arguments)
+    if status.status_code == 200:
+        return status.json()["machine_ids"]
     else:    
-        raise MachineStatusManagerException(matched_machine.status_code, matched_machine.json()["msg"])       
+        raise MachineStatusManagerException(status.status_code, status.json()["msg"])       
 
 def enableTestModeOnMachine(machine_id):
     status=requests.post(_get_MSM_URL() + '/enable_testmode/'+machine_id)

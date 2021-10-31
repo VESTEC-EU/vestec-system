@@ -134,13 +134,15 @@ def _getPredictedTotalTime(requested_walltime, requested_num_nodes, executable, 
     queue_time=predictors[machine.machine_name].predict(requested_walltime, requested_num_nodes, detailed_machines_status[machine.machine_name])    
     return queue_time + _getPredictedRuntime(executable, machine, requested_walltime)
 
-@app.route("/MSM/matchmachine", methods=["GET"])
+@app.route("/MSM/matchmachine", methods=["POST"])
 @pny.db_session
 def get_appropriate_machine():
     _check_queue_predictors()
-    requested_walltime = request.args.get("walltime", None)
-    requested_num_nodes = request.args.get("num_nodes", None)
-    executable=request.args.get("executable", None)    
+    data = request.get_json()
+    requested_walltime = data["walltime"]
+    requested_num_nodes = data["num_nodes"]
+    executable=data["executable"]
+    number_retrieve=data["number_retrieve"]
     machines=pny.select(machine for machine in Machine)
     predicted_total_times={}
     for machine in machines:
@@ -150,7 +152,11 @@ def get_appropriate_machine():
             predicted_total_times[machine]=_getPredictedTotalTime(requested_walltime, requested_num_nodes, executable, machine)            
     if predicted_total_times:
         sorted_times={k: v for k, v in sorted(predicted_total_times.items(), key=lambda item: item[1])}
-        return jsonify({"machine_id":list(sorted_times.keys())[0].machine_id}), 200
+        sorted_machines=list(sorted_times.keys())
+        mids=[]
+        for i in range(number_retrieve):
+            mids.append(sorted_machines[i].machine_id)
+        return jsonify({"machine_ids": mids}), 200
     else:
         return jsonify({"msg":"No matching machine"}), 404
 
