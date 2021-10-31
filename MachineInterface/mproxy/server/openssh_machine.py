@@ -126,8 +126,8 @@ class OpenSSHMachineConnection(ThrottlableMixin):
             parsed_jobs=self.queue_system.parseQueueStatus(run_info.stdout)        
             for queue_id in queue_ids:
                 if (queue_id in parsed_jobs):
-                    status=parsed_jobs[queue_id]                
-                    to_return[queue_id]=[status.getStatus(), status.getWalltime()]
+                    status=parsed_jobs[queue_id]                    
+                    to_return[queue_id]=[status.getStatus(), status.getWalltime(), status.getQueueTime(), status.getRunTime()]
                     self.queue_info[queue_id]=status    # Update general machine status information too with this                
         return to_return
 

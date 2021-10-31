@@ -71,6 +71,8 @@ class Simulation(db.Entity):
     results_handler = pny.Optional(str)
     requested_walltime = pny.Optional(str)
     walltime = pny.Optional(str)
+    machine_queue_time = pny.Optional(str)
+    machine_run_time = pny.Optional(str)
     num_nodes = pny.Optional(int)
     queue_state_calls = pny.Set("SimulationStateWorkflowCalls")
     performance_data = pny.Set("PerformanceData")

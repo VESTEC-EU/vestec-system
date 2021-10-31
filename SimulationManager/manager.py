@@ -202,7 +202,7 @@ def poll_outstanding_sim_statuses():
     handleRefreshOfSimulations(simulations)    
 
 @pny.db_session
-def handleRefreshOfSimulations(simulations):
+def handleRefreshOfSimulations(simulations):    
     machine_to_queueid={}    
     queueid_to_sim={}
     workflow_stages_to_run=[]
@@ -213,13 +213,17 @@ def handleRefreshOfSimulations(simulations):
         machine_to_queueid[sim.machine.machine_name].append(sim.jobID)
     for key, value in machine_to_queueid.items():
         job_statuses=asyncio.run(get_job_status_update(key, value))
-        for jkey, jvalue in job_statuses.items():
+        for jkey, jvalue in job_statuses.items():            
             queueid_to_sim[jkey].status_updated=datetime.datetime.now() 
             if (jvalue[0] != queueid_to_sim[jkey].status):
                 logger.Log("Simulation '"+queueid_to_sim[jkey].uuid+"' changed state from '"+queueid_to_sim[jkey].status+"' to '"+jvalue[0]+"'", "system", queueid_to_sim[jkey].incident.uuid)
                 queueid_to_sim[jkey].status=jvalue[0]
                 if (len(jvalue[1]) > 0):
                     queueid_to_sim[jkey].walltime=jvalue[1]
+                if (jvalue[2] != "-"):
+                    queueid_to_sim[jkey].machine_queue_time=jvalue[2]
+                if (jvalue[3] != "-"):
+                    queueid_to_sim[jkey].machine_run_time=jvalue[3]
                 pny.commit()
                 targetStateCall=checkMatchAgainstQueueStateCalls(queueid_to_sim[jkey].queue_state_calls, jvalue[0])
                 if (targetStateCall is not None):                      

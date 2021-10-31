@@ -10,6 +10,7 @@ import pony.orm as pny
 import requests
 from Database import initialiseDatabase
 from Database.machine import Machine
+from Database.workflow import Simulation
 import datetime
 from uuid import uuid4
 import Utils.log as log
@@ -19,6 +20,7 @@ from models.current_state_queue_model import QueuePredictionCurrentState
 from mproxy.client import Client
 import asyncio
 import aio_pika
+from dateutil.parser import parse
 
 poll_scheduler=BackgroundScheduler(executors={"default": ThreadPoolExecutor(1)})
 
@@ -105,10 +107,32 @@ def add_machine():
     pny.commit()
     return jsonify({"msg": "Machine added"}), 201
 
+def _isFloat(value):
+  try:
+    float(value)
+    return True
+  except ValueError:
+    return False
+
+@pny.db_session
+def _getPredictedRuntime(executable, machine, requested_walltime):
+    previous_executables=pny.select(sim for sim in Simulation if sim.executable == executable and sim.machine == machine)[:]
+    avg_exec_time=0.0
+    tot_count=0
+    for exec in previous_executables:        
+        if exec.machine_run_time != "" and _isFloat(exec.machine_run_time):
+            avg_exec_time+=float(exec.machine_run_time)
+            tot_count+=1
+    if (tot_count > 0):
+        return avg_exec_time/tot_count
+    else:
+        pt=parse(requested_walltime)
+        return pt.second + pt.minute*60 + pt.hour*3600       
+
 @pny.db_session
 def _getPredictedTotalTime(requested_walltime, requested_num_nodes, executable, machine):
-    queue_time=predictors[machine.machine_name].predict(requested_walltime, requested_num_nodes, detailed_machines_status[machine.machine_name])
-    return queue_time
+    queue_time=predictors[machine.machine_name].predict(requested_walltime, requested_num_nodes, detailed_machines_status[machine.machine_name])    
+    return queue_time + _getPredictedRuntime(executable, machine, requested_walltime)
 
 @app.route("/MSM/matchmachine", methods=["GET"])
 @pny.db_session
@@ -123,10 +147,10 @@ def get_appropriate_machine():
         if machine.enabled:
             if machine.machine_name not in detailed_machines_status:
                 poll_machine_statuses()
-            predicted_total_times[machine.machine_name]=_getPredictedTotalTime(requested_walltime, requested_num_nodes, executable, machine)            
+            predicted_total_times[machine]=_getPredictedTotalTime(requested_walltime, requested_num_nodes, executable, machine)            
     if predicted_total_times:
         sorted_times={k: v for k, v in sorted(predicted_total_times.items(), key=lambda item: item[1])}
-        return jsonify({"machine_id":list(sorted_times.keys())[0]}), 200
+        return jsonify({"machine_id":list(sorted_times.keys())[0].machine_id}), 200
     else:
         return jsonify({"msg":"No matching machine"}), 404
 
