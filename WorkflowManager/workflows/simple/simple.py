@@ -10,7 +10,7 @@ from base64 import b64decode
 from Database import LocalDataStorage
 from Database.workflow import Simulation
 from DataManager.client import registerDataWithDM, putByteDataViaDM, DataManagerException
-from SimulationManager.client import createSimulation, submitSimulation, SimulationManagerException
+from SimulationManager.client import createSimulation, submitSimulation, SimulationManagerException, groupSimulations
 from ExternalDataInterface.client import registerEndpoint, ExternalDataInterfaceException, removeEndpoint
 
 # we now want to define some handlers
@@ -53,12 +53,13 @@ def test_workflow(message):
     callbacks = {'COMPLETED': 'simple_workflow_execution_completed'}    
 
     try:
-        sim_id=createSimulation(message["IncidentID"], 1, "00:10", "test run", "submit.srun", callbacks, template_dir="templates/simple")[0]                
+        sim_id1=createSimulation(message["IncidentID"], 1, "00:10", "test run", "submit.srun", callbacks, template_dir="templates/simple")[0]                
+        sim_id2=createSimulation(message["IncidentID"], 1, "00:10", "test run", "submit.srun", callbacks, template_dir="templates/simple")[0]                
     except SimulationManagerException as err:
         print("Error creating simulation "+err.message)
         return
     
-    simulation=Simulation[sim_id]
+    simulation=Simulation[sim_id1]
     machine_name=simulation.machine.machine_name
 
     data_blob="Sample configuration file"
@@ -68,8 +69,11 @@ def test_workflow(message):
     except DataManagerException as err:
         print("Error creating configuration file on machine, continuing without! "+err.message)            
 
+    groupSimulations([sim_id1, sim_id2])
+
     try:
-        submitSimulation(sim_id)
+        submitSimulation(sim_id1)
+        submitSimulation(sim_id2)
     except SimulationManagerException as err:
         print("Error submitting simulation "+err.message)
 
