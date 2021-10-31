@@ -118,6 +118,13 @@ class OpenSSHMachineConnection(ThrottlableMixin):
         return str_to_return
 
     @throttle
+    def getHistoricalStatus(self, start_time, end_time):
+        status_command=self.queue_system.getQueueCommandForHistoricalStatus(start_time, end_time)
+        run_info=self.run(status_command)      
+        if not self._checkForErrors(run_info.stderr):
+            return self.queue_system.parseHistorialStatus(run_info.stdout)
+
+    @throttle
     def getJobStatus(self, queue_ids):        
         status_command=self.queue_system.getQueueStatusForSpecificJobsCommand(queue_ids)
         run_info=self.run(status_command)

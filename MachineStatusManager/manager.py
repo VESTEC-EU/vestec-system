@@ -16,7 +16,7 @@ from uuid import uuid4
 import Utils.log as log
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
-from models.current_state_queue_model import QueuePredictionCurrentState
+from models.current_machine_state_queue_model import QueuePredictionCurrentMachineState
 from mproxy.client import Client
 import asyncio
 import aio_pika
@@ -27,7 +27,7 @@ poll_scheduler=BackgroundScheduler(executors={"default": ThreadPoolExecutor(1)})
 app = Flask("Machine Status Manager")
 logger = log.VestecLogger("Machine Status Manager")
 
-predictors={"cirrus": QueuePredictionCurrentState("cirrus")}
+predictors={"cirrus": QueuePredictionCurrentMachineState("cirrus")}
 detailed_machines_status={}
 
 @pny.db_session
@@ -35,7 +35,7 @@ def _check_queue_predictors():
     machines=pny.select(machine for machine in Machine)
     for machine in machines:
         if machine.machine_name not in predictors and machine.enabled:
-            predictors[machine.machine_name]=QueuePredictionCurrentState(machine.machine_name)
+            predictors[machine.machine_name]=QueuePredictionCurrentMachineState(machine.machine_name)
 
 @app.route("/MSM/health", methods=["GET"])
 def get_health():

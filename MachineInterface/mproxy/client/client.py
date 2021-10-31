@@ -42,6 +42,7 @@ class Client:
     mv = proxy(API.mv)
     getstatus = proxy(API.getstatus)
     getDetailedStatus = proxy(API.getDetailedStatus)
+    getHistoricalStatus = proxy(API.getHistoricalStatus)
     submitJob = proxy(API.submitJob)
     getJobStatus = proxy(API.getJobStatus)
     cancelJob = proxy(API.cancelJob)
