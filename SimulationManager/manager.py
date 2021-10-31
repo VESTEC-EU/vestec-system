@@ -157,7 +157,7 @@ def create_job():
         comment = ""
 
     try:                
-        matched_machine_id=matchBestMachine(requested_walltime, num_nodes)   
+        matched_machine_id=matchBestMachine(requested_walltime, num_nodes, executable)   
         stored_machine=Machine.get(machine_id=matched_machine_id)        
         asyncio.run(create_job_on_machine(stored_machine.machine_name, directory, template_dir))        
         job_status="CREATED"
