@@ -17,8 +17,9 @@ Will create a simulation on a target HPC machine ready for it to be submitted. T
 * _directory_: The directory to run in
 * _template_dir_: Template directory to copy from when setting up the submission environment
 * _comment_: Free text comments that are logged
+* _number_instances_: (Optional) defaults to 1, the number of instances on separate machines that should be created
 
-Returns a unique simulation ID that can be used to identify the created simulation.
+Returns a list of unique simulation identifiers, one per instance, that can be used to identify the created simulation(s).
 
 If there is an error during creation this will throw a _SimulationManagerException_ with message containing the source of the error
 

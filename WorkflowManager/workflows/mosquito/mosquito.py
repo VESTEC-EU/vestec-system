@@ -22,7 +22,7 @@ def _launch_simulation(IncidentID, simulation_description, template_directory, y
     try:
         callbacks = { 'COMPLETED': callback }
         # ./R0 -a trento -s albopictus -d deng -ns 200 -rt n
-        sim_id = createSimulation(IncidentID, 1, "00:15:00", simulation_description, "submit.sh", callbacks, template_dir="templates/"+template_directory)
+        sim_id = createSimulation(IncidentID, 1, "00:15:00", simulation_description, "submit.sh", callbacks, template_dir="templates/"+template_directory)[0]
         with pny.db_session:
             simulation=Simulation[sim_id]    
             machine_name=simulation.machine.machine_name            

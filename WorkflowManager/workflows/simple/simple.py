@@ -53,7 +53,7 @@ def test_workflow(message):
     callbacks = {'COMPLETED': 'simple_workflow_execution_completed'}    
 
     try:
-        sim_id=createSimulation(message["IncidentID"], 1, "00:10", "test run", "submit.srun", callbacks, template_dir="templates/simple")
+        sim_id=createSimulation(message["IncidentID"], 1, "00:10", "test run", "submit.srun", callbacks, template_dir="templates/simple")[0]                
     except SimulationManagerException as err:
         print("Error creating simulation "+err.message)
         return

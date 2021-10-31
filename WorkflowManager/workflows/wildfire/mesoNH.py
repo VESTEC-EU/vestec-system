@@ -138,7 +138,7 @@ def wildfire_mesonh_physiographic(msg):
 
     try:
         callbacks = {'COMPLETED': 'wildfire_mesonh_simulation'}   
-        sim_id=createSimulation(IncidentID, 1, "0:05:00", "PGD pre-processing", "prep_pgd.sh", queuestate_callbacks=callbacks, template_dir="templates/prep_pdg_template")
+        sim_id=createSimulation(IncidentID, 1, "0:05:00", "PGD pre-processing", "prep_pgd.sh", queuestate_callbacks=callbacks, template_dir="templates/prep_pdg_template")[0]
         with pny.db_session:
             simulation=Simulation[sim_id]   
             machine_name=simulation.machine.machine_name   
@@ -230,7 +230,7 @@ def wildfire_mesonh_simulation(msg):
     
     try:
         callbacks = {'COMPLETED': 'wildfire_mesonh_results'}   
-        sim_id=createSimulation(IncidentID, 1, "0:10:00", "MesoNH weather simulation", "mesonh_composed.sh", queuestate_callbacks=callbacks, template_dir="templates/mesonh_template")
+        sim_id=createSimulation(IncidentID, 1, "0:10:00", "MesoNH weather simulation", "mesonh_composed.sh", queuestate_callbacks=callbacks, template_dir="templates/mesonh_template")[0]
         with pny.db_session:
             simulation=Simulation[sim_id]    
             machine_name=simulation.machine.machine_name

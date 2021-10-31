@@ -124,27 +124,49 @@ def submit_job():
 async def submit_job_to_machine(machine_name, num_nodes, requested_walltime, directory, executable):        
     client = await Client.create(machine_name)
     queue_id = await client.submitJob(num_nodes, requested_walltime, directory, executable)
-    return queue_id    
+    return queue_id
+
+@pny.db_session
+def _issueCreationOfJobOnMachine(machine_id, incident_id, incident, num_nodes, kind, requested_walltime, executable, directory, template_dir, comment, callbacks):
+    uuid=str(uuid4())
+    incident_dir_id=incident_id.split("-")[-1]
+    simulation_dir_id=uuid.split("-")[-1]
+
+    if directory is None:        
+        directory = "incident-"+incident_dir_id+"/simulation-"+simulation_dir_id
+
+    try:
+        stored_machine=Machine.get(machine_id=machine_id)
+        asyncio.run(create_job_on_machine(stored_machine.machine_name, directory, template_dir))                
+    except asyncio.exceptions.TimeoutError:
+        return "Timeout contacting remote machine", 504
+
+    job_status="CREATED"
+    logger.Log("Created simulation '"+uuid+"'", "system", incident_id)
+
+    simulation = Simulation(uuid=uuid, incident=incident, kind=kind, date_created=datetime.datetime.now(), num_nodes=num_nodes, 
+                    requested_walltime=requested_walltime, executable=executable, status=job_status, status_updated=datetime.datetime.now(), directory=directory, comment=comment)
+    if (job_status=="ERROR"):
+        simulation.status_message=status_message
+    if (stored_machine is not None):
+        simulation.machine=stored_machine
+    if callbacks is not None:
+        for key, value in callbacks.items():
+            simulation.queue_state_calls.create(queue_state=key, call_name=value)
+
+    return uuid
 
 @app.route("/SM/create", methods=["POST"])
 @pny.db_session
 def create_job():    
     data = request.get_json()
-
-    uuid=str(uuid4())
+    
     incident_id = data["incident_id"]    
     num_nodes = data["num_nodes"]
+    number_instances = data["number_instances"]
     kind = data["kind"]
     requested_walltime = data["requested_walltime"]
     executable = data["executable"]
-
-    incident_dir_id=incident_id.split("-")[-1]
-    simulation_dir_id=uuid.split("-")[-1]
-
-    if "directory" in data:
-        directory = data["directory"]
-    else:
-        directory = "incident-"+incident_dir_id+"/simulation-"+simulation_dir_id
 
     if "template_dir" in data:
         template_dir = data["template_dir"]
@@ -156,39 +178,29 @@ def create_job():
     else:
         comment = ""
 
+    try:
+        #fetch incident, make sure it exists
+        incident = Incident[incident_id]
+    except pny.core.ObjectNotFound:
+        return "Invalid IncidentID", 500
+
     try:                
-        matched_machine_id=matchBestMachine(requested_walltime, num_nodes, executable)        
-        stored_machine=Machine.get(machine_id=matched_machine_id[0])        
-        asyncio.run(create_job_on_machine(stored_machine.machine_name, directory, template_dir))        
-        job_status="CREATED"
-        logger.Log("Created simulation '"+uuid+"'", "system", incident_id)
+        matched_machine_ids=matchBestMachine(requested_walltime, num_nodes, executable, number_retrieve=number_instances)                
     except MachineStatusManagerException as err:        
         job_status="ERROR"
         status_message="Error allocating machine to job, "+err.message
         stored_machine=None
         logger.Log("Error creating simulation, message is "+err.message, "system", incident_id, type=log.LogType.Error)
         return "Error allocating job to machine", 400
-    except asyncio.exceptions.TimeoutError:
-        return "Timeout contating remote machine", 504
+            
+    if len(matched_machine_ids) < number_instances:
+        return "Error, requested "+number_instances+" instances but only "+len(matched_machine_ids)+" applicable machines found", 400
+
+    uuids=[]
+    for matched_machine_id in matched_machine_ids:
+        uuids.append(_issueCreationOfJobOnMachine(matched_machine_id, incident_id, incident, num_nodes, kind, requested_walltime, executable, data["directory"] if "directory" in data else None, template_dir, comment, data["queuestate_calls"] if "queuestate_calls" in data else None))
     
-    #fetch incident, make sure it exists
-    try:
-        incident = Incident[incident_id]
-    except pny.core.ObjectNotFound:
-        return "Invalid IncidentID", 500
-    
-    #create simulation in the DB
-    simulation = Simulation(uuid=uuid, incident=incident, kind=kind, date_created=datetime.datetime.now(), num_nodes=num_nodes, 
-                    requested_walltime=requested_walltime, executable=executable, status=job_status, status_updated=datetime.datetime.now(), directory=directory, comment=comment)
-    if (job_status=="ERROR"):
-        simulation.status_message=status_message
-    if (stored_machine is not None):
-        simulation.machine=stored_machine
-    if ("queuestate_calls" in data):
-        for key, value in data["queuestate_calls"].items():
-            simulation.queue_state_calls.create(queue_state=key, call_name=value)  
-    
-    return jsonify({"simulation_id": uuid}), 201
+    return jsonify({"simulation_id": uuids}), 201
 
 async def create_job_on_machine(machine_name, directory, simulation_template_dir):        
     client = await asyncio.wait_for(Client.create(machine_name),timeout=3.0)
