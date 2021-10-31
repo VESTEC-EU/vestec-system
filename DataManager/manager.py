@@ -8,7 +8,6 @@ from pony.orm.serialization import to_dict
 from Database import db, initialiseDatabase, Data, DataTransfer, Machine
 import datetime
 import os
-import ConnectionManager
 import json
 import subprocess
 from Database import LocalDataStorage
