@@ -60,8 +60,9 @@ class QueuePredictionCurrentMachineState():
                         whole=int(tokens[3])
                     else:
                         part=int(tokens[3])
-                        whole=requested_seconds                    
-                    return_info.append([tokens[2], 1 / ((whole-part))])
+                        whole=requested_seconds
+                    difference=whole-part
+                    return_info.append([tokens[2], 1 / difference if difference > 0 else 1])
         return return_info
 
 
