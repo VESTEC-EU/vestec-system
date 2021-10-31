@@ -233,11 +233,20 @@ def remove(id):
 
 @app.route("/DM/predict",methods=["POST"])
 @pny.db_session
-def predict():    
-    src_machine=flask.request.form["src_machine"]
-    dest_machine=flask.request.form["dest_machine"]
-    data_size=float(flask.request.form["data_size"])
+def predict():
+    if "data_uuid" in flask.request.form:
+        uuid=flask.request.form["data_uuid"]
+        try:
+            d=Data[id]
+        except pny.ObjectNotFound:
+            return "Data with uuid '"+uuid+"' not found", 404
+        src_machine=d.machine
+        data_size=d.size
+    else:
+        src_machine=flask.request.form["src_machine"]    
+        data_size=float(flask.request.form["data_size"])
 
+    dest_machine=flask.request.form["dest_machine"]
     matching_transfers=pny.select(dt for dt in DataTransfer if dt.src_machine == src_machine and dt.dst_machine == dest_machine)[:]
     if len(matching_transfers) == 0:
         return "No matching data transfers between machines", 400
