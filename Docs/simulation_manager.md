@@ -62,3 +62,13 @@ Retrieves information about a specific simulation based on it's state. Note that
 * _sim_id_: Simulation identifier returned from the creation API call
 
 If there is an error this will throw a _SimulationManagerException_ with message containing the source of the error
+
+## groupSimulations
+
+`groupSimulations(sim_ids)`
+
+Will group simulations together such that only the completion callback of one will be issued eagerly (i.e. the first one to complete will call the corresponding callback). These for instance could be running on separate machines and could be used to add resilience to a simulation.
+
+* _sim_ids_: List of simulation identifiers to group together
+
+If there is an error this will throw a _SimulationManagerException_ with message containing the source of the error

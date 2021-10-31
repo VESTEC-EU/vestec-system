@@ -36,6 +36,12 @@ def submitSimulation(sim_id):
     if response.status_code != 200:
         raise SimulationManagerException(response.status_code, response.text)
 
+def groupSimulations(sim_ids):
+    submitobj = {'simulation_uuids' : sim_ids}
+    response = requests.post(_get_SM_URL()+'/group', json=submitobj)
+    if response.status_code != 200:
+        raise SimulationManagerException(response.status_code, response.text)
+
 def refreshSimilation(sim_id):
     response = requests.post(_get_SM_URL()+'/refresh/'+sim_id)
     if response.status_code != 200:

@@ -12,7 +12,7 @@ from Database.generate_db import initialiseStaticInformation
 from Database.machine import Machine
 from Database.queues import Queue
 from Database.users import User
-from Database.workflow import RegisteredWorkflow, Simulation, Incident
+from Database.workflow import RegisteredWorkflow, Simulation, Incident, SimulationGroup
 import datetime
 from uuid import uuid4
 import Utils.log as log
@@ -96,6 +96,20 @@ def cancel_simulation(simulation_id):
 async def delete_simulation_job(machine_name, queue_id):        
     client = await Client.create(machine_name)
     await client.cancelJob(queue_id)
+
+@app.route("/SM/group", methods=["POST"])
+@pny.db_session
+def group_jobs():
+    data = request.get_json()
+
+    simulation_uuids = data["simulation_uuids"]
+    group=SimulationGroup()
+    for uuid in simulation_uuids:
+        sim=Simulation[uuid]
+        if (sim is None):
+            return "Simulation not found with identifier '"+uuid+"'", 404
+        sim.simulation_group=group        
+    return "Jobs grouped", 200
 
 @app.route("/SM/submit", methods=["POST"])
 @pny.db_session
@@ -211,7 +225,7 @@ async def create_job_on_machine(machine_name, directory, simulation_template_dir
 @pny.db_session
 def poll_outstanding_sim_statuses():
     simulations=pny.select(g for g in Simulation if g.status == "QUEUED" or g.status == "RUNNING" or g.status == "ENDING")
-    handleRefreshOfSimulations(simulations)    
+    handleRefreshOfSimulations(simulations)
 
 @pny.db_session
 def handleRefreshOfSimulations(simulations):    
@@ -238,7 +252,15 @@ def handleRefreshOfSimulations(simulations):
                     queueid_to_sim[jkey].machine_run_time=jvalue[3]
                 pny.commit()
                 targetStateCall=checkMatchAgainstQueueStateCalls(queueid_to_sim[jkey].queue_state_calls, jvalue[0])
-                if (targetStateCall is not None):                      
+                if (targetStateCall is not None):                    
+                    if jvalue[0]=="COMPLETED" and queueid_to_sim[jkey].simulation_group is not None:                        
+                        if queueid_to_sim[jkey].simulation_group.completion_callback_issued:
+                            logger.Log("Ignoring completion callback for simulation '"+str(queueid_to_sim[jkey].uuid)+"' as issued for group already", "system", queueid_to_sim[jkey].incident.uuid, type=log.LogType.Info)
+                            continue
+                        else:
+                            queueid_to_sim[jkey].simulation_group.completion_callback_issued=True
+                            logger.Log("Marking simulation group '"+str(queueid_to_sim[jkey].simulation_group.id)+"' as completion callback actioned", "system", queueid_to_sim[jkey].incident.uuid, type=log.LogType.Info)
+                            pny.commit()
                     new_wf_stage_call={'targetName' : targetStateCall, 'incidentId' : queueid_to_sim[jkey].incident.uuid, 'simulationId' : queueid_to_sim[jkey].uuid, 'status' : jvalue[0]}
                     workflow_stages_to_run.append(new_wf_stage_call)
     pny.commit()
