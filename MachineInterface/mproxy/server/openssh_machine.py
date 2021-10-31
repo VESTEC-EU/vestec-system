@@ -110,6 +110,14 @@ class OpenSSHMachineConnection(ThrottlableMixin):
             return "Error, can not connect"
 
     @throttle
+    def getDetailedStatus(self):
+        str_to_return=""
+        self.checkForUpdateToQueueData()
+        for value in list(self.queue_info.values()):
+            str_to_return+=value.toString()+"\n"
+        return str_to_return
+
+    @throttle
     def getJobStatus(self, queue_ids):        
         status_command=self.queue_system.getQueueStatusForSpecificJobsCommand(queue_ids)
         run_info=self.run(status_command)

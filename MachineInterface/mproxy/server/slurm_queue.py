@@ -8,7 +8,7 @@ class SlurmQueueProcessor:
         job_queue_str=""
         for queue_id in queue_ids:
             job_queue_str+=queue_id+","
-        return "sacct --format jobid,elapsed,state -j "+job_queue_str
+        return "sacct --format jobid,elapsed,state,nnodes -j "+job_queue_str
 
     def getSubmissionCommand(self, scriptname):
         return "sbatch "+scriptname
@@ -41,13 +41,13 @@ class SlurmQueueProcessor:
             for line in queue_raw_data.split('\n'):                
                 tokens=line.split()
                 if len(tokens) >=3 and self.isStringQueueId(tokens[0]):                        
-                        jobs[tokens[0]]=JobStatus(tokens[0], self.getConvertSlurmAccountingJobStatusCode(tokens[2]), tokens[1] if tokens[1] != "0:00" else "")
+                        jobs[tokens[0]]=JobStatus(tokens[0], self.getConvertSlurmAccountingJobStatusCode(tokens[2]), tokens[1] if tokens[1] != "0:00" else "N/A", tokens[3])
         else:
             # squeue data
             for line in queue_raw_data.split('\n'):                
                 tokens=line.split()
                 if len(tokens) >=6 and self.isStringQueueId(tokens[0]):
-                    jobs[tokens[0]]=JobStatus(tokens[0], self.getConvertSlurmQueueJobStatusCode(tokens[4]), tokens[5] if tokens[5] != "0:00" else "")                    
+                    jobs[tokens[0]]=JobStatus(tokens[0], self.getConvertSlurmQueueJobStatusCode(tokens[4]), tokens[5] if tokens[5] != "0:00" else "N/A", tokens[6])                    
 
         return jobs
 

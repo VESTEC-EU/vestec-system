@@ -42,6 +42,10 @@ class API:
         pass
 
     @rpcmethod
+    def getDetailedStatus() -> str:
+        pass
+
+    @rpcmethod
     def submitJob(num_nodes: int, requested_walltime:str, directory:str, executable: str) -> list:
         pass
 	

@@ -41,6 +41,7 @@ class Client:
     rmdir = proxy(API.rmdir)
     mv = proxy(API.mv)
     getstatus = proxy(API.getstatus)
+    getDetailedStatus = proxy(API.getDetailedStatus)
     submitJob = proxy(API.submitJob)
     getJobStatus = proxy(API.getJobStatus)
     cancelJob = proxy(API.cancelJob)
