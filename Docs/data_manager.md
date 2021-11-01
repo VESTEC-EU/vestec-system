@@ -159,7 +159,7 @@ Will predict (in seconds) the transfer performance of data from a source to dest
 
 Will throw the _DataManagerException_ is unsuccessful, including if no prediction can be made due to a lack of performance data
 
-## predictDataTransferPerformance
+## predictDatasetTransferPerformance
 
 `predictDatasetTransferPerformance(data_uuid, dest_machine)`
 
