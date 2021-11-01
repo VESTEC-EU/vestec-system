@@ -14,12 +14,17 @@ from Database import LocalDataStorage
 from mproxy.client import Client
 import asyncio
 import aio_pika
+from WorkflowManager.manager import workflow
+from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
+from apscheduler.schedulers.background import BackgroundScheduler
 
 app = flask.Flask(__name__)
 
 OK=0
 FILE_ERROR=1
 NOT_IMPLEMENTED = 2
+
+async_scheduler=BackgroundScheduler(executors={"default": ThreadPoolExecutor(1)})
 
 @app.route("/DM/health", methods=["GET"])
 def get_health():
@@ -137,7 +142,7 @@ def _perform_registration(form_data):
 
     #register this with the database and return its UUID
     id=_register(fname,path,machine,description,type,size,originator,group,storage_technology)
-    return id, 201
+    return id, 201      
 
 #instructs the data manager to download data from the internet onto a specified machine. Returns a uuid for that data entity
 @app.route("/DM/getexternal",methods=["PUT"])
@@ -164,34 +169,47 @@ def GetExternal():
     else:
         options = None    
 
+    if "callback" in flask.request.form and "incidentId" in flask.request.form:
+        callback = flask.request.form["callback"]
+        incidentId = flask.request.form["incidentId"]
+    else:
+        callback = None
+        incidentId = None
+
     if _checkExists(machine,fname,path):
         return "File already exists", 406
 
-    #instruct the machine to download the file (passes the size of the file back in the "options" dict)
-    try:
-        status, message, date_started, date_completed = _download(fname, path, storage_technology, machine, url, protocol, options)
-    except ConnectionManager.ConnectionError as e:
-        return str(e), 500
-        
-    if status == OK:
-        size=message
-        #register this new file with the data manager
-        id=_register(fname,path, machine, description, type, size, originator, group, storage_technology)
-        with pny.db_session:
-            transfer_id = str(uuid.uuid4())
-            data_transfer = DataTransfer(id=transfer_id,
-                                     src=Data[id],
-                                     src_machine=protocol,
-                                     dst_machine=machine,
-                                     date_started=date_started,
-                                     status = "COMPLETED",
-                                     date_completed = date_completed,
-                                     completion_time = (date_completed - date_started))
-        return id, 201
-    elif status == NOT_IMPLEMENTED:
-        return message, 501
-    elif status==FILE_ERROR:
-        return message, 500
+    if callback is None or incidentId is None:
+        #instruct the machine to download the file (passes the size of the file back in the "options" dict)
+        try:
+            status, message, date_started, date_completed = _download(fname, path, storage_technology, machine, url, protocol, options)
+        except ConnectionManager.ConnectionError as e:
+            return str(e), 500
+            
+        if status == OK:
+            size=message
+            #register this new file with the data manager
+            id=_register(fname,path, machine, description, type, size, originator, group, storage_technology)
+            with pny.db_session:
+                transfer_id = str(uuid.uuid4())
+                data_transfer = DataTransfer(id=transfer_id,
+                                        src=Data[id],
+                                        src_machine=protocol,
+                                        dst_machine=machine,
+                                        date_started=date_started,
+                                        status = "COMPLETED",
+                                        date_completed = date_completed,
+                                        completion_time = (date_completed - date_started))
+            return id, 201
+        elif status == NOT_IMPLEMENTED:
+            return message, 501
+        elif status==FILE_ERROR:
+            return message, 500
+    else:
+        async_scheduler.add_job(downloadDataAsync, 'interval', weeks=1000, next_run_time=datetime.datetime.now()+ datetime.timedelta(seconds=1), 
+            end_date=datetime.datetime.now()+ datetime.timedelta(seconds=10),
+            args=[fname, path, storage_technology, machine, url, protocol, description, type, originator, group, options, callback, incidentId])
+        return "Scheduled", 201
 
 #Moves a data entity from one location to another
 @app.route("/DM/move/<id>",methods=["POST"])
@@ -270,6 +288,34 @@ def activate(id):
 
 
 #--------------------- helper functions --------------------------
+
+def _issueWorkflowCallback(callback, incidentId, response, success):      
+    workflow.OpenConnection()    
+    msg={"IncidentID": incidentId, "response": response, "success": success}            
+    workflow.send(message=msg, queue=callback, providedCaller="Data manager callback from non-blocking operation")
+    workflow.FlushMessages()
+    workflow.CloseConnection()
+
+def _downloadDataAsync(fname, path, storage_technology, machine, url, protocol, description, type, originator, group, options, callback, incidentId):        
+    try:
+        status, message, date_started, date_completed = _download(fname, path, storage_technology, machine, url, protocol, options)
+    except ConnectionManager.ConnectionError as e:
+        issueWorkflowCallback(callback, incidentId, "Connection error", False)    
+            
+    if status == OK:
+        size=message
+        #register this new file with the data manager
+        id=_register(fname,path, machine, description, type, size, originator, group, storage_technology)
+        with pny.db_session:
+            transfer_id = str(uuid.uuid4())
+            data_transfer = DataTransfer(id=transfer_id, src=Data[id], src_machine=protocol, dst_machine=machine,
+                                        date_started=date_started, status = "COMPLETED", date_completed = date_completed,
+                                        completion_time = (date_completed - date_started))
+            issueWorkflowCallback(callback, incidentId, id, True)            
+    elif status == NOT_IMPLEMENTED:
+        issueWorkflowCallback(callback, incidentId, message, False)            
+    elif status==FILE_ERROR:
+        issueWorkflowCallback(callback, incidentId, message, False) 
 
 @pny.db_session
 def _retrieveAbsolutePath(data_info):
@@ -663,5 +709,6 @@ def _getLocalPathPrepend():
         return ""
 
 if __name__ == "__main__":
-    initialiseDatabase()
+    initialiseDatabase() 
+    async_scheduler.start()   
     app.run(host='0.0.0.0', port=5503)

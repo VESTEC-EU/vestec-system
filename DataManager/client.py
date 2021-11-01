@@ -102,9 +102,11 @@ def putByteDataViaDM(filename, machine, description, type, originator, payload, 
         raise DataManagerException(response.status_code, response.text)
 
 def downloadDataToTargetViaDM(filename, machine, description, type, originator, url, protocol, group = "none", storage_technology=None, path=None, options=None,
-        associate_with_incident=False, incidentId=None, kind="", comment=None):
+        associate_with_incident=False, incidentId=None, kind="", comment=None, callback=None):
     if associate_with_incident and incidentId is None:
         raise DataManagerException(400, "Must supply an incident ID when associating dataset with an incident")
+    if callback and incidentId is None:
+        raise DataManagerException(400, "Must supply an incident ID when providing a callback for nonblocking download")
 
     arguments = {   'filename': filename, 
                     'machine':machine,
@@ -121,6 +123,9 @@ def downloadDataToTargetViaDM(filename, machine, description, type, originator, 
         arguments["path"]=path
     if options is not None:
         arguments["options"]=options
+    if callback is not None and incidentId is not None:
+        arguments["callback"]=callback
+        arguments["incidentId"]=incidentId
 
     returnUUID = requests.put(_get_DM_URL()+'/getexternal', data=arguments)
     if returnUUID.status_code == 201:

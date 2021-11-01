@@ -83,7 +83,7 @@ If unsuccessful then the _DataManagerException_ will be thrown with associated m
 
 ## downloadDataToTargetViaDM
 
-`downloadDataToTargetViaDM(filename, machine, description, type, originator, url, protocol, group = "none", storage_technology=None, path=None, options=None, associate_with_incident=False, incidentId=None, kind="", comment=None)`
+`downloadDataToTargetViaDM(filename, machine, description, type, originator, url, protocol, group = "none", storage_technology=None, path=None, options=None, associate_with_incident=False, incidentId=None, kind="", comment=None, callback=None)`
         
 Downloads data from some external source (represented by _url_ and _protocol_) to a target and register this dataset with the DM. Note that the system will always gather performance metrics for this operation.
 * _filename_: The name of the file to register
@@ -100,6 +100,7 @@ Downloads data from some external source (represented by _url_ and _protocol_) t
  * _incidentId_: (Optional) The incident unique identifier that this data is associated with
  * _kind_: (Optional) The kind of the dataset
  * _comment_: (Optional) Free text field associating any miscellaneous comments with the data
+* _callback_: (Optional) If provided will operate in non-blocking mode and return immediately, then calling back to specified workflow state when data transfer is completed or error has occurred
 
 Returns the unique DM identifier of this new dataset.
 
