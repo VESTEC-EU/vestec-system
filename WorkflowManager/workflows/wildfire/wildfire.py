@@ -123,7 +123,25 @@ def wildfire_fire_results(msg):
     simulationId = msg["simulationId"]
     simulationIdPostfix=simulationId.split("-")[-1]
     directoryListing=msg["directoryListing"]
-    print("\nResults available for wildfire analyst simulation!") 
+    print("\nResults available for wildfire analyst simulation!")
+
+    logs = workflow.Persist.Get(IncidentID)
+
+    # get the latest data for all 3 required data types
+    # staticFile = None
+    hotspotDataUUID = None
+    for log in logs:
+        if log["originator"] == "wildfire_tecnosylva_hotspots":
+            hotspotDataUUID = log["hotspot_data_uuid"]
+
+    hotspotData = getByteDataViaDM(hotspotDataUUID).decode('ascii')
+    hotspot_dict = json.loads(hotspotData)
+
+    if "simDuration" in hotspot_dict:
+        simDuration = hotspot_dict['simDuration']
+    else:
+        print("Simulation duration (key simDuration) not in hotspot JSON data. This is required")
+        return
 
     with pny.db_session:
         myincident = Incident[IncidentID]
@@ -162,7 +180,7 @@ def wildfire_fire_results(msg):
 
             try:
                 putByteDataViaDM("wfapost.yml", machine_name, "Wildfire post-processing configuration", "text/plain", "Wildfire workflow", 
-                    _buildWFAPostYaml(IncidentID, simulation.directory, machine_basedir), path=post_proc_simulation.directory)                    
+                    _buildWFAPostYaml(simulation.directory, machine_basedir, simDuration), path=post_proc_simulation.directory)
             except DataManagerException as err:
                 print("Can not write wildfire post processing configuration to simulation location"+err.message)
                 return
@@ -187,10 +205,7 @@ def _registerWFAResultFile(filename, result_files, machine_name, directory, inci
         raise WildfireDataAccessException("Error registering WFA result data with data manager on the VESTEC system")
 
 @pny.db_session
-def _buildWFAPostYaml(incidentId, simulation_directory, machine_basedir):
-    myincident = Incident[incidentId]
-    duration = myincident.duration
-
+def _buildWFAPostYaml(simulation_directory, machine_basedir, simDuration):
     if simulation_directory[-1] != "/": simulation_directory+="/"
 
     sample_configuration_file = open("workflows/wildfire/templates/wfapost.yml")
@@ -200,7 +215,7 @@ def _buildWFAPostYaml(incidentId, simulation_directory, machine_basedir):
     yaml_template["variance"]["path"]=machine_basedir+simulation_directory+"test_Fire_Variance.tif"
     yaml_template["mean"]["path"]=machine_basedir+simulation_directory+"test_Fire_Mean.tif"
     
-    yaml_template["sim_duration"]=duration
+    yaml_template["sim_duration"]=simDuration
         
     return yaml.dump(yaml_template)
 
