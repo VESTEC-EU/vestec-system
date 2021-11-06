@@ -7,6 +7,7 @@ import pony.orm as pny
 from pony.orm.serialization import to_dict
 from Database import db, initialiseDatabase, Data, DataTransfer, Machine
 import datetime
+from dateutil.parser import parse
 import os
 import json
 import subprocess
@@ -23,6 +24,31 @@ app = flask.Flask(__name__)
 OK=0
 FILE_ERROR=1
 NOT_IMPLEMENTED = 2
+
+useCaching = False
+fileCache=[]
+maxNumCacheEntries=10
+maxCacheSize=1024*1024*100
+minCacheSize=1024*1024
+
+class cachedData:
+    def __init__(self, machine, full_file, size, last_changed, byte_data):
+        self.machine=machine
+        self.full_file=full_file
+        self.size=size
+        self.last_changed=last_changed
+        self.byte_data=byte_data
+
+    def update(self, size, last_changed, byte_data):
+        self.size=size
+        self.last_changed=last_changed
+        self.byte_data=byte_data
+
+    def match(self, machine, full_file, size, last_changed):
+        return self.machine==machine and self.full_file==full_file and self.size==size and self.last_changed==last_changed
+
+    def getData(self):
+        return self.byte_data
 
 async_scheduler=BackgroundScheduler(executors={"default": ThreadPoolExecutor(1)})
 
@@ -559,7 +585,24 @@ def _get_data_from_location(registered_data, gather_metrics):
             localData=LocalDataStorage.get(filename=target_src)
             contents=localData.contents            
     else:
-        contents=asyncio.run(submit_remote_get_data(registered_data.machine, target_src))
+        if useCaching:
+            details=asyncio.run(get_ls_on_data(registered_data.machine, target_src))
+            tokens=details[0].split()
+            file_size = tokens[4]
+            filefound=False
+            timestamp=parse(tokens[5]+" "+tokens[6]+" "+tokens[7]).timestamp()
+            for entry in fileCache:
+                if entry.match(registered_data.machine, target_src, file_size, timestamp):
+                    contents=entry.getData()                    
+                    filefound=True
+                    break
+            if not filefound:
+                contents=asyncio.run(submit_remote_get_data(registered_data.machine, target_src))            
+                if int(file_size) < maxCacheSize: #and int(file_size) > minCacheSize:                    
+                    if len(fileCache) == maxNumCacheEntries: del fileCache[0]
+                    fileCache.append(cachedData(registered_data.machine, target_src, file_size, timestamp, contents))
+        else:
+            contents=asyncio.run(submit_remote_get_data(registered_data.machine, target_src))
 
     if gather_metrics:
         data_transfer = DataTransfer[transfer_id]
@@ -571,7 +614,11 @@ def _get_data_from_location(registered_data, gather_metrics):
 
 async def submit_remote_get_data(target_machine_name, src_file):
     client = await Client.create(target_machine_name)              
-    return await client.get(src_file)     
+    return await client.get(src_file)
+
+async def get_ls_on_data(target_machine_name, src_file):
+    client = await Client.create(target_machine_name)
+    return await client.ls(src_file)
 
 @pny.db_session
 def _put_data_to_location(data_payload, data_uuid, gather_metrics):
