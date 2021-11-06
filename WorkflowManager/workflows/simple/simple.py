@@ -9,7 +9,7 @@ import json
 from base64 import b64decode
 from Database import LocalDataStorage
 from Database.workflow import Simulation
-from DataManager.client import registerDataWithDM, putByteDataViaDM, DataManagerException, predictDataTransferPerformance
+from DataManager.client import registerDataWithDM, putByteDataViaDM, DataManagerException, predictDataTransferPerformance, downloadDataToTargetViaDM
 from SimulationManager.client import createSimulation, submitSimulation, SimulationManagerException, groupSimulations
 from ExternalDataInterface.client import registerEndpoint, ExternalDataInterfaceException, removeEndpoint
 
@@ -47,9 +47,24 @@ def manually_add_data(message):
         print("Error registering uploaded data with DM, "+err.message)
 
 @workflow.handler
+def data_xfer_complete(message):
+    print("Hello!")
+
+@workflow.handler
 @pny.db_session
 def test_workflow(message):
     print("Test called!")
+
+    try:
+        #registerDataWithDM("wc_temp_rome.csv", "cirrus", "workflow", "test", 30890314, "Manually added", path="/lustre/home/dc118/shared/data/mosquito/rome", associate_with_incident=True, incidentId=message["IncidentID"])
+        registerDataWithDM("wfa.sh", "cirrus", "workflow", "test", 416, "Manually added", path="/lustre/home/dc118/dc118sys/incidents/incident-126fced65822/simulation-ffe904c2cee5", associate_with_incident=True, incidentId=message["IncidentID"])
+    except DataManagerException as err:
+        print("Error registering uploaded data with DM, "+err.message)
+
+    return
+    downloadDataToTargetViaDM(message["IncidentID"], "cirrus", "test", "abc", "simple workflow", url="http://www.math.sjsu.edu/~foster/dictionary.txt", protocol="https", callback="data_xfer_complete", incidentId=message["IncidentID"])
+
+    return
     callbacks = {'COMPLETED': 'simple_workflow_execution_completed'}
 
     try:
@@ -132,6 +147,7 @@ def initialise_simple(message):
 # we have to register them with the workflow system
 def RegisterHandlers():
     workflow.RegisterHandler(external_data_arrival_handler, "external_data_arrival")
+    workflow.RegisterHandler(data_xfer_complete, "data_xfer_complete")
     workflow.RegisterHandler(manually_add_data, "add_data_simple")
     workflow.RegisterHandler(test_workflow, "test_workflow_simple")
     workflow.RegisterHandler(initialise_simple, "initialise_simple")
