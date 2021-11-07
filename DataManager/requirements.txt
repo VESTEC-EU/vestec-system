@@ -1,4 +1,5 @@
 aio_pika
+pika
 pony
 uuid
 pyYAML
