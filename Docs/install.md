@@ -30,7 +30,7 @@ You should also change the _MYSQL_ROOT_PASSWORD_ in the _docker-compose.yml_ ent
 In a new shell on your machine you then need to connect to the mariadb image via `sudo docker exec mariadb /bin/bash` which will start a bash session in that container and login to the database.
 
 ``` 
- $ sudo docker exec mariadb /bin/bash
+ $ sudo docker exec -it mariadb /bin/bash
  # mysql -u root -p -h 0.0.0.0
 ```
 
