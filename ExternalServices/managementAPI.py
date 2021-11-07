@@ -31,7 +31,7 @@ from SimulationManager.client import refreshSimilation, SimulationManagerExcepti
 
 logger = log.VestecLogger("Website")
 
-VERSION_PRECLUDE="1.2"
+VERSION_PRECLUDE="1.3"
 version_number=VERSION_PRECLUDE+"."+VERSION_POSTFIX
 
 def version():
