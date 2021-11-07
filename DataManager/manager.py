@@ -232,7 +232,7 @@ def GetExternal():
         elif status==FILE_ERROR:
             return message, 500
     else:
-        async_scheduler.add_job(downloadDataAsync, 'interval', weeks=1000, next_run_time=datetime.datetime.now()+ datetime.timedelta(seconds=1), 
+        async_scheduler.add_job(_downloadDataAsync, 'interval', weeks=1000, next_run_time=datetime.datetime.now()+ datetime.timedelta(seconds=1), 
             end_date=datetime.datetime.now()+ datetime.timedelta(seconds=10),
             args=[fname, path, storage_technology, machine, url, protocol, description, type, originator, group, options, callback, incidentId])
         return "Scheduled", 201
@@ -326,7 +326,7 @@ def _downloadDataAsync(fname, path, storage_technology, machine, url, protocol, 
     try:
         status, message, date_started, date_completed = _download(fname, path, storage_technology, machine, url, protocol, options)
     except ConnectionManager.ConnectionError as e:
-        issueWorkflowCallback(callback, incidentId, "Connection error", False)    
+        _issueWorkflowCallback(callback, incidentId, "Connection error", False)    
             
     if status == OK:
         size=message
@@ -337,11 +337,11 @@ def _downloadDataAsync(fname, path, storage_technology, machine, url, protocol, 
             data_transfer = DataTransfer(id=transfer_id, src=Data[id], src_machine=protocol, dst_machine=machine,
                                         date_started=date_started, status = "COMPLETED", date_completed = date_completed,
                                         completion_time = (date_completed - date_started))
-            issueWorkflowCallback(callback, incidentId, id, True)            
+            _issueWorkflowCallback(callback, incidentId, id, True)            
     elif status == NOT_IMPLEMENTED:
-        issueWorkflowCallback(callback, incidentId, message, False)            
+        _issueWorkflowCallback(callback, incidentId, message, False)            
     elif status==FILE_ERROR:
-        issueWorkflowCallback(callback, incidentId, message, False) 
+        _issueWorkflowCallback(callback, incidentId, message, False) 
 
 @pny.db_session
 def _retrieveAbsolutePath(data_info):
