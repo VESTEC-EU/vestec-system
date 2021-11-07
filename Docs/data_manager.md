@@ -102,7 +102,7 @@ Downloads data from some external source (represented by _url_ and _protocol_) t
  * _comment_: (Optional) Free text field associating any miscellaneous comments with the data
 * _callback_: (Optional) If provided will operate in non-blocking mode and return immediately, then calling back to specified workflow state when data transfer is completed or error has occurred
 
-Returns the unique DM identifier of this new dataset.
+Returns the unique DM identifier of this new dataset. It is possible for _filename_, _url_, and _path_ to be lists and in such cases then multiple downloads will be issued and a list of unique DM identifiers returned. An error (via the  _DataManagerException_ will be thrown) if a mixture of lists and scalars are provided as arguments to this call.
 
 If unsuccessful then the _DataManagerException_ will be thrown with associated message describing the source of the error.
 
