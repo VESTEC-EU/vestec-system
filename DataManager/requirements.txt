@@ -6,4 +6,4 @@ pymysql
 fabric
 flask
 apscheduler
-dateutil
+python-dateutil
