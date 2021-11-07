@@ -364,6 +364,7 @@ def doesStoredIncidentMatchFilter(stored_incident, pending_filter, active_filter
 def retrieveMyIncidentSummary(username, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter):
     incidents=[]
     user = User.get(username=username)
+    if user is None: return incidents
     for stored_incident in user.incidents:
         if doesStoredIncidentMatchFilter(stored_incident, pending_filter, active_filter, completed_filter, cancelled_filter, error_filter, archived_filter):
             incidents.append(packageIncident(stored_incident, True, False, False, False, False, False))
