@@ -134,10 +134,14 @@ def wildfire_fire_results(msg):
 
     if simulation is not None:
         result_files={}
+        matched_pv_files=[]
         for entry in directoryListing:
             tokens=entry.split()
             if len(tokens) == 9 and ".tif" in tokens[8]:
                 result_files[tokens[8]]=int(tokens[4])
+            if len(tokens) == 9 and ".vt" in tokens[8]:
+                result_files[tokens[8]]=int(tokens[4])
+                matched_pv_files.append(tokens[8])
 
         try:
             data_uuid_test_fire_best=_registerWFAResultFile("test_Fire_Best.tif", result_files, machine_name, simulation.directory, IncidentID, simulationId)
@@ -152,6 +156,12 @@ def wildfire_fire_results(msg):
                 simulation.status_updated=datetime.datetime.now()
                 pny.commit()
             return
+
+        for pv_file in matched_pv_files:
+                try:
+                        _registerWFAResultFile(pv_file, result_files, machine_name, simulation.directory, IncidentID, simulationId)
+                except WildfireDataAccessException as err:
+                        print("Can not register VTK file "+pv_file)
 
         try:
             callbacks = {'COMPLETED': 'wildfire_post_results'}
