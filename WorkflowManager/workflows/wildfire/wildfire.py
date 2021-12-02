@@ -87,12 +87,16 @@ def wildfire_fire_simulation(msg):
             else:
                 print("Simulation duration (key simDuration) not in hotspot JSON data. This is required")
                 return
+            if "numberOfSims" in hotspot_dict:
+                numberOfSims = hotspot_dict['numberOfSims']
+            else:
+                numberOfSims = 2
 
             moveDataViaDM(hotspotDataUUID, machine_basedir + simulation.directory + "/WFA_hotspots.json", machine_name)
 
             try:
                 putByteDataViaDM("wfa.yml", machine_name, "Wildfire configuration", "text/plain", "Wildfire workflow",
-                                 _buildWFAYaml(IncidentID, weather_data_info, simDuration), path=simulation.directory)
+                                 _buildWFAYaml(IncidentID, weather_data_info, simDuration, numberOfSims), path=simulation.directory)
             except DataManagerException as err:
                 print("Can not write wildfire configuration to simulation location" + err.message)
                 return
@@ -104,7 +108,7 @@ def wildfire_fire_simulation(msg):
 
 
 @pny.db_session
-def _buildWFAYaml(incidentId, weather_datainfo, simDuration):
+def _buildWFAYaml(incidentId, weather_datainfo, simDuration, sims_per_rank):
     myincident = Incident[incidentId]
     upperLeft = myincident.upper_left_latlong
     lowerRight = myincident.lower_right_latlong
@@ -122,6 +126,7 @@ def _buildWFAYaml(incidentId, weather_datainfo, simDuration):
     yaml_template["weather_data"]["path"] = weather_datainfo["absolute_path"]
     yaml_template["dynamic_config"]["path"] = "WFA_hotspots.json"
     yaml_template["sim_duration"] = simDuration
+    yaml_template["sims_per_rank"] = sims_per_rank
 
     return yaml.dump(yaml_template)
 
