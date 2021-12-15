@@ -7,14 +7,16 @@ class SimulationManagerException(Exception):
         self.status_code = status_code
         self.message = message
 
-def createSimulation(incident_id, num_nodes, requested_walltime, kind, executable, queuestate_callbacks={}, directory=None, template_dir=None, comment=None):
+def createSimulation(incident_id, num_nodes, requested_walltime, kind, executable, queuestate_callbacks={}, directory=None, template_dir=None, comment=None, number_instances=1, associated_datasets=[]):
 
     arguments = {   'incident_id': incident_id, 
                     'num_nodes':num_nodes,
                     'requested_walltime' : requested_walltime, 
                     'kind':kind, 
                     'executable':executable, 
-                    'queuestate_calls':queuestate_callbacks }
+                    'number_instances':number_instances,
+                    'queuestate_calls':queuestate_callbacks,
+                    'associated_datasets':associated_datasets }
     
     if directory is not None:
         arguments["directory"]=directory
@@ -32,6 +34,12 @@ def createSimulation(incident_id, num_nodes, requested_walltime, kind, executabl
 def submitSimulation(sim_id):
     submitobj = {'simulation_uuid' : sim_id}
     response = requests.post(_get_SM_URL()+'/submit', json=submitobj)
+    if response.status_code != 200:
+        raise SimulationManagerException(response.status_code, response.text)
+
+def groupSimulations(sim_ids):
+    submitobj = {'simulation_uuids' : sim_ids}
+    response = requests.post(_get_SM_URL()+'/group', json=submitobj)
     if response.status_code != 200:
         raise SimulationManagerException(response.status_code, response.text)
 

@@ -6,3 +6,4 @@ pyYAML
 pymysql
 fabric
 paramiko
+python-dateutil

@@ -110,6 +110,21 @@ class OpenSSHMachineConnection(ThrottlableMixin):
             return "Error, can not connect"
 
     @throttle
+    def getDetailedStatus(self):
+        str_to_return=""
+        self.checkForUpdateToQueueData()
+        for value in list(self.queue_info.values()):
+            str_to_return+=value.toString()+"\n"
+        return str_to_return
+
+    @throttle
+    def getHistoricalStatus(self, start_time, end_time):
+        status_command=self.queue_system.getQueueCommandForHistoricalStatus(start_time, end_time)
+        run_info=self.run(status_command)      
+        if not self._checkForErrors(run_info.stderr):
+            return self.queue_system.parseHistorialStatus(run_info.stdout)
+
+    @throttle
     def getJobStatus(self, queue_ids):        
         status_command=self.queue_system.getQueueStatusForSpecificJobsCommand(queue_ids)
         run_info=self.run(status_command)
@@ -118,8 +133,8 @@ class OpenSSHMachineConnection(ThrottlableMixin):
             parsed_jobs=self.queue_system.parseQueueStatus(run_info.stdout)        
             for queue_id in queue_ids:
                 if (queue_id in parsed_jobs):
-                    status=parsed_jobs[queue_id]                
-                    to_return[queue_id]=[status.getStatus(), status.getWalltime()]
+                    status=parsed_jobs[queue_id]                    
+                    to_return[queue_id]=[status.getStatus(), status.getWalltime(), status.getQueueTime(), status.getRunTime()]
                     self.queue_info[queue_id]=status    # Update general machine status information too with this                
         return to_return
 

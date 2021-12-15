@@ -13,7 +13,7 @@ from Database.generate_db import initialiseStaticInformation
 from Database.machine import Machine
 from Database.queues import Queue
 from Database.users import User
-from Database.workflow import RegisteredWorkflow, Simulation, Incident
+from Database.workflow import RegisteredWorkflow, Simulation, Incident, SimulationGroup
 import datetime
 from uuid import uuid4
 import Utils.log as log
@@ -98,6 +98,20 @@ async def delete_simulation_job(machine_name, queue_id):
     client = await Client.create(machine_name)
     await client.cancelJob(queue_id)
 
+@app.route("/SM/group", methods=["POST"])
+@pny.db_session
+def group_jobs():
+    data = request.get_json()
+
+    simulation_uuids = data["simulation_uuids"]
+    group=SimulationGroup()
+    for uuid in simulation_uuids:
+        sim=Simulation[uuid]
+        if (sim is None):
+            return "Simulation not found with identifier '"+uuid+"'", 404
+        sim.simulation_group=group        
+    return "Jobs grouped", 200
+
 @app.route("/SM/submit", methods=["POST"])
 @pny.db_session
 def submit_job():
@@ -125,27 +139,50 @@ def submit_job():
 async def submit_job_to_machine(machine_name, num_nodes, requested_walltime, directory, executable):        
     client = await Client.create(machine_name)
     queue_id = await client.submitJob(num_nodes, requested_walltime, directory, executable)
-    return queue_id    
+    return queue_id
+
+@pny.db_session
+def _issueCreationOfJobOnMachine(machine_id, incident_id, incident, num_nodes, kind, requested_walltime, executable, directory, template_dir, comment, callbacks):
+    uuid=str(uuid4())
+    incident_dir_id=incident_id.split("-")[-1]
+    simulation_dir_id=uuid.split("-")[-1]
+
+    if directory is None:        
+        directory = "incident-"+incident_dir_id+"/simulation-"+simulation_dir_id
+
+    try:
+        stored_machine=Machine.get(machine_id=machine_id)
+        asyncio.run(create_job_on_machine(stored_machine.machine_name, directory, template_dir))                
+    except asyncio.exceptions.TimeoutError:
+        return "Timeout contacting remote machine", 504
+
+    job_status="CREATED"
+    logger.Log("Created simulation '"+uuid+"'", "system", incident_id)
+
+    simulation = Simulation(uuid=uuid, incident=incident, kind=kind, date_created=datetime.datetime.now(), num_nodes=num_nodes, 
+                    requested_walltime=requested_walltime, executable=executable, status=job_status, status_updated=datetime.datetime.now(), directory=directory, comment=comment)
+    if (job_status=="ERROR"):
+        simulation.status_message=status_message
+    if (stored_machine is not None):
+        simulation.machine=stored_machine
+    if callbacks is not None:
+        for key, value in callbacks.items():
+            simulation.queue_state_calls.create(queue_state=key, call_name=value)
+
+    return uuid
 
 @app.route("/SM/create", methods=["POST"])
 @pny.db_session
 def create_job():    
     data = request.get_json()
-
-    uuid=str(uuid4())
+    
     incident_id = data["incident_id"]    
     num_nodes = data["num_nodes"]
+    number_instances = data["number_instances"]
     kind = data["kind"]
     requested_walltime = data["requested_walltime"]
     executable = data["executable"]
-
-    incident_dir_id=incident_id.split("-")[-1]
-    simulation_dir_id=uuid.split("-")[-1]
-
-    if "directory" in data:
-        directory = data["directory"]
-    else:
-        directory = "incident-"+incident_dir_id+"/simulation-"+simulation_dir_id
+    associated_datasets = data["associated_datasets"]
 
     if "template_dir" in data:
         template_dir = data["template_dir"]
@@ -157,53 +194,43 @@ def create_job():
     else:
         comment = ""
 
+    try:
+        #fetch incident, make sure it exists
+        incident = Incident[incident_id]
+    except pny.core.ObjectNotFound:
+        return "Invalid IncidentID", 500
+
     try:                
-        matched_machine_id=matchBestMachine(requested_walltime, num_nodes)   
-        stored_machine=Machine.get(machine_id=matched_machine_id)        
-        asyncio.run(create_job_on_machine(stored_machine.machine_name, directory, template_dir))        
-        job_status="CREATED"
-        logger.Log("Created simulation '"+uuid+"'", "system", incident_id)
+        matched_machine_ids=matchBestMachine(requested_walltime, num_nodes, executable, number_retrieve=number_instances, associated_datasets=associated_datasets)                
     except MachineStatusManagerException as err:        
         job_status="ERROR"
         status_message="Error allocating machine to job, "+err.message
         stored_machine=None
         logger.Log("Error creating simulation, message is "+err.message, "system", incident_id, type=log.LogType.Error)
         return "Error allocating job to machine", 400
-    except asyncio.exceptions.TimeoutError:
-        return "Timeout contating remote machine", 504
+            
+    if len(matched_machine_ids) < number_instances:
+        return "Error, requested "+number_instances+" instances but only "+len(matched_machine_ids)+" applicable machines found", 400
+
+    uuids=[]
+    for matched_machine_id in matched_machine_ids:
+        uuids.append(_issueCreationOfJobOnMachine(matched_machine_id, incident_id, incident, num_nodes, kind, requested_walltime, executable, data["directory"] if "directory" in data else None, template_dir, comment, data["queuestate_calls"] if "queuestate_calls" in data else None))
     
-    #fetch incident, make sure it exists
-    try:
-        incident = Incident[incident_id]
-    except pny.core.ObjectNotFound:
-        return "Invalid IncidentID", 500
-    
-    #create simulation in the DB
-    simulation = Simulation(uuid=uuid, incident=incident, kind=kind, date_created=datetime.datetime.now(), num_nodes=num_nodes, 
-                    requested_walltime=requested_walltime, executable=executable, status=job_status, status_updated=datetime.datetime.now(), directory=directory, comment=comment)
-    if (job_status=="ERROR"):
-        simulation.status_message=status_message
-    if (stored_machine is not None):
-        simulation.machine=stored_machine
-    if ("queuestate_calls" in data):
-        for key, value in data["queuestate_calls"].items():
-            simulation.queue_state_calls.create(queue_state=key, call_name=value)  
-    
-    return jsonify({"simulation_id": uuid}), 201
+    return jsonify({"simulation_id": uuids}), 201
 
 async def create_job_on_machine(machine_name, directory, simulation_template_dir):        
-    client = await asyncio.wait_for(Client.create(machine_name),timeout=3.0)
-    mk_directory=await asyncio.wait_for(client.mkdir(directory, "-p"),timeout=3.0)
+    client = await asyncio.wait_for(Client.create(machine_name))
+    mk_directory=await asyncio.wait_for(client.mkdir(directory, "-p"))
     if (simulation_template_dir != ""):    
-        copy_template_submission = await asyncio.wait_for(client.cp(simulation_template_dir+"/*", directory, "-R"),timeout=3.0)    
+        copy_template_submission = await asyncio.wait_for(client.cp(simulation_template_dir+"/*", directory, "-R"))
 
 @pny.db_session
 def poll_outstanding_sim_statuses():
     simulations=pny.select(g for g in Simulation if g.status == "QUEUED" or g.status == "RUNNING" or g.status == "ENDING")
-    handleRefreshOfSimulations(simulations)    
+    handleRefreshOfSimulations(simulations)
 
 @pny.db_session
-def handleRefreshOfSimulations(simulations):
+def handleRefreshOfSimulations(simulations):    
     machine_to_queueid={}    
     queueid_to_sim={}
     workflow_stages_to_run=[]
@@ -214,16 +241,28 @@ def handleRefreshOfSimulations(simulations):
         machine_to_queueid[sim.machine.machine_name].append(sim.jobID)
     for key, value in machine_to_queueid.items():
         job_statuses=asyncio.run(get_job_status_update(key, value))
-        for jkey, jvalue in job_statuses.items():
+        for jkey, jvalue in job_statuses.items():            
             queueid_to_sim[jkey].status_updated=datetime.datetime.now() 
             if (jvalue[0] != queueid_to_sim[jkey].status):
                 logger.Log("Simulation '"+queueid_to_sim[jkey].uuid+"' changed state from '"+queueid_to_sim[jkey].status+"' to '"+jvalue[0]+"'", "system", queueid_to_sim[jkey].incident.uuid)
                 queueid_to_sim[jkey].status=jvalue[0]
                 if (len(jvalue[1]) > 0):
                     queueid_to_sim[jkey].walltime=jvalue[1]
+                if (jvalue[2] != "-"):
+                    queueid_to_sim[jkey].machine_queue_time=jvalue[2]
+                if (jvalue[3] != "-"):
+                    queueid_to_sim[jkey].machine_run_time=jvalue[3]
                 pny.commit()
                 targetStateCall=checkMatchAgainstQueueStateCalls(queueid_to_sim[jkey].queue_state_calls, jvalue[0])
-                if (targetStateCall is not None):                      
+                if (targetStateCall is not None):                    
+                    if jvalue[0]=="COMPLETED" and queueid_to_sim[jkey].simulation_group is not None:                        
+                        if queueid_to_sim[jkey].simulation_group.completion_callback_issued:
+                            logger.Log("Ignoring completion callback for simulation '"+str(queueid_to_sim[jkey].uuid)+"' as issued for group already", "system", queueid_to_sim[jkey].incident.uuid, type=log.LogType.Info)
+                            continue
+                        else:
+                            queueid_to_sim[jkey].simulation_group.completion_callback_issued=True
+                            logger.Log("Marking simulation group '"+str(queueid_to_sim[jkey].simulation_group.id)+"' as completion callback actioned", "system", queueid_to_sim[jkey].incident.uuid, type=log.LogType.Info)
+                            pny.commit()
                     new_wf_stage_call={'targetName' : targetStateCall, 'incidentId' : queueid_to_sim[jkey].incident.uuid, 'simulationId' : queueid_to_sim[jkey].uuid, 'status' : jvalue[0]}
                     workflow_stages_to_run.append(new_wf_stage_call)
     pny.commit()

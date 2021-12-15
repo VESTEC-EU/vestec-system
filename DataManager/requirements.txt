@@ -1,7 +1,10 @@
 aio_pika
+pika
 pony
 uuid
 pyYAML
 pymysql
 fabric
 flask
+apscheduler
+python-dateutil

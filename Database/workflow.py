@@ -71,15 +71,23 @@ class Simulation(db.Entity):
     results_handler = pny.Optional(str)
     requested_walltime = pny.Optional(str)
     walltime = pny.Optional(str)
+    machine_queue_time = pny.Optional(str)
+    machine_run_time = pny.Optional(str)
     num_nodes = pny.Optional(int)
     queue_state_calls = pny.Set("SimulationStateWorkflowCalls")
     performance_data = pny.Set("PerformanceData")
+    simulation_group = pny.Optional("SimulationGroup")
     
 class SimulationStateWorkflowCalls(db.Entity):
     id = pny.PrimaryKey(int, auto=True)
     queue_state = pny.Required(str)
     call_name = pny.Required(str)
     simulation = pny.Required(Simulation)
+
+class SimulationGroup(db.Entity):
+    id = pny.PrimaryKey(int, auto=True)
+    completion_callback_issued = pny.Required(bool, default=False)
+    simulation = pny.Set(Simulation)
 
 #lock for workflow handlers
 class Lock(db.Entity):

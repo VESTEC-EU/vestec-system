@@ -32,9 +32,9 @@ class PBSQueueProcessor:
             if ".sdb" in line:
                 tokens=line.split()
                 if (len(tokens) < 8):
-                    jobs[tokens[0]]=JobStatus(tokens[0], self.getConvertPBSJobStatusCode(tokens[4]), tokens[3] if tokens[3] != "0" else "")
+                    jobs[tokens[0]]=JobStatus(tokens[0], self.getConvertPBSJobStatusCode(tokens[4]), tokens[3] if tokens[3] != "0" else "", 1)
                 else:                    
-                    jobs[tokens[0]]=JobStatus(tokens[0], self.getConvertPBSJobStatusCode(tokens[9]), tokens[10] if tokens[10] != "--" else "")
+                    jobs[tokens[0]]=JobStatus(tokens[0], self.getConvertPBSJobStatusCode(tokens[9]), tokens[10] if tokens[10] != "--" else "", 1)
 
         return jobs
 

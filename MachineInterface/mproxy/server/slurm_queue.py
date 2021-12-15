@@ -1,14 +1,20 @@
 from .job_status import JobStatus
+import time
+import datetime
+from dateutil.parser import parse
 
 class SlurmQueueProcessor:
     def getQueueStatusSummaryCommand(self):
         return "squeue"
 
+    def getQueueCommandForHistoricalStatus(self, start, end):
+        return "sacct -a -S "+start+" -E "+end+" --format=JobID,ReqNodes,State,Submit,Start,TimeLimit"
+
     def getQueueStatusForSpecificJobsCommand(self, queue_ids):
         job_queue_str=""
         for queue_id in queue_ids:
             job_queue_str+=queue_id+","
-        return "sacct --format jobid,elapsed,state -j "+job_queue_str
+        return "sacct --format jobid,elapsed,state,nnodes,submit,start,end -j "+job_queue_str
 
     def getSubmissionCommand(self, scriptname):
         return "sbatch "+scriptname
@@ -36,18 +42,18 @@ class SlurmQueueProcessor:
     def parseQueueStatus(self, queue_raw_data):
         jobs={}
         header_data=queue_raw_data.split('\n')[0]
-        if len(header_data.split()) == 3:
+        if len(header_data.split()) == 7:
             # sacct data
             for line in queue_raw_data.split('\n'):                
                 tokens=line.split()
-                if len(tokens) >=3 and self.isStringQueueId(tokens[0]):                        
-                        jobs[tokens[0]]=JobStatus(tokens[0], self.getConvertSlurmAccountingJobStatusCode(tokens[2]), tokens[1] if tokens[1] != "0:00" else "")
+                if len(tokens) >=7 and self.isStringQueueId(tokens[0]):                        
+                        jobs[tokens[0]]=JobStatus(tokens[0], self.getConvertSlurmAccountingJobStatusCode(tokens[2]), tokens[1] if tokens[1] != "0:00" else "N/A", tokens[3], tokens[4], tokens[5], tokens[6])
         else:
             # squeue data
             for line in queue_raw_data.split('\n'):                
                 tokens=line.split()
                 if len(tokens) >=6 and self.isStringQueueId(tokens[0]):
-                    jobs[tokens[0]]=JobStatus(tokens[0], self.getConvertSlurmQueueJobStatusCode(tokens[4]), tokens[5] if tokens[5] != "0:00" else "")                    
+                    jobs[tokens[0]]=JobStatus(tokens[0], self.getConvertSlurmQueueJobStatusCode(tokens[4]), tokens[5] if tokens[5] != "0:00" else "N/A", tokens[6], "Unknown", "Unknown", "Unknown")                    
 
         return jobs
 
@@ -73,3 +79,22 @@ class SlurmQueueProcessor:
         if (job_queue_str == "SUSPENDED"): return "HELD"
         if (job_queue_str == "COMPLETED"): return "COMPLETED"        
         return "UNKNOWN"
+
+    def parseHistorialStatus(self, queue_raw_data):
+        jobs=""        
+        for line in queue_raw_data.split('\n'):
+            tokens=line.split()
+            if len(tokens) >= 5 and self.isStringQueueId(tokens[0]):                
+                if tokens[3] != "Unknown" and tokens[4] != "Unknown" and tokens[5] != "":                    
+                    submit=time.mktime(parse(tokens[3]).timetuple())
+                    start=time.mktime(parse(tokens[4]).timetuple())
+                    extra_hours=0
+                    if ("-" in tokens[5]):
+                        sp=tokens[5].split("-")
+                        pt=parse(sp[1])
+                        extra_hours=24 * int(sp[0])
+                    else:
+                        pt=parse(tokens[5])
+
+                    jobs+=tokens[0]+" "+tokens[1]+" "+str(start-submit)+" " +str(pt.second + pt.minute*60 + (pt.hour+extra_hours)*3600)+"\n"
+        return jobs

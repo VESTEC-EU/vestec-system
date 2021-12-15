@@ -72,7 +72,7 @@ def wildfire_fire_simulation(msg):
             callbacks = {'COMPLETED': 'wildfire_fire_results'}
             sim_id = createSimulation(IncidentID, 1, "0:05:00", "Wildfire simulation", "wfa.sh",
                                       queuestate_callbacks=callbacks, template_dir="templates/wildfire_template",
-                                      comment="Execution linked to hotspot data " + hotspotDataUUID)
+                                      comment="Execution linked to hotspot data " + hotspotDataUUID)[0]
             with pny.db_session:
                 simulation = Simulation[sim_id]
                 machine_name = simulation.machine.machine_name
@@ -192,7 +192,7 @@ def wildfire_fire_results(msg):
             pp_sim_id = createSimulation(IncidentID, 1, "0:05:00", "Wildfire postprocessing", "wfapost.sh",
                                          queuestate_callbacks=callbacks,
                                          template_dir="templates/wildfire_post_template",
-                                         comment="Executed following WFA simulation " + simulationId)
+                                         comment="Executed following WFA simulation " + simulationId)[0]
             with pny.db_session:
                 post_proc_simulation = Simulation[pp_sim_id]
                 post_proc_machine_name = post_proc_simulation.machine.machine_name

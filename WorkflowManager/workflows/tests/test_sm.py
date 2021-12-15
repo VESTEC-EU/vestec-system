@@ -45,7 +45,7 @@ def sm_tests_create(msg):
                                 queuestate_callbacks= {
                                     "RUNNING": "sm_tests_check",
                                     "COMPLETED": "sm_tests_check",
-                                })
+                                })[0]
     except client.SimulationManagerException as e:
         logTest("sm_create","FAIL",logdir,e.message)
         msg["total_tests"]+=1

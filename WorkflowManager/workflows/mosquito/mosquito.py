@@ -22,7 +22,7 @@ def _launch_simulation(IncidentID, simulation_description, template_directory, y
     try:
         callbacks = { 'COMPLETED': callback }
         # ./R0 -a trento -s albopictus -d deng -ns 200 -rt n
-        sim_id = createSimulation(IncidentID, 1, "00:15:00", simulation_description, "submit.sh", callbacks, template_dir="templates/"+template_directory)
+        sim_id = createSimulation(IncidentID, 1, "00:15:00", simulation_description, "submit.sh", callbacks, template_dir="templates/"+template_directory)[0]
         with pny.db_session:
             simulation=Simulation[sim_id]    
             machine_name=simulation.machine.machine_name            
@@ -81,12 +81,29 @@ def rome(IncidentId):
     }
     workflow.Persist.Put(IncidentId, sim_meta)    
 
+def run_simulation_from_payload(IncidentId, config):
+    simulation_yaml=_build_simulation_yaml(config["species"], config["disease"], config["region"], int(config["count"]))
+    sim_id=_launch_simulation(IncidentId, "Mosquito simulation", "mosquito_template", "mosquito.yml", simulation_yaml, "mosquito_simulation_postprocess")
+    sim_meta = {
+        "simulation": sim_id,
+        "species": config["species"],
+        "disease": config["disease"],
+        "region": config["region"],
+        "count": config["count"]
+    }
+    workflow.Persist.Put(IncidentId, sim_meta)
+
 @workflow.handler
 def mosquito_test(msg):
-    print("\nMosquito test handler called to start trento simulation")
+    print("\nMosquito test handler called to start mosquito simulation")
     IncidentID = msg["IncidentID"]
-    trento(IncidentID)
-    #rome(IncidentID)
+
+    try:
+        payload = json.loads(msg["data"]["payload"])
+        run_simulation_from_payload(IncidentID, payload)
+    except KeyError:
+        # Run Trento for now
+        trento(IncidentID)
  
 # mosquito weather init
 @workflow.handler
@@ -237,10 +254,10 @@ def mosquito_mosaic_postprocess(msg):
                 if not _check_directory_contains_file(msg["directoryListing"], "output_band_"+num+".tif"):
                     print("Convert result file 'output_band_"+num+".tif' not found, exitting")
                     return
-            registerMatchingFiles(msg["directoryListing"], ".tif", machine_name, "Mosquito simulation", "application/octet-stream", "Mosquito mosaic output", 
-                simulation.directory, IncidentID, "Mosquito mosaic output", "Created by mosaic for mosquito on "+machine_name+" with simulation ID "+simulationId)
+            # registerMatchingFiles(msg["directoryListing"], ".tif", machine_name, "Mosquito simulation", "application/octet-stream", "Mosquito mosaic output",
+            #     simulation.directory, IncidentID, "Mosquito mosaic output", "Created by mosaic for mosquito on "+machine_name+" with simulation ID "+simulationId)
             build_topo_yaml=_build_topo_yaml(simulation_metadata["disease"], simulation_metadata["species"], simulation_metadata["region"], machine_basedir+simulation.directory)
-            sim_id=_launch_simulation(IncidentID, "Mosquito topological", "mosquito_topo_template", "topo.yml", build_topo_yaml, "mosquito_topo_postprocess")            
+            sim_id=_launch_simulation(IncidentID, "Mosquito topological", "mosquito_topo_template", "topo.yml", build_topo_yaml, "mosquito_topo_postprocess")
             simulation_metadata["simulation"]=sim_id
             workflow.Persist.Put(IncidentID, simulation_metadata)
         else:

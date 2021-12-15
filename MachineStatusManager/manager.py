@@ -10,20 +10,33 @@ import pony.orm as pny
 import requests
 from Database import initialiseDatabase
 from Database.machine import Machine
+from Database.workflow import Simulation
+from DataManager.client import predictDatasetTransferPerformance, DataManagerException
 import datetime
 from uuid import uuid4
 import Utils.log as log
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
-
+from models.current_machine_state_queue_model import QueuePredictionCurrentMachineState
 from mproxy.client import Client
 import asyncio
 import aio_pika
+from dateutil.parser import parse
 
 poll_scheduler=BackgroundScheduler(executors={"default": ThreadPoolExecutor(1)})
 
 app = Flask("Machine Status Manager")
 logger = log.VestecLogger("Machine Status Manager")
+
+predictors={"cirrus": QueuePredictionCurrentMachineState("cirrus")}
+detailed_machines_status={}
+
+@pny.db_session
+def _check_queue_predictors():
+    machines=pny.select(machine for machine in Machine)
+    for machine in machines:
+        if machine.machine_name not in predictors and machine.enabled:
+            predictors[machine.machine_name]=QueuePredictionCurrentMachineState(machine.machine_name)
 
 @app.route("/MSM/health", methods=["GET"])
 def get_health():
@@ -95,16 +108,69 @@ def add_machine():
     pny.commit()
     return jsonify({"msg": "Machine added"}), 201
 
-@app.route("/MSM/matchmachine", methods=["GET"])
+def _isFloat(value):
+  try:
+    float(value)
+    return True
+  except ValueError:
+    return False
+
+@pny.db_session
+def _getPredictedRuntime(executable, machine, requested_walltime):
+    previous_executables=pny.select(sim for sim in Simulation if sim.executable == executable and sim.machine == machine)[:]
+    avg_exec_time=0.0
+    tot_count=0
+    for exec in previous_executables:        
+        if exec.machine_run_time != "" and _isFloat(exec.machine_run_time):
+            avg_exec_time+=float(exec.machine_run_time)
+            tot_count+=1
+    if (tot_count > 0):
+        return avg_exec_time/tot_count
+    else:
+        pt=parse(requested_walltime)
+        return pt.second + pt.minute*60 + pt.hour*3600
+
+def _getPredictedDataTransferTime(machine_name, associated_datasets):
+    data_transfer_time=0.0
+    for data_set in associated_datasets:
+        try:
+            data_transfer_time+=predictDatasetTransferPerformance(data_set, machine_name)
+        except DataManagerException as err:
+            pass
+    print(data_transfer_time)
+    return data_transfer_time
+
+@pny.db_session
+def _getPredictedTotalTime(requested_walltime, requested_num_nodes, executable, machine, associated_datasets):
+    queue_time=predictors[machine.machine_name].predict(requested_walltime, requested_num_nodes, detailed_machines_status[machine.machine_name])    
+    return queue_time + _getPredictedRuntime(executable, machine, requested_walltime) + _getPredictedDataTransferTime(machine.machine_name, associated_datasets)
+
+@app.route("/MSM/matchmachine", methods=["POST"])
 @pny.db_session
 def get_appropriate_machine():
-    requested_walltime = request.args.get("walltime", None)
-    requested_num_nodes = request.args.get("num_nodes", None)
+    _check_queue_predictors()
+    data = request.get_json()
+    requested_walltime = data["walltime"]
+    requested_num_nodes = data["num_nodes"]
+    executable=data["executable"]
+    number_retrieve=data["number_retrieve"]
+    associated_datasets=data["associated_datasets"]
     machines=pny.select(machine for machine in Machine)
+    predicted_total_times={}
     for machine in machines:
-        if machine.enabled:            
-            return jsonify({"machine_id":machine.machine_id}), 200    
-    return jsonify({"msg":"No matching machine"}), 404
+        if machine.enabled:
+            if machine.machine_name not in detailed_machines_status:
+                poll_machine_statuses()
+            predicted_total_times[machine]=_getPredictedTotalTime(requested_walltime, requested_num_nodes, executable, machine, associated_datasets)            
+    if predicted_total_times:
+        sorted_times={k: v for k, v in sorted(predicted_total_times.items(), key=lambda item: item[1])}
+        sorted_machines=list(sorted_times.keys())
+        mids=[]
+        for i in range(number_retrieve):
+            mids.append(sorted_machines[i].machine_id)
+        return jsonify({"machine_ids": mids}), 200
+    else:
+        return jsonify({"msg":"No matching machine"}), 404
 
 @app.route("/MSM/machinestatuses", methods=["GET"])
 @pny.db_session
@@ -136,18 +202,21 @@ def poll_machine_statuses():
     machines=pny.select(machine for machine in Machine)
     for machine in machines:
         if not machine == None and machine.enabled: 
-            status=asyncio.run(retrieve_machine_status(machine.machine_name))
+            status,detailed_status=asyncio.run(retrieve_machine_status(machine.machine_name))
+            detailed_machines_status[machine.machine_name]=detailed_status
             machine.status=status
             machine.status_last_checked=datetime.datetime.now()
-            pny.commit()
+            pny.commit()            
 
 async def retrieve_machine_status(machine_name):        
     client = await Client.create(machine_name)
     status = await client.getstatus()
-    return status
+    detailed_status = await client.getDetailedStatus()
+    return status, detailed_status
             
 if __name__ == "__main__":
-    initialiseDatabase()    
+    initialiseDatabase()
+    _check_queue_predictors()
     poll_scheduler.start()
     runon = datetime.datetime.now()+ datetime.timedelta(seconds=300)
     poll_scheduler.add_job(poll_machine_statuses, 'interval', seconds=1200, next_run_time = runon) # Machine queue update every 20 minutes

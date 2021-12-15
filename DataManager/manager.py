@@ -7,20 +7,50 @@ import pony.orm as pny
 from pony.orm.serialization import to_dict
 from Database import db, initialiseDatabase, Data, DataTransfer, Machine
 import datetime
+from dateutil.parser import parse
 import os
-import ConnectionManager
 import json
 import subprocess
 from Database import LocalDataStorage
 from mproxy.client import Client
 import asyncio
 import aio_pika
+from WorkflowManager.manager import workflow
+from apscheduler.executors.pool import ThreadPoolExecutor, ProcessPoolExecutor
+from apscheduler.schedulers.background import BackgroundScheduler
 
 app = flask.Flask(__name__)
 
 OK=0
 FILE_ERROR=1
 NOT_IMPLEMENTED = 2
+
+useCaching = False
+fileCache=[]
+maxNumCacheEntries=10
+maxCacheSize=1024*1024*100
+minCacheSize=1024*1024
+
+class cachedData:
+    def __init__(self, machine, full_file, size, last_changed, byte_data):
+        self.machine=machine
+        self.full_file=full_file
+        self.size=size
+        self.last_changed=last_changed
+        self.byte_data=byte_data
+
+    def update(self, size, last_changed, byte_data):
+        self.size=size
+        self.last_changed=last_changed
+        self.byte_data=byte_data
+
+    def match(self, machine, full_file, size, last_changed):
+        return self.machine==machine and self.full_file==full_file and self.size==size and self.last_changed==last_changed
+
+    def getData(self):
+        return self.byte_data
+
+async_scheduler=BackgroundScheduler(executors={"default": ThreadPoolExecutor(1)})
 
 @app.route("/DM/health", methods=["GET"])
 def get_health():
@@ -138,7 +168,7 @@ def _perform_registration(form_data):
 
     #register this with the database and return its UUID
     id=_register(fname,path,machine,description,type,size,originator,group,storage_technology)
-    return id, 201
+    return id, 201      
 
 #instructs the data manager to download data from the internet onto a specified machine. Returns a uuid for that data entity
 @app.route("/DM/getexternal",methods=["PUT"])
@@ -165,34 +195,47 @@ def GetExternal():
     else:
         options = None    
 
+    if "callback" in flask.request.form and "incidentId" in flask.request.form:
+        callback = flask.request.form["callback"]
+        incidentId = flask.request.form["incidentId"]
+    else:
+        callback = None
+        incidentId = None
+
     if _checkExists(machine,fname,path):
         return "File already exists", 406
 
-    #instruct the machine to download the file (passes the size of the file back in the "options" dict)
-    try:
-        status, message, date_started, date_completed = _download(fname, path, storage_technology, machine, url, protocol, options)
-    except ConnectionManager.ConnectionError as e:
-        return str(e), 500
-        
-    if status == OK:
-        size=message
-        #register this new file with the data manager
-        id=_register(fname,path, machine, description, type, size, originator, group, storage_technology)
-        with pny.db_session:
-            transfer_id = str(uuid.uuid4())
-            data_transfer = DataTransfer(id=transfer_id,
-                                     src=Data[id],
-                                     src_machine=protocol,
-                                     dst_machine=machine,
-                                     date_started=date_started,
-                                     status = "COMPLETED",
-                                     date_completed = date_completed,
-                                     completion_time = (date_completed - date_started))
-        return id, 201
-    elif status == NOT_IMPLEMENTED:
-        return message, 501
-    elif status==FILE_ERROR:
-        return message, 500
+    if callback is None or incidentId is None:
+        #instruct the machine to download the file (passes the size of the file back in the "options" dict)
+        try:
+            status, message, date_started, date_completed = _download(fname, path, storage_technology, machine, url, protocol, options)
+        except ConnectionManager.ConnectionError as e:
+            return str(e), 500
+            
+        if status == OK:
+            size=message
+            #register this new file with the data manager
+            id=_register(fname,path, machine, description, type, size, originator, group, storage_technology)
+            with pny.db_session:
+                transfer_id = str(uuid.uuid4())
+                data_transfer = DataTransfer(id=transfer_id,
+                                        src=Data[id],
+                                        src_machine=protocol,
+                                        dst_machine=machine,
+                                        date_started=date_started,
+                                        status = "COMPLETED",
+                                        date_completed = date_completed,
+                                        completion_time = (date_completed - date_started))
+            return id, 201
+        elif status == NOT_IMPLEMENTED:
+            return message, 501
+        elif status==FILE_ERROR:
+            return message, 500
+    else:
+        async_scheduler.add_job(_downloadDataAsync, 'interval', weeks=1000, next_run_time=datetime.datetime.now()+ datetime.timedelta(seconds=1), 
+            end_date=datetime.datetime.now()+ datetime.timedelta(seconds=10),
+            args=[fname, path, storage_technology, machine, url, protocol, description, type, originator, group, options, callback, incidentId])
+        return "Scheduled", 201
 
 #Moves a data entity from one location to another
 @app.route("/DM/move/<id>",methods=["POST"])
@@ -232,6 +275,32 @@ def remove(id):
             Data[id].date_modified=datetime.datetime.now()
             return "%s deleted"%Data[id].filename, 200
 
+@app.route("/DM/predict",methods=["POST"])
+@pny.db_session
+def predict():    
+    if "uuid" in flask.request.form:
+        uuid=flask.request.form["uuid"]
+        try:
+            d=Data[uuid]
+        except pny.ObjectNotFound:            
+            return "Data with uuid '"+uuid+"' not found", 404
+        src_machine=d.machine
+        data_size=d.size
+    else:
+        src_machine=flask.request.form["src_machine"]    
+        data_size=float(flask.request.form["data_size"])    
+
+    dest_machine=flask.request.form["dest_machine"]
+    print("From to "+src_machine+" "+str(data_size) +" to " +dest_machine)
+    matching_transfers=pny.select(dt for dt in DataTransfer if dt.src_machine == src_machine and dt.dst_machine == dest_machine)[:]
+    if len(matching_transfers) == 0:
+        return "No matching data transfers between machines", 400
+    else:
+        avg_speed_per_sec=0.0
+        for transfer in matching_transfers:
+            avg_speed_per_sec += (float(transfer.src.size)/transfer.completion_time.total_seconds())
+        avg_speed_per_sec /= len(matching_transfers)
+        return flask.jsonify({"prediction_time": data_size / avg_speed_per_sec}), 201
 
 #moves the data entity to a long term file storage location and marks it as archived
 @app.route("/DM/archive/<id>",methods=["PUT"])
@@ -245,6 +314,34 @@ def activate(id):
 
 
 #--------------------- helper functions --------------------------
+
+def _issueWorkflowCallback(callback, incidentId, response, success):      
+    workflow.OpenConnection()    
+    msg={"IncidentID": incidentId, "response": response, "success": success}            
+    workflow.send(message=msg, queue=callback, providedCaller="Data manager callback from non-blocking operation")
+    workflow.FlushMessages()
+    workflow.CloseConnection()
+
+def _downloadDataAsync(fname, path, storage_technology, machine, url, protocol, description, type, originator, group, options, callback, incidentId):        
+    try:
+        status, message, date_started, date_completed = _download(fname, path, storage_technology, machine, url, protocol, options)
+    except ConnectionManager.ConnectionError as e:
+        _issueWorkflowCallback(callback, incidentId, "Connection error", False)    
+            
+    if status == OK:
+        size=message
+        #register this new file with the data manager
+        id=_register(fname,path, machine, description, type, size, originator, group, storage_technology)
+        with pny.db_session:
+            transfer_id = str(uuid.uuid4())
+            data_transfer = DataTransfer(id=transfer_id, src=Data[id], src_machine=protocol, dst_machine=machine,
+                                        date_started=date_started, status = "COMPLETED", date_completed = date_completed,
+                                        completion_time = (date_completed - date_started))
+            _issueWorkflowCallback(callback, incidentId, id, True)            
+    elif status == NOT_IMPLEMENTED:
+        _issueWorkflowCallback(callback, incidentId, message, False)            
+    elif status==FILE_ERROR:
+        _issueWorkflowCallback(callback, incidentId, message, False) 
 
 @pny.db_session
 def _retrieveAbsolutePath(data_info):
@@ -488,7 +585,24 @@ def _get_data_from_location(registered_data, gather_metrics):
             localData=LocalDataStorage.get(filename=target_src)
             contents=localData.contents            
     else:
-        contents=asyncio.run(submit_remote_get_data(registered_data.machine, target_src))
+        if useCaching:
+            details=asyncio.run(get_ls_on_data(registered_data.machine, target_src))
+            tokens=details[0].split()
+            file_size = tokens[4]
+            filefound=False
+            timestamp=parse(tokens[5]+" "+tokens[6]+" "+tokens[7]).timestamp()
+            for entry in fileCache:
+                if entry.match(registered_data.machine, target_src, file_size, timestamp):
+                    contents=entry.getData()                    
+                    filefound=True
+                    break
+            if not filefound:
+                contents=asyncio.run(submit_remote_get_data(registered_data.machine, target_src))            
+                if int(file_size) < maxCacheSize: #and int(file_size) > minCacheSize:                    
+                    if len(fileCache) == maxNumCacheEntries: del fileCache[0]
+                    fileCache.append(cachedData(registered_data.machine, target_src, file_size, timestamp, contents))
+        else:
+            contents=asyncio.run(submit_remote_get_data(registered_data.machine, target_src))
 
     if gather_metrics:
         data_transfer = DataTransfer[transfer_id]
@@ -500,7 +614,11 @@ def _get_data_from_location(registered_data, gather_metrics):
 
 async def submit_remote_get_data(target_machine_name, src_file):
     client = await Client.create(target_machine_name)              
-    return await client.get(src_file)     
+    return await client.get(src_file)
+
+async def get_ls_on_data(target_machine_name, src_file):
+    client = await Client.create(target_machine_name)
+    return await client.ls(src_file)
 
 @pny.db_session
 def _put_data_to_location(data_payload, data_uuid, gather_metrics):
@@ -638,5 +756,6 @@ def _getLocalPathPrepend():
         return ""
 
 if __name__ == "__main__":
-    initialiseDatabase()
+    initialiseDatabase() 
+    async_scheduler.start()   
     app.run(host='0.0.0.0', port=5503)

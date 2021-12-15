@@ -101,11 +101,8 @@ def putByteDataViaDM(filename, machine, description, type, originator, payload, 
         if incidentId is not None: logger.Log("Error putting data with name '"+filename+"' on machine '"+machine+"' message '"+response.text+"'", "system", incidentId, type=log.LogType.Error)
         raise DataManagerException(response.status_code, response.text)
 
-def downloadDataToTargetViaDM(filename, machine, description, type, originator, url, protocol, group = "none", storage_technology=None, path=None, options=None,
-        associate_with_incident=False, incidentId=None, kind="", comment=None):
-    if associate_with_incident and incidentId is None:
-        raise DataManagerException(400, "Must supply an incident ID when associating dataset with an incident")
-
+def _issueDataDownloadToDM(filename, machine, description, type, originator, url, protocol, group = "none", storage_technology=None, path=None, options=None,
+        associate_with_incident=False, incidentId=None, kind="", comment=None, callback=None):
     arguments = {   'filename': filename, 
                     'machine':machine,
                     'storage_technology' : storage_technology, 
@@ -121,6 +118,9 @@ def downloadDataToTargetViaDM(filename, machine, description, type, originator, 
         arguments["path"]=path
     if options is not None:
         arguments["options"]=options
+    if callback is not None and incidentId is not None:
+        arguments["callback"]=callback
+        arguments["incidentId"]=incidentId
 
     returnUUID = requests.put(_get_DM_URL()+'/getexternal', data=arguments)
     if returnUUID.status_code == 201:
@@ -132,6 +132,25 @@ def downloadDataToTargetViaDM(filename, machine, description, type, originator, 
     else:
         if incidentId is not None: logger.Log("Error downloading data from '"+url+"' data message '"+returnUUID.text+"'", "system", incidentId, type=log.LogType.Error)
         raise DataManagerException(returnUUID.status_code, returnUUID.text)
+
+def downloadDataToTargetViaDM(filename, machine, description, type, originator, url, protocol, group = "none", storage_technology=None, path=None, options=None,
+        associate_with_incident=False, incidentId=None, kind="", comment=None, callback=None):
+    if associate_with_incident and incidentId is None:
+        raise DataManagerException(400, "Must supply an incident ID when associating dataset with an incident")
+    if callback and incidentId is None:
+        raise DataManagerException(400, "Must supply an incident ID when providing a callback for nonblocking download")
+
+    if isinstance(filename, list) and isinstance(url, list) and isinstance(path, list):
+        dataUUIDs=[]
+        for (a, b, c) in zip(filename, url, path):
+            dataUUIDs.append(_issueDataDownloadToDM(a, machine, description, type, b, url, protocol, group, storage_technology, c, options,
+                associate_with_incident, incidentId, kind, comment, callback))
+    elif not isinstance(filename, list) and not isinstance(url, list) and not isinstance(path, list):
+        return _issueDataDownloadToDM(filename, machine, description, type, originator, url, protocol, group, storage_technology, path, options,
+            associate_with_incident, incidentId, kind, comment, callback)
+    else:
+        raise DataManagerException(400, "Passing a mix of lists and single values for multiple download, filename, url and path must be a list for multiple downloads")
+    
 
 def moveDataViaDM(data_uuid, dest_name, dest_machine, dest_storage_technology=None, gather_metrics=True):
     arguments = {   'dest': dest_name, 
@@ -175,6 +194,22 @@ def copyDataViaDM(data_uuid, dest_name, dest_machine, dest_storage_technology=No
 def deleteDataViaDM(data_uuid):
     response=requests.delete(_get_DM_URL()+'/remove/'+data_uuid)
     if response.status_code != 200:
+        raise DataManagerException(response.status_code, response.text)
+
+def predictDatasetTransferPerformance(data_uuid, dest_machine):
+    arguments={ 'uuid' : data_uuid, 'dest_machine' : dest_machine }
+    response=requests.post(_get_DM_URL()+'/predict', data=arguments)
+    if response.status_code == 201:        
+        return response.json()["prediction_time"]
+    else:
+        raise DataManagerException(response.status_code, response.text)
+
+def predictDataTransferPerformance(src_machine, dest_machine, data_size):
+    arguments={ 'src_machine' : src_machine, 'dest_machine' : dest_machine, 'data_size' : data_size }
+    response=requests.post(_get_DM_URL()+'/predict', data=arguments)
+    if response.status_code == 201:        
+        return response.json()["prediction_time"]
+    else:
         raise DataManagerException(response.status_code, response.text)
 
 def getDMHealth():

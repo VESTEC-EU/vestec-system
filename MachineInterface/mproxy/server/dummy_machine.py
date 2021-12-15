@@ -67,6 +67,11 @@ class DummyMachineConnection(ThrottlableMixin):
         return "connected"
 
     @throttle
+    def getDetailedStatus(self):
+        str_to_return=""
+        return str_to_return
+
+    @throttle
     def submitJob(self, num_nodes, requested_walltime, directory, executable):
         log.info("%s.getstatus()", self.name)
         queueid="Q"+(''.join(["{}".format(randint(0, 5)) for num in range(0, 5)]))
@@ -83,9 +88,9 @@ class DummyMachineConnection(ThrottlableMixin):
                     dummy_jobs[queue_id]="RUNNING"
                 elif (status == "RUNNING"):
                     dummy_jobs[queue_id]="COMPLETED"
-                to_return[queue_id]=[dummy_jobs[queue_id], "0:0:1"]
+                to_return[queue_id]=[dummy_jobs[queue_id], "0:0:1", "-", "-"]
             else:
-                to_return[queue_id]=["UNKNOWN", "0:0:0"]
+                to_return[queue_id]=["UNKNOWN", "0:0:0", "-", "-"]
         return to_return
 
     @throttle

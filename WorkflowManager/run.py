@@ -13,6 +13,7 @@ from workflows.performance_data import performance_data
 from workflows.wildfire import main as wildfire
 from workflows.mosquito import mosquito
 from workflows.tests import tests
+from workflows.spaceweather import spaceweather
 
 # set the logging level of the workflow logger
 workflow.SetLoggingLevel(logging.WARNING)
@@ -27,6 +28,7 @@ performance_data.RegisterHandlers()
 wildfire.RegisterHandlers()
 mosquito.RegisterHandlers()
 tests.RegisterHandlers()
+spaceweather.RegisterHandlers()
 
 workflow.execute()
 
