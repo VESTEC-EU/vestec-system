@@ -142,8 +142,9 @@ def _getPredictedDataTransferTime(machine_name, associated_datasets):
 
 @pny.db_session
 def _getPredictedTotalTime(requested_walltime, requested_num_nodes, executable, machine, associated_datasets):
-    queue_time=predictors[machine.machine_name].predict(requested_walltime, requested_num_nodes, detailed_machines_status[machine.machine_name])    
-    return queue_time + _getPredictedRuntime(executable, machine, requested_walltime) + _getPredictedDataTransferTime(machine.machine_name, associated_datasets)
+    return 60
+    #queue_time=predictors[machine.machine_name].predict(requested_walltime, requested_num_nodes, detailed_machines_status[machine.machine_name])    
+    #return queue_time + _getPredictedRuntime(executable, machine, requested_walltime) + _getPredictedDataTransferTime(machine.machine_name, associated_datasets)
 
 @app.route("/MSM/matchmachine", methods=["POST"])
 @pny.db_session
