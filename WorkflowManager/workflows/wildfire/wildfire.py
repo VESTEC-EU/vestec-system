@@ -186,6 +186,9 @@ def wildfire_fire_results(msg):
                 simulation.status_updated = datetime.datetime.now()
                 pny.commit()
             return
+        
+        _registerMatchingFiles(directoryListing, ".vtu", machine_name, "WFA simulation", "application/octet-stream", "VTU paraview output", 
+                              simulation.directory, IncidentID, "WFA paraview output file", "Created by WFA on " + machine_name + " with simulation ID " + simulationId)
 
         try:
             callbacks = {'COMPLETED': 'wildfire_post_results'}
@@ -228,6 +231,21 @@ def _registerWFAResultFile(filename, result_files, machine_name, directory, inci
         print("Error registering WFA result data with data manager, aborting " + err.message)
         raise WildfireDataAccessException("Error registering WFA result data with data manager on the VESTEC system")
 
+def _registerMatchingFiles(directoryListing, matching_ending, machine_name, source, meta_file_description, description, directory, IncidentID, kind_description, commentStr):
+    for entry in directoryListing:
+        tokens=entry.split()
+        if len(tokens) == 9 and matching_ending in tokens[-1]:
+            if tokens[4].isnumeric():
+                file_size=int(tokens[4])
+            else:
+                file_size=0
+            try:
+                registerDataWithDM(tokens[-1], machine_name, source, meta_file_description, file_size, description, 
+                    path=directory, associate_with_incident=True, incidentId=IncidentID, kind=kind_description, 
+                    comment=commentStr)
+            except DataManagerException as err:
+                print("Error registering "+description+" with data manager, aborting "+err.message)
+                return    
 
 @pny.db_session
 def _buildWFAPostYaml(simulation_directory, machine_basedir, simDuration):
