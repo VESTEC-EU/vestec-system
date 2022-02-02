@@ -252,7 +252,7 @@ def wildfire_mesonh_simulation(msg):
         mesoNHYaml=_buildMesoNHYaml(IncidentID, machine_basedir, simulation.directory, gfs_data_filenames[0],gfs_data_filenames[1], _retrievePGDDataLocation(IncidentID))
 
         try:
-            data_uuid=putByteDataViaDM("mesonh_composed.yml", machine_name, "MesoNH YAML configuration", "text/plain", "MesoNH workflow", mesoNHYaml, path=simulation.directory)        
+            data_uuid=putByteDataViaDM("mesonh_composed-template.yml", machine_name, "MesoNH YAML configuration", "text/plain", "MesoNH workflow", mesoNHYaml, path=simulation.directory)        
         except DataManagerException as err:
             print("Error creating configuration file on machine"+err.message)
             return
