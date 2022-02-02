@@ -290,8 +290,8 @@ def _buildMesoNHYaml(incidentId, machine_basedir, simulation_location, gfs_file1
     yaml_template["lowerright"]["lat"]=float(lowerRightLat)
     yaml_template["lowerright"]["lon"]=float(lowerRightLon)
 
-    yaml_template["gfs_gribs"][0]["path"]="${INCIDENTS_ROOT}/"+simulation_location+"/"+gfs_file1
-    yaml_template["gfs_gribs"][1]["path"]="${INCIDENTS_ROOT}/"+simulation_location+"/"+gfs_file2
+    yaml_template["gfs_gribs"][0]["path"]=machine_basedir+simulation_location+"/"+gfs_file1
+    yaml_template["gfs_gribs"][1]["path"]=machine_basedir+simulation_location+"/"+gfs_file2
     yaml_template["ini_nameroots"][0]="GFS"+gfs_file1.split("_")[-3]+"."+gfs_file1.split("_")[-2][0:2]
     yaml_template["ini_nameroots"][1]="GFS"+gfs_file2.split("_")[-3]+"."+gfs_file2.split("_")[-2][0:2]
     yaml_template["pgd"]["path"]=pdg_file
