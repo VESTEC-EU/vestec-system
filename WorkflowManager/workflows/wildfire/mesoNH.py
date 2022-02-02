@@ -283,15 +283,15 @@ def _buildMesoNHYaml(incidentId, machine_basedir, simulation_location, gfs_file1
     upperLeftLon, upperLeftLat = upperLeft.split("/")
     lowerRightLon, lowerRightLat = lowerRight.split("/")
 
-    sample_configuration_file = open("workflows/wildfire/templates/mesonh.yml")
+    sample_configuration_file = open("workflows/wildfire/templates/mesonh-template.yml")
     yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)    
     yaml_template["upperleft"]["lat"]=float(upperLeftLat)
     yaml_template["upperleft"]["lon"]=float(upperLeftLon)
     yaml_template["lowerright"]["lat"]=float(lowerRightLat)
     yaml_template["lowerright"]["lon"]=float(lowerRightLon)
 
-    yaml_template["gfs_gribs"][0]["path"]=machine_basedir+simulation_location+"/"+gfs_file1
-    yaml_template["gfs_gribs"][1]["path"]=machine_basedir+simulation_location+"/"+gfs_file2
+    yaml_template["gfs_gribs"][0]["path"]="${INCIDENTS_ROOT}/"+simulation_location+"/"+gfs_file1
+    yaml_template["gfs_gribs"][1]["path"]="${INCIDENTS_ROOT}/"+simulation_location+"/"+gfs_file2
     yaml_template["ini_nameroots"][0]="GFS"+gfs_file1.split("_")[-3]+"."+gfs_file1.split("_")[-2][0:2]
     yaml_template["ini_nameroots"][1]="GFS"+gfs_file2.split("_")[-3]+"."+gfs_file2.split("_")[-2][0:2]
     yaml_template["pgd"]["path"]=pdg_file
