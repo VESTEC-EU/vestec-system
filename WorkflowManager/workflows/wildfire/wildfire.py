@@ -95,7 +95,7 @@ def wildfire_fire_simulation(msg):
             moveDataViaDM(hotspotDataUUID, machine_basedir + simulation.directory + "/WFA_hotspots.json", machine_name)
 
             try:
-                putByteDataViaDM("wfa.yml", machine_name, "Wildfire configuration", "text/plain", "Wildfire workflow",
+                putByteDataViaDM("wfa-template.yml", machine_name, "Wildfire configuration", "text/plain", "Wildfire workflow",
                                  _buildWFAYaml(IncidentID, weather_data_info, simDuration, numberOfSims), path=simulation.directory)
             except DataManagerException as err:
                 print("Can not write wildfire configuration to simulation location" + err.message)
@@ -116,7 +116,7 @@ def _buildWFAYaml(incidentId, weather_datainfo, simDuration, sims_per_rank):
     upperLeftLon, upperLeftLat = upperLeft.split("/")
     lowerRightLon, lowerRightLat = lowerRight.split("/")
 
-    sample_configuration_file = open("workflows/wildfire/templates/wfa.yml")
+    sample_configuration_file = open("workflows/wildfire/templates/wfa-template.yml")
     yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)
     yaml_template["upperleft"]["lat"] = float(upperLeftLat)
     yaml_template["upperleft"]["lon"] = float(upperLeftLon)
