@@ -24,4 +24,4 @@ dynamic_config:
   path: wfadata/dynamic.json
 catalyst_script:
   class: File
-  path: ${FIREAPP_DIR}/scripts/topologicalProxies.py
+  path: ${CATALYST_SCRIPT_LOCATION}
