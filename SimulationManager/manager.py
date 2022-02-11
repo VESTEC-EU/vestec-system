@@ -1,4 +1,5 @@
 from __future__ import print_function
+import re
 import sys
 sys.path.append("../")
 sys.path.append("../MachineInterface")
@@ -280,6 +281,8 @@ def issueWorkFlowStageCalls(workflow_stages_to_run):
             origionatorPrettyStr="Simulation Completed"
             simulation = Simulation[wf_call["simulationId"]]
             directory_listing = asyncio.run(get_job_directory_listing(simulation.machine.machine_name, simulation.directory))
+            hotspot_uuid = re.search(r"[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}", simulation.comment)
+            if hotspot_uuid: msg["hotspot_data_uuid"] = hotspot_uuid.group()
             msg["directoryListing"]=directory_listing
         elif wf_call["status"] == "QUEUED":
             origionatorPrettyStr="Simulation Queued"

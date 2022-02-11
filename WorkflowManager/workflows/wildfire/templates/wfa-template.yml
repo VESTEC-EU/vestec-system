@@ -22,3 +22,6 @@ lowerright:
 dynamic_config:
   class: File
   path: wfadata/dynamic.json
+catalyst_script:
+  class: File
+  path: ${CATALYST_SCRIPT_LOCATION}

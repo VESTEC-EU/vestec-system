@@ -129,7 +129,7 @@ def wildfire_mesonh_physiographic(msg):
     upperLeftLon, upperLeftLat = upperLeft.split("/")
     lowerRightLon, lowerRightLat = lowerRight.split("/")
 
-    sample_configuration_file = open("workflows/wildfire/templates/prep_pgd.yml")
+    sample_configuration_file = open("workflows/wildfire/templates/prep_pgd-template.yml")
     yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)
     yaml_template["upperleft"]["lat"]=float(upperLeftLat)
     yaml_template["upperleft"]["lon"]=float(upperLeftLon)
@@ -143,7 +143,7 @@ def wildfire_mesonh_physiographic(msg):
             simulation=Simulation[sim_id]   
             machine_name=simulation.machine.machine_name   
         try:
-            data_uuid=putByteDataViaDM("prep_pgd.yml", machine_name, "PGD pre-processing YAML configuration", "text/plain", "MesoNH workflow", yaml.dump(yaml_template), path=simulation.directory)        
+            data_uuid=putByteDataViaDM("prep_pgd-template.yml", machine_name, "PGD pre-processing YAML configuration", "text/plain", "MesoNH workflow", yaml.dump(yaml_template), path=simulation.directory)        
         except DataManagerException as err:
             print("Error creating configuration file on machine"+err.message)
             return
@@ -252,7 +252,7 @@ def wildfire_mesonh_simulation(msg):
         mesoNHYaml=_buildMesoNHYaml(IncidentID, machine_basedir, simulation.directory, gfs_data_filenames[0],gfs_data_filenames[1], _retrievePGDDataLocation(IncidentID))
 
         try:
-            data_uuid=putByteDataViaDM("mesonh_composed.yml", machine_name, "MesoNH YAML configuration", "text/plain", "MesoNH workflow", mesoNHYaml, path=simulation.directory)        
+            data_uuid=putByteDataViaDM("mesonh_composed-template.yml", machine_name, "MesoNH YAML configuration", "text/plain", "MesoNH workflow", mesoNHYaml, path=simulation.directory)        
         except DataManagerException as err:
             print("Error creating configuration file on machine"+err.message)
             return
@@ -283,7 +283,7 @@ def _buildMesoNHYaml(incidentId, machine_basedir, simulation_location, gfs_file1
     upperLeftLon, upperLeftLat = upperLeft.split("/")
     lowerRightLon, lowerRightLat = lowerRight.split("/")
 
-    sample_configuration_file = open("workflows/wildfire/templates/mesonh.yml")
+    sample_configuration_file = open("workflows/wildfire/templates/mesonh-template.yml")
     yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)    
     yaml_template["upperleft"]["lat"]=float(upperLeftLat)
     yaml_template["upperleft"]["lon"]=float(upperLeftLon)
