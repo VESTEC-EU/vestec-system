@@ -1,0 +1,29 @@
+lat_first_point: 41
+lon_first_point: 12
+lat_second_point: 42
+lon_second_point: 13
+n_max_tiles: 4
+
+global_tif_folder:
+  class: Directory
+  path: ${MOSQUITO_DATA_DIR}/global
+
+species: ${species}
+
+species_user_parameters:
+  class: File
+  path: ${MOSQUITO_INSTALL_DIR}/share/mosquito/input_files/${species}_parameter.txt
+species_fixed_parameters:
+  class: File
+  path: ${MOSQUITO_INSTALL_DIR}/share/mosquito/input_files/${species}_parameter_fixed.txt
+species_alpha_distribution:
+  class: File
+  path: ${MOSQUITO_INSTALL_DIR}/share/mosquito/input_files/${species}_alpha_w_k_m_wc_lm_within_fit_cumulato_best_dic.txt
+species_covariate_distribution:
+  class: File
+  path: ${MOSQUITO_INSTALL_DIR}/share/mosquito/input_files/${species}_coeff_covariate_wc_lm_within_fit_cumulato_best_dic.txt
+disease: ${disease}
+disease_species_user_parameters:
+  class: File
+  path: ${MOSQUITO_INSTALL_DIR}/share/mosquito/input_files/${disease}_${species}_parameter_user.txt
+count: 200

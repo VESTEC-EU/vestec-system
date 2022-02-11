@@ -1,0 +1,20 @@
+region: global
+species: aegypti
+disease: chik
+tiffs:
+  - class: File
+    path: output_band_00.tif
+  - class: File
+    path: output_band_01.tif
+  - class: File
+    path: output_band_02.tif
+  - class: File
+    path: output_band_03.tif
+  - class: File
+    path: output_band_04.tif
+  - class: File
+    path: output_band_05.tif
+  - class: File
+    path: output_band_06.tif
+  - class: File
+    path: output_band_07.tif
