@@ -91,10 +91,16 @@ class SlurmQueueProcessor:
                     extra_hours=0
                     if ("-" in tokens[5]):
                         sp=tokens[5].split("-")
-                        pt=parse(sp[1])
+                        try:
+                            pt=parse(sp[1])
+                        except (ParseError):
+                            pt=None
                         extra_hours=24 * int(sp[0])
                     else:
-                        pt=parse(tokens[5])
-
-                    jobs+=tokens[0]+" "+tokens[1]+" "+str(start-submit)+" " +str(pt.second + pt.minute*60 + (pt.hour+extra_hours)*3600)+"\n"
+                        try:
+                            pt=parse(tokens[5])
+                        except (ParseError):
+                            pt=None
+                    if (pt is not None):
+                        jobs+=tokens[0]+" "+tokens[1]+" "+str(start-submit)+" " +str(pt.second + pt.minute*60 + (pt.hour+extra_hours)*3600)+"\n"
         return jobs
