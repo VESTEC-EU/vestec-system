@@ -40,7 +40,7 @@ def _launch_simulation(IncidentID, simulation_description, template_directory, y
 
 @pny.db_session
 def _build_simulation_yaml(species, disease, region, count):
-    sample_configuration_file = open("workflows/mosquito/templates/mosquito.yml")
+    sample_configuration_file = open("workflows/mosquito/templates/mos.yml")
     yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)    
     
     yaml_template["region"]=region
@@ -59,7 +59,7 @@ def _build_simulation_yaml(species, disease, region, count):
 
 def trento(IncidentId):
     simulation_yaml=_build_simulation_yaml('albopictus', 'deng', 'trento', 200)
-    sim_id=_launch_simulation(IncidentId, "Mosquito simulation", "mosquito_template", "mosquito.yml", simulation_yaml, "mosquito_simulation_postprocess")
+    sim_id=_launch_simulation(IncidentId, "Mosquito simulation", "mosquito_template", "mos.yml", simulation_yaml, "mosquito_simulation_postprocess")
     sim_meta = {
         "simulation": sim_id,
         "species": "albopictus",
@@ -71,7 +71,7 @@ def trento(IncidentId):
 
 def rome(IncidentId):
     simulation_yaml=_build_simulation_yaml('albopictus', 'deng', 'trento', 200)
-    sim_id=_launch_simulation(IncidentId, "Mosquito simulation", "mosquito_template", "mosquito.yml", simulation_yaml, "mosquito_simulation_postprocess")
+    sim_id=_launch_simulation(IncidentId, "Mosquito simulation", "mosquito_template", "mos.yml", simulation_yaml, "mosquito_simulation_postprocess")
     sim_meta = {
         "simulation": sim_id,
         "species": "aegypti",
@@ -83,7 +83,7 @@ def rome(IncidentId):
 
 def run_simulation_from_payload(IncidentId, config):
     simulation_yaml=_build_simulation_yaml(config["species"], config["disease"], config["region"], int(config["count"]))
-    sim_id=_launch_simulation(IncidentId, "Mosquito simulation", "mosquito_template", "mosquito.yml", simulation_yaml, "mosquito_simulation_postprocess")
+    sim_id=_launch_simulation(IncidentId, "Mosquito simulation", "mosquito_template", "mos.yml", simulation_yaml, "mosquito_simulation_postprocess")
     sim_meta = {
         "simulation": sim_id,
         "species": config["species"],
