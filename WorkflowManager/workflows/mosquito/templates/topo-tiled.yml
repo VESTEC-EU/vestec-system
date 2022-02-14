@@ -18,3 +18,11 @@ tiffs:
     path: output_band_06.tif
   - class: File
     path: output_band_07.tif
+  - class: File
+    path: output_band_08.tif
+  - class: File
+    path: output_band_09.tif
+  - class: File
+    path: output_band_10.tif
+  - class: File
+    path: output_band_11.tif
