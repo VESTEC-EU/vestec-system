@@ -160,7 +160,7 @@ def _build_topo_yaml(disease, species, result_dir, directoryListing):
     yaml_template["disease"]=disease    
     for i in range(0,12):
         if _check_directory_contains_file(directoryListing, "output_area_band_"+str(i)+".tif"):
-           yaml_template["tiffs"][i]["path"]=result_dir+"/output_area_band_"+str(i)+".tif"
+           yaml_template["inputs"][i]["path"]=result_dir+"/output_area_band_"+str(i)+".tif"
         else:
            print("Error - can not find file 'output_area_band_"+str(i)+".tif' I continue but probably won't work!")
     return yaml.dump(yaml_template)        
