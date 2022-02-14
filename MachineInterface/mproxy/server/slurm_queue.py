@@ -14,7 +14,7 @@ class SlurmQueueProcessor:
         job_queue_str=""
         for queue_id in queue_ids:
             job_queue_str+=queue_id+","
-        return "sacct --format jobid,elapsed,state,nnodes,submit,start,end -j "+job_queue_str
+        return "squeue --states=all --job "+job_queue_str
 
     def getSubmissionCommand(self, scriptname):
         return "sbatch "+scriptname
