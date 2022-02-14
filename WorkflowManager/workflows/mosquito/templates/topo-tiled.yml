@@ -1,7 +1,7 @@
 region: global
 species: aegypti
 disease: chik
-tiffs:
+inputs:
   - class: File
     path: output_band_00.tif
   - class: File
