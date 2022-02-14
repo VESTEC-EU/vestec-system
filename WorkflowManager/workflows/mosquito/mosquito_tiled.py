@@ -157,13 +157,12 @@ def _build_topo_yaml(disease, species, result_dir, directoryListing):
     yaml_template = yaml.load(sample_configuration_file, Loader=yaml.FullLoader)            
     
     yaml_template["species"]=species
-    yaml_template["disease"]=disease
-    yaml_template["tiffs"][0]["path"]=result_dir+"/output_area.tif"
-    for i in range(1,8):
-        if _check_directory_contains_file(directoryListing, "output_area.tif_"+str(i+1)):
-           yaml_template["tiffs"][i]["path"]=result_dir+"/output_area.tif_"+str(i+1)
+    yaml_template["disease"]=disease    
+    for i in range(0,12):
+        if _check_directory_contains_file(directoryListing, "output_area_band_"+str(i)+".tif"):
+           yaml_template["tiffs"][i]["path"]=result_dir+"/output_area_band_"+str(i)+".tif"
         else:
-           print("Error - can not find file 'output_area.tif_"+str(i+1)+"' I continue but probably won't work!")
+           print("Error - can not find file 'output_area_band_"+str(i)+".tif' I continue but probably won't work!")
     return yaml.dump(yaml_template)        
 
 @workflow.handler
