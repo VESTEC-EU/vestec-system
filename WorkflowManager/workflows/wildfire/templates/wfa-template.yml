@@ -1,6 +1,6 @@
 sim_name: test
-mpi_processes: 24
-omp_threads: 1
+mpi_processes: 32
+omp_threads: 4
 sim_duration: 1
 start_time: 0
 sims_per_rank: 2
