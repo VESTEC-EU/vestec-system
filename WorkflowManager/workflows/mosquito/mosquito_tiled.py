@@ -44,6 +44,11 @@ def _build_simulation_yaml(species, disease, count, lat_first_point, lon_first_p
     yaml_template["species"]=species
     yaml_template["disease"]=disease
     yaml_template["count"]=count
+    yaml_template["lat_first_point"]=lat_first_point
+    yaml_template["lon_first_point"]=lon_first_point
+    yaml_template["lat_second_point"]=lat_second_point
+    yaml_template["lon_second_point"]=lon_second_point
+    yaml_template["n_max_tiles"]=n_max_tiles
 
     yaml_template["species_user_parameters"]["path"]="${MOSQUITO_INSTALL_DIR}/share/mosquito/input_files/"+species+"_parameter.txt"
     yaml_template["species_fixed_parameters"]["path"]="${MOSQUITO_INSTALL_DIR}/share/mosquito/input_files/"+species+"_parameter_fixed.txt"
@@ -54,7 +59,7 @@ def _build_simulation_yaml(species, disease, count, lat_first_point, lon_first_p
     return yaml.dump(yaml_template)
 
 def testRun(IncidentId):
-    simulation_yaml=_build_simulation_yaml('albopictus', 'chik', 200, 41, 12, 42, 13, 4)
+    simulation_yaml=_build_simulation_yaml('albopictus', 'chik', 200, 41.0, 12.0, 42.0, 13.0, 4)
     sim_id=_launch_simulation(IncidentId, "Mosquito simulation", "mosquito_tiled_template", "tiled-template.yml", simulation_yaml, "mosquito_tiled_simulation_completed")
     sim_meta = {
         "simulation": sim_id,
@@ -65,7 +70,7 @@ def testRun(IncidentId):
     workflow.Persist.Put(IncidentId, sim_meta)    
 
 def run_simulation_from_payload(IncidentId, config):
-    simulation_yaml=_build_simulation_yaml(config["species"], config["disease"], int(config["count"]), int(config["lat_first_point"]), int(config["lon_first_point"]), int(config["lat_second_point"]), int(config["lon_second_point"]), int(config["n_max_tiles"]))
+    simulation_yaml=_build_simulation_yaml(config["species"], config["disease"], int(config["count"]), float(config["lat_first_point"]), float(config["lon_first_point"]), float(config["lat_second_point"]), float(config["lon_second_point"]), int(config["n_max_tiles"]))
     sim_id=_launch_simulation(IncidentId, "Mosquito simulation", "mosquito_tiled_template", "tiled-template.yml", simulation_yaml, "mosquito_tiled_simulation_completed")
     sim_meta = {
         "simulation": sim_id,
