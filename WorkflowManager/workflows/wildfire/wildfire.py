@@ -189,6 +189,16 @@ def wildfire_fire_results(msg):
         
         _registerMatchingFiles(directoryListing, ".vtu", machine_name, "WFA simulation", "application/octet-stream", "VTU paraview output", 
                               simulation.directory, IncidentID, "WFA paraview output file", "Created by WFA on " + machine_name + " with simulation ID " + simulationId)
+        
+        _registerMatchingFiles(directoryListing, ".pvtp", machine_name, "WFA simulation", "application/octet-stream", "PVTP paraview output", 
+                              simulation.directory, IncidentID, "WFA paraview output file", "Created by WFA on " + machine_name + " with simulation ID " + simulationId)
+        
+        _registerMatchingFiles(directoryListing, ".vtp", machine_name, "WFA simulation", "application/octet-stream", "VTP paraview output", 
+                              simulation.directory, IncidentID, "WFA paraview output file", "Created by WFA on " + machine_name + " with simulation ID " + simulationId)
+        
+        _registerMatchingFiles(directoryListing, ".vti", machine_name, "WFA simulation", "application/octet-stream", "VTI paraview output", 
+                              simulation.directory, IncidentID, "WFA paraview output file", "Created by WFA on " + machine_name + " with simulation ID " + simulationId)
+
 
         try:
             callbacks = {'COMPLETED': 'wildfire_post_results'}
