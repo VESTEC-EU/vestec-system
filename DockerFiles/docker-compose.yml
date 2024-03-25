@@ -29,7 +29,7 @@ services:
       VESTEC_EDI_URI: "http://edi:5501/EDImanager"
       VESTEC_MSM_URI: "http://msm:5502/MSM"
       VESTEC_DM_URI : "http://datamanager:5503/DM"
-      VESTEC_SHARED_FILE_LOCATION : "/shared_data"
+      #VESTEC_SHARED_FILE_LOCATION : "/shared_data"
       JWT_PASSWD: "SECRET"  # to be replaced by docker secrets
       PYTHONUNBUFFERED: 1
     env_file:
@@ -92,7 +92,7 @@ services:
     # volumes:
     #   - "../Database:/database"
     environment:
-      VESTEC_SHARED_FILE_LOCATION : "/shared_data"    
+      VESTEC_SHARED_FILE_LOCATION : "/shared_data"
       PYTHONUNBUFFERED: 1
     env_file:
       - environment_variables.env
@@ -112,7 +112,7 @@ services:
     # volumes:
     #   - "../Database:/database"
     environment:
-      VESTEC_SHARED_FILE_LOCATION : "/shared_data"    
+      VESTEC_SHARED_FILE_LOCATION : "/shared_data"
       PYTHONUNBUFFERED: 1
     env_file:
       - environment_variables.env
@@ -120,18 +120,17 @@ services:
       - "/shared_data:/shared_data"
     networks:
       - vestec
-
   maria:
     container_name: mariadb
     image: mariadb
     environment:
+      MYSQL_DATABASE: "vestec"
       MYSQL_ROOT_PASSWORD: "changeme"
     volumes:
       - "/var/vestec/db:/var/lib/mysql"
     networks:
       - vestec
-    
-      
+
   rmq:
     container_name: rabbitmq
     image: rabbitmq
@@ -168,7 +167,7 @@ services:
       context: ../
       dockerfile: DataManager/Dockerfile
     environment:
-      VESTEC_SHARED_FILE_LOCATION : "/shared_data"
+      #VESTEC_SHARED_FILE_LOCATION : "/shared_data"
       PYTHONUNBUFFERED: 1
     env_file:
       - environment_variables.env

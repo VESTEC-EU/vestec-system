@@ -31,7 +31,11 @@ class OpenSSHMachineConnection(ThrottlableMixin):
         return output, errors
 
     def _checkForErrors(self, errorString, reportError=True):        
-        if len(errorString.strip()) == 0 or (len(errorString.strip().split('\n')) == 1 and "Shared connection to" in errorString):
+        if "Connection to " in errorString and " closed." in errorString:
+            return False
+        elif "Submitted batch job " in errorString:
+            return False
+        elif len(errorString.strip()) == 0 or (len(errorString.strip().split('\n')) == 1 and "Shared connection to" in errorString):
             return False
         else:
             if (reportError): print("Error: "+errorString.strip())
@@ -40,6 +44,7 @@ class OpenSSHMachineConnection(ThrottlableMixin):
     @throttle
     def run(self, command, env=None):
         cmd = "ssh -tt " + self.hostname+" \"cd "+self.remote_base_dir+" ; "+command+"\""        
+        print(cmd)
         output, errors= self._execute_command(cmd)
         errorRaised=self._checkForErrors(errors)
         return CmdResult(stdout=output, stderr=errors, error=errorRaised)
@@ -166,7 +171,7 @@ class OpenSSHMachineConnection(ThrottlableMixin):
 
     @throttle
     def ls(self, d="."):
-        run_info=self.run("ls -l "+d)
+        run_info=self.run("find "+d+" -type f -ls")
         self._checkForErrors(run_info.stderr)
         line_info=[]
         for line in run_info.stdout.splitlines():
