@@ -7,6 +7,7 @@ from Database.workflow import Simulation
 class PerformanceDataType(Enum):
     TIMINGS = 0
     LIKWID = 1
+    CWL_TIMINGS = 2
 
 
 class PerformanceData(db.Entity):
